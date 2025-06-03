@@ -118,6 +118,9 @@ class BSRMatrix {
      */
     explicit BSRMatrix(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
         num_rows_(num_rows), num_columns_(num_columns), tile_size_(tile_size) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::BSRMatrix(num_rows=" << num_rows << ", num_columns=" << num_columns << ", tile_size=" << tile_size << ")" << std::endl;
+    #endif
 
     }
 
@@ -255,9 +258,9 @@ class BSRMatrix {
                         IT tile_c_idx = it->second % tile_size_;
 
                         if (row_major) {
-                            current_tile[tile_r_idx * tile_size_ + tile_c_idx] = true;
+                            current_tile[tile_r_idx * tile_size_ + tile_c_idx] = static_cast<MT>(true);
                         }else{
-                            current_tile[tile_c_idx * tile_size_ + tile_r_idx] = true;
+                            current_tile[tile_c_idx * tile_size_ + tile_r_idx] = static_cast<MT>(true);
                         }
                     }
 
