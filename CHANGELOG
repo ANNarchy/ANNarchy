@@ -1,6 +1,13 @@
 **5.0.0**
 
-* TODO
+* Important: the construction of networks using a magic network is deprecated. All ANNarchy objects, such as populations or projections, should now use the *Network* class.
+* uniform distributions are now initialized with a rng instance (i.e., numpy.random.default_rng or comparable) instead of a seed (commit 90bad44)
+* Attributes recorded by monitors can be accessed now directly: m['r'] instead of m.get('r')
+* ANNarchy uses now nanobind instead of Cython as interface between Python and C++
+* We extended the implementation for various formats, e.g.:
+    * CSRC on GPUs (commit 2764e2b)
+    * Dense on GPUs (commit 8b46823)
+    * Experimental feature: Bitmasks for Dense (commit 89e8f0e) and BSR (commit 4ead060)
 
 **4.8.2**
 
