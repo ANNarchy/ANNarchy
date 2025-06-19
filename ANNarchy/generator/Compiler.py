@@ -88,6 +88,30 @@ def compile(
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
 
+    Note since ANNarchy 5.0 the compilation of shadow networks is not allowed anymore. You need to construct a Network object, see the documentation.
+    """
+    Messages._warning("Since ANNarchy 5.0 the compilation of shadow networks is not supported anymore\n\t and using them possibly could generate errorneous simulation results or crash.\n\t You need to construct a Network object, please refer to the documentation.")
+    _compile(directory=directory, clean=clean, compiler=compiler, compiler_flags=compiler_flags, add_sources=add_sources, extra_libs=extra_libs, cuda_config=cuda_config,
+             annarchy_json=annarchy_json, silent=silent, debug_build=debug_build, trace_calls=trace_calls, profile_enabled=profile_enabled, net_id=net_id)
+
+def _compile(
+        directory='annarchy',
+        clean=False,
+        compiler="default",
+        compiler_flags="default",
+        add_sources="",
+        extra_libs="",
+        cuda_config={'device': 0},
+        annarchy_json="",
+        silent=False,
+        debug_build=False,
+        trace_calls=None,
+        profile_enabled=False,
+        net_id=0
+    ):
+    """
+    This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
+
     The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
 
     The following arguments are for internal development use only:
