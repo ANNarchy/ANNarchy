@@ -265,7 +265,17 @@ class NanoBindGenerator:
             record_container += """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(id=pop.id, name=attr['name'])
         
             clear_container += """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(id=pop.id, name=attr['name'])
-        
+
+        # Arrays for the post-synaptic potential
+        if pop.neuron_type.type == 'rate':
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(id=pop.id, name="_sum_"+target)
+
+                record_container += """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(id=pop.id, name="_sum_"+target)
+
+                clear_container += """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(id=pop.id, name="_sum_"+target)
+
+        # Spike events        
         if pop.neuron_type.type == "spike":
         
             record_flag +="""\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(id=pop.id, name='spike')

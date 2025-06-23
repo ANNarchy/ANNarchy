@@ -362,7 +362,6 @@ class Convolution(SpecificProjection):
             Messages._error('Convolution: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
         
         self.cyInstance.pre_coords = self.pre_coordinates
@@ -370,7 +369,7 @@ class Convolution(SpecificProjection):
 
         # Set delays after instantiation
         if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/ConfigManager().get('dt', self.net_id))
+            self.cyInstance.set_delay(int(self.delays/ConfigManager().get('dt', self.net_id)))
 
         return True
 
@@ -552,8 +551,17 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': ConfigManager().get('precision', self.net_id)
+            'float_prec': ConfigManager().get('precision', self.net_id),
+            'delays': ''
         }
+
+        # Delays are optional
+        if self.delays > ConfigManager().get('dt', self.net_id):
+            base_ids.update({'delays': f"""// Synaptic delays
+        .def("get_delay", &ProjStruct{self.id}::get_delay)
+        .def("get_dendrite_delay", &ProjStruct{self.id}::get_dendrite_delay)
+        .def("set_delay", &ProjStruct{self.id}::set_delay)
+"""})
 
         # Fill the basic definitions
         conv_dict = deepcopy(convolve_template_omp)

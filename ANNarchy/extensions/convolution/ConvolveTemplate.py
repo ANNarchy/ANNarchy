@@ -48,11 +48,11 @@ convolve_template_omp = {
         .def("post_rank", &ProjStruct%(id_proj)s::get_post_ranks)
         .def_rw("w", &ProjStruct%(id_proj)s::w)
         .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+        %(delays)s
 
         // Other methods
-        .def("clear", &ProjStruct%(id_proj)s::clear);    
-    
-    """,
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+""",
 
 
     # Memory Management

@@ -1,24 +1,8 @@
 """
-    test_Convoluvion.py
+This file is part of ANNarchy.
 
-    This file is part of ANNarchy.
-
-    Copyright (C) 2021 Alex Schwarz <alex.schwarz@informatik.tu-chemnitz.de>
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
 """
 import unittest
 import numpy
@@ -53,6 +37,7 @@ class test_Convolution(unittest.TestCase):
         neuron2 = Neuron(
             equations="""
                 r = sum(exc) : init = 0.0
+                rd = sum(exc_delay) : init = 0.0
                 mr = sum(mex) : init = 0.0
                 pr = sum(pex) : init = 0.0
                 br = sum(bex) : init = 0.0
@@ -86,6 +71,9 @@ class test_Convolution(unittest.TestCase):
         proj5 = cls.test_net.connect(Convolution(pre=cls.pop2, post=cls.pop3, target="exc"))
         proj5.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
 
+        proj6 = cls.test_net.connect(Convolution(pre=cls.pop0, post=cls.pop1, target="exc_delay"))
+        proj6.connect_filter(conv_filter, delays=3.0)
+
         cls.test_net.compile(silent=True)
 
     @classmethod
@@ -99,11 +87,15 @@ class test_Convolution(unittest.TestCase):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        # self.test_net.reset()
+        self.test_net.reset()
+        
+        # set the input
         baseline = numpy.reshape(numpy.arange(0.0, 1.2, 0.1), (3, 4))
         baseline2 = numpy.moveaxis(numpy.array([baseline, baseline + 2]), 0, 2)
         self.pop0.baseline = baseline
         self.pop2.baseline = baseline2
+        
+        # ensure that the psp is updated
         self.test_net.simulate(2)
 
     def test_get_weights(self):
@@ -136,6 +128,26 @@ class test_Convolution(unittest.TestCase):
                             [1.94, 1.1, 1.16, -1.18],
                             [1.48, 0.49, 0.5, -1.49]])
         numpy.testing.assert_allclose(self.pop1.get('r'), comb)
+
+    def test_post_simple_convolution(self):
+        """
+        Tests if the rates after convolution in the post projection are as
+        expected when a delay is used.
+        """
+        # After 2 ms all should be zero (delay is 3 ms)
+        comb = numpy.array([[0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0]])
+        
+        numpy.testing.assert_allclose(self.pop1.get('rd'), comb)
+
+        # Simulate another 2 ms and verify the output
+        self.test_net.simulate(2)
+        comb = numpy.array([[0.8, 0.66, 0.72, -0.42],
+                            [1.94, 1.1, 1.16, -1.18],
+                            [1.48, 0.49, 0.5, -1.49]])
+        
+        numpy.testing.assert_allclose(self.pop1.get('rd'), comb)
 
     def test_post_max_convolution(self):
         """

@@ -125,8 +125,10 @@ class Pooling(SpecificProjection):
         if len(self.extent) < self.pre.dimension:
             Messages._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
 
-        # process delays
-        self.delays = delays
+        # Process the delays
+        self.delays = float(delays)
+        if not isinstance(delays, (int, float)):
+            Messages._error('Convolutions can only have constant delays.')
 
         # Generate the pre-synaptic coordinates
         self._generate_extent_coordinates()

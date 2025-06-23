@@ -66,88 +66,85 @@ def check_experimental_features(populations, projections):
     """
     net_id = populations[0].net_id
 
+    detected_formats = []
+    for proj in projections:
+        detected_formats.append((proj._storage_format, proj._storage_order, proj.synapse_type.type))
+    detected_formats = list(set(detected_formats))
+
     # CPU-related formats
     if ConfigManager().get('paradigm', net_id) == "openmp":
         if ConfigManager().get("disable_SIMD_SpMV", net_id) == False:
             Messages._warning("Using hand-written SIMD kernel for continuous transmission is an experimental feature, we greatly appreciate bug reports.")
 
-        for proj in projections:
-            if proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
+        for fmt in detected_formats:
+            if fmt == "lil":
+                # nothing to tell, its the default
+                continue
+
+            elif fmt[0] == "csr" and fmt[1] == "pre_to_post":
                 Messages._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "bsr":
+            elif fmt[0] == "bsr":
                 Messages._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "coo":
+            elif fmt[0] == "coo":
                 Messages._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "dia":
+            elif fmt[0] == "dia":
                 Messages._warning("Diagonal (dia) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "ellr":
+            elif fmt[0] == "ellr":
                 Messages._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "sell":
+            elif fmt[0] == "sell":
                 Messages._warning("Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "ell":
+            elif fmt[0] == "ell":
                 Messages._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "hyb":
+            elif fmt[0] == "hyb":
                 Messages._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "dense" and proj.synapse_type.type=="spike":
+            elif fmt[0] == "dense" and fmt[2]=="spike":
                 Messages._warning("Dense representation is an experimental feature for spiking models, we greatly appreciate bug reports.")
-                break
+
+            else:   # check invalid arguments as last
+                if fmt[0] not in ["lil", "csr", "bsr", "coo", "dia", "ellr", "sell", "ell", "hyb", "dense"]:
+                    Messages._error("Invalid storage format provided for execution on CPUs:", fmt[0])
+                if fmt[1] not in ["post_to_pre", "pre_to_post"]:
+                    Messages._error("Invalid storage order provided:", fmt[1])
 
     # GPU-related formats
     elif ConfigManager().get('paradigm', net_id) == "cuda":
 
-        for proj in projections:
-            if proj._storage_format == "dense":
+        for fmt in detected_formats:
+            if fmt == "lil" or fmt == "csr":
+                # nothing to tell, its the default
+                continue
+
+            elif fmt[0] == "dense":
                 Messages._warning("Dense representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "sell":
+            elif proj._storage_format == "sell":
                 Messages._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "ellr":
+            elif proj._storage_format == "ellr":
                 Messages._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "bsr":
+            elif proj._storage_format == "bsr":
                 Messages._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "coo":
+            elif proj._storage_format == "coo":
                 Messages._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
 
-        for proj in projections:
-            if proj._storage_format == "hyb":
+            elif proj._storage_format == "hyb":
                 Messages._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                break
+
+            else:   # check invalid arguments as last
+                if fmt[0] not in ["lil", "csr", "bsr", "coo", "ellr", "sell", "hyb", "dense"]:
+                    Messages._error("Invalid storage format provided for execution on CPUs GPUs:", fmt[0])
+                if fmt[1] not in ["post_to_pre", "pre_to_post"]:
+                    Messages._error("Invalid storage order provided:", fmt[1])
 
     else:
         pass

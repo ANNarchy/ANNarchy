@@ -1,25 +1,8 @@
 """
+This file is part of ANNarchy.
 
-    storage_formats.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2022 Alex Schwarz and Helge Uelo Dinkelbach
-    <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
 """
 
 # Defines the tested storage_formats. The tests are overloaded in __init__.py.
@@ -53,6 +36,9 @@ single_thread = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                      ["lil"],
+    "test_MonitorLocalVariable":                ["lil"],
     # SpecificProjections
     "test_Convolution":                         ["lil"],
     "test_Pooling":                             ["lil"],
@@ -86,6 +72,9 @@ open_mp = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                      ["lil"],
+    "test_MonitorLocalVariable":                ["lil"],
     # SpecificProjections
     "test_Convolution":                         ["lil"],
     "test_Pooling":                             ["lil"],
@@ -94,7 +83,7 @@ open_mp = {
 
 cuda = {
     # test_RateTransmission.py
-    "test_RateTransmission":                ["csr", "ell", "ellr", "sell", "dense"],
+    "test_RateTransmission":                ["csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
@@ -117,6 +106,9 @@ cuda = {
     "test_UniformDelay":                    ["csr", "ellr", "dense"],
     "test_SynapseOperations":               ["csr", ],
     "test_SynapticAccess":                  ["csr", "ellr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                  ["csr"],
+    "test_MonitorLocalVariable":            ["csr"],
     # SpecificProjections
     "test_Convolution":                     ["csr"],
     "test_Pooling":                         ["csr"],
