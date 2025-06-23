@@ -1,3 +1,9 @@
+"""
+This file is part of ANNarchy.
+
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
 from ANNarchy import add_function, Constant, Hebb, IF_curr_exp, \
     Network, Neuron, STDP, STP, Synapse, Uniform
 

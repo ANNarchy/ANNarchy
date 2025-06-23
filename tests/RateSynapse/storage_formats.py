@@ -1,25 +1,8 @@
 """
+This file is part of ANNarchy.
 
-    storage_formats.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2022 Alex Schwarz and Helge Uelo Dinkelbach
-    <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
 """
 
 # Defines the tested storage_formats. The tests are overloaded in __init__.py.
