@@ -362,7 +362,6 @@ class Convolution(SpecificProjection):
             Messages._error('Convolution: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
         
         self.cyInstance.pre_coords = self.pre_coordinates

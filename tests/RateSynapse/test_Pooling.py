@@ -23,11 +23,18 @@ class test_Pooling(unittest.TestCase):
     def setUpClass(cls):
         """
         Compile the network for this test
-        TODO! copy of Pooling is not possible
         """
-        # setup(structural_plasticity=False)
-        neuron = Neuron(parameters="baseline = 0", equations="r = baseline")
-        neuron2 = Neuron(equations="r = sum(exc) : init = 0.0")
+        neuron = Neuron(
+            parameters="baseline = 0",
+            equations="r = baseline"
+        )
+
+        neuron2 = Neuron(
+            equations="""
+                r = sum(exc)        : init = 0.0
+                rd = sum(exc_delay) : init = 0.0
+            """
+        )
 
         cls.test_net = Network()
 
@@ -45,19 +52,24 @@ class test_Pooling(unittest.TestCase):
         )
         cls.proj2.pooling(extent=(2, 3, 1))
 
+        cls.proj3 = cls.test_net.connect(
+            Pooling(pre=cls.pop1, post=cls.pop2, target="exc_delay", operation='mean')
+        )
+        cls.proj3.pooling(extent=(1, 1, 10), delays=3.0)
+
         cls.test_net.compile(silent=True)
-
-        baseline = numpy.arange(0.0, 6.0, 0.1)
-        baseline = numpy.moveaxis(numpy.reshape(baseline, (10, 2, 3)), 0, -1)
-
-        cls.pop1.baseline = baseline
-        cls.test_net.simulate(2)
 
     def setUp(self):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        pass
+        self.test_net.reset()
+
+        baseline = numpy.arange(0.0, 6.0, 0.1)
+        baseline = numpy.moveaxis(numpy.reshape(baseline, (10, 2, 3)), 0, -1)
+
+        self.pop1.baseline = baseline
+        self.test_net.simulate(2)
 
     def test_get_size(self):
         """
@@ -89,3 +101,18 @@ class test_Pooling(unittest.TestCase):
         """
         comb = numpy.array([0.25 + 0.6 * i for i in range(10)])
         numpy.testing.assert_allclose(self.pop3.get('r').flatten(), comb)
+
+    def test_pool_delay(self):
+        """
+        Tests if after pooling the last dimension, the rates in the post
+        projection are as expected
+        """
+        comb = numpy.array([[0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0]])
+        numpy.testing.assert_allclose(self.pop2.get('rd'), comb)
+
+        # Simulate another 2 ms and verify the output
+        self.test_net.simulate(2.0)
+        comb = numpy.array([[2.7, 2.8, 2.9],
+                            [3.0, 3.1, 3.2]])
+        numpy.testing.assert_allclose(self.pop2.get('rd'), comb)
