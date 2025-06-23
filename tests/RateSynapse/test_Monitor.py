@@ -1,10 +1,10 @@
 """
 
-    test_Projection.py
+    test_Monitor.py
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2024-25 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+    Copyright (C) 2025 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,15 +20,93 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-
-import unittest
 import numpy
+import unittest
 from ANNarchy import Network, Neuron, Synapse
 
-class test_ProjectionMonitor(unittest.TestCase):
+class test_MonitorRatePSP():
+    """
+    This test covers the recording of the post-synaptic potential in rate-coded
+    networks.
+    """
 
     @classmethod
     def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        in_neuron = Neuron(
+            equations="""
+                r = t
+            """
+        )        
+        out_neuron = Neuron(
+            equations="""
+                r = sum(exc)
+            """
+        )
+
+        cls._network = Network()
+
+        pre = cls._network.create(geometry=3, neuron=in_neuron)
+        post = cls._network.create(geometry=1, neuron=out_neuron)
+        proj = cls._network.connect(pre, post, "exc")
+        proj.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
+
+        cls._mon_sum_exc = cls._network.monitor(post, "sum(exc)", start=False)
+
+        cls._network.compile()
+
+    @classmethod
+    def tearDownClass(cls):
+        """ Delete class instance. """
+        del cls._network
+
+    def setUp(self):
+        """
+        Automatically called before each test method, basically to reset the
+        network after every test.
+        """
+        self._network.reset(populations=True, projections=True, monitors=True, synapses=False)
+
+    def test_record_sum_exc(self):
+        """
+        Tests if the post-synaptic potential, i.e., sum(target) in rate-coded models,
+        can be recored.
+        """
+        # Simulate 10 ms without recording
+        self._network.simulate(10.0)
+
+        # Record 5 ms
+        self._mon_sum_exc.start()
+        self._network.simulate(5.0)
+        self._mon_sum_exc.pause()
+
+        # Record another 10 ms
+        self._network.simulate(10.0)
+
+        # Retrieve the data
+        rec_sum_exc = self._mon_sum_exc.get('sum(exc)')
+
+        # Compare to expected result: t = 9 to t = 13 for 3 neurons
+        numpy.testing.assert_allclose(rec_sum_exc, [ [27.0], [30.0],[33.0], [36.0], [39.0] ])
+
+
+class test_MonitorLocalVariable(unittest.TestCase):
+    """
+    This test covers the recording of local variable of a rate-coded
+    synapse.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
         simple_pre_neuron = Neuron(
             equations="r = t"
         )

@@ -29,7 +29,6 @@ setup(paradigm="cuda")
 
 from Common import *
 from Interface import *
-from Monitor import *
 from Neuron import *
 from RateSynapse import *
 from SpikeSynapse import *

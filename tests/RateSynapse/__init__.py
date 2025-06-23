@@ -7,6 +7,9 @@ from .test_RateCustomConnectivity import test_CustomConnectivityNoDelay, test_Cu
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
 from .test_Projection import test_Projection, test_SliceProjections
 
+# Recording
+from .test_Monitor import test_MonitorRatePSP, test_MonitorLocalVariable
+
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
 from .test_RateDelays import test_NoDelay, test_UniformDelay, test_SynapseOperations, test_SynapticAccess

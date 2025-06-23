@@ -53,6 +53,9 @@ single_thread = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                      ["lil"],
+    "test_MonitorLocalVariable":                ["lil"],
     # SpecificProjections
     "test_Convolution":                         ["lil"],
     "test_Pooling":                             ["lil"],
@@ -86,6 +89,9 @@ open_mp = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                      ["lil"],
+    "test_MonitorLocalVariable":                ["lil"],
     # SpecificProjections
     "test_Convolution":                         ["lil"],
     "test_Pooling":                             ["lil"],
@@ -94,7 +100,7 @@ open_mp = {
 
 cuda = {
     # test_RateTransmission.py
-    "test_RateTransmission":                ["csr", "ell", "ellr", "sell", "dense"],
+    "test_RateTransmission":                ["csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
@@ -117,6 +123,9 @@ cuda = {
     "test_UniformDelay":                    ["csr", "ellr", "dense"],
     "test_SynapseOperations":               ["csr", ],
     "test_SynapticAccess":                  ["csr", "ellr"],
+    # test_Monitor
+    "test_MonitorRatePSP":                  ["csr"],
+    "test_MonitorLocalVariable":            ["csr"],
     # SpecificProjections
     "test_Convolution":                     ["csr"],
     "test_Pooling":                         ["csr"],
