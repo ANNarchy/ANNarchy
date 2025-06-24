@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ANNarchy"
-version = "5.0.0rc3"
+version = "5.0.0rc4"
 description = 'Artificial Neural Networks architect'
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,13 +27,13 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-    'setuptools',
-    'cython',
-    'numpy',
-    'sympy',
-    'scipy',
-    'matplotlib',
-    'tqdm',
+    "setuptools",
+    "cython",
+    "numpy",
+    "sympy",
+    "scipy",
+    "matplotlib",
+    "tqdm",
     "h5py",
     "lxml",
     "nanobind",

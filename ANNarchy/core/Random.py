@@ -81,6 +81,9 @@ class Uniform(RandomDistribution):
         else:
             self.rng = rng
 
+        if min >= max:
+            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
+
         self.min = min
         self.max = max
 
@@ -115,6 +118,8 @@ class DiscreteUniform(RandomDistribution):
         else:
             self.rng = rng
 
+        if min >= max:
+            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
 
         self.min = min
         self.max = max
