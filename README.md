@@ -1,5 +1,6 @@
 # ANNarchy 
 
+[![PyPI version](https://badge.fury.io/py/ANNarchy.svg)](https://badge.fury.io/py/ANNarchy)
 [![DOI](https://zenodo.org/badge/57382690.svg)](https://zenodo.org/badge/latestdoi/57382690)
 
 
@@ -11,7 +12,7 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 * Bug reports and feature requests: [Issue Tracker](https://github.com/ANNarchy/ANNarchy/issues).
 
 > [!NOTE]
-> ANNarchy 5.0 has been released as pre-release. It is a major update with many new features and improvements. To use the new release, you need to install ANNarchy with *pip install ANNarchy==5.0.0rc0*. The documentation is available at [annarchy.github.io](https://annarchy.github.io). The documentation for ANNarchy 4.8 is available at [annarchy.github.io/ANNarchy4](https://annarchy.github.io/ANNarchy4).
+> ANNarchy 5.0 has been released as pre-release. It is a major update with many new features and improvements. To use the new release, you need to install ANNarchy with *pip install ANNarchy==5.0.0rc4*. The documentation is available at [annarchy.github.io](https://annarchy.github.io). The documentation for ANNarchy 4.8 is available at [annarchy.github.io/ANNarchy4](https://annarchy.github.io/ANNarchy4).
 
 
 ### Citation
