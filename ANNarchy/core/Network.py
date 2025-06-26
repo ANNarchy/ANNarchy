@@ -478,7 +478,7 @@ class Network (metaclass=NetworkMeta):
         :param silent: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler._compile(
+        Compiler.compile(
             directory=directory, 
             clean=clean, 
             silent=silent, 

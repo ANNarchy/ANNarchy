@@ -7,6 +7,8 @@ import sys
 
 from ANNarchy.intern import ConfigManagement
 
+_printed_warnings = set()
+
 class ANNarchyException(Exception):
     """
     Custom exception that can be catched in some cases (IO) instead of quitting.
@@ -68,6 +70,11 @@ def _warning(*var_text):
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
+    # only emit each unique warning once
+    if text in _printed_warnings:
+        return
+    _printed_warnings.add(text)
+
     if not ConfigManagement.get_global_config('suppress_warnings'):
         print(text)
 

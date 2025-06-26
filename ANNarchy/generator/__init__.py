@@ -1,1 +1,2 @@
 
+from .Compiler import compile

@@ -15,6 +15,28 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
+__all__ = [
+    'clear',
+    'check_profile_results',
+    'reset',
+    'magic_network',
+    'get_population',
+    'get_projection',
+    'populations',
+    'projections',
+    'monitors',
+    'add_function',
+    'functions',
+    'enable_learning',
+    'disable_learning',
+    'get_time',
+    'set_time',
+    'get_current_step',
+    'set_current_step',
+    'dt',
+    'set_seed',
+]
+
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
