@@ -51,8 +51,11 @@ def simulate(
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
 
-    if not network.instance:
+    # Sanity checks
+    if not network.compiled:
         Messages._error('simulate(): the network is not compiled yet.')
+    if not network.instance:
+        Messages._error('simulate(): the network is not initialized yet.')
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / ConfigManager().get("dt", net_id))
@@ -131,13 +134,19 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
 
+    # Sanity checks
     if not network.compiled:
         Messages._error('simulate_until(): the network is not compiled yet.')
+    if not network.instance:
+        Messages._error('simulate_until(): the network is not initialized yet.')
 
+    # Compute maximum number of steps
     nb_steps = ceil(float(max_duration) / ConfigManager().get("dt", net_id))
+
     if not isinstance(population, list):
         population = [population]
 
+    # Perform the simulation until max_duration is reached or the conditio is fulfilled.
     if measure_time:
         tstart = time.time()
 
@@ -148,7 +157,6 @@ def simulate_until(max_duration:float, population: Population | list[Population]
         Messages._print('Simulating', nb/ConfigManager().get("dt", net_id)/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
-
 def step(net_id=0):
     """
     Performs a single simulation step (duration = `dt`).
@@ -156,9 +164,13 @@ def step(net_id=0):
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
 
+    # Sanity check
     if not network.compiled:
         Messages._error('step(): the network is not compiled yet.')
+    if not network.instance:
+        Messages._error('step(): the network is not initialized yet.')
 
+    # Simulate a single step
     network.instance.step()
 
 
@@ -236,7 +248,6 @@ class every :
 
     def __init__(self, network:"Network"=None, period:float=1.0, offset:float=0., wait:float=0.0) -> None:
 
-        
         self.network = network if network is not None else NetworkManager().magic_network()
         self.network._callbacks.append(self)
 

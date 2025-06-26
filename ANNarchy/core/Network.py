@@ -736,13 +736,16 @@ class Network (metaclass=NetworkMeta):
 
         # Get the parameters
         id, classname, config, method, dt, seed, init_args, method_args = params
-        
+
         # Create an instance with the same parameters as the original instance
         net = classname(dt=dt, seed=seed, **init_args)
 
         # Set the config
         ConfigManager().set_config(net.id, config)
-        
+
+        # Transfer compilation state of "parent" network
+        net.compiled = NetworkManager().get_network(id).compiled
+
         # Instantiate the network but not compile
         net._instantiate(import_id=id)
         
@@ -790,9 +793,16 @@ class Network (metaclass=NetworkMeta):
         """
         if not 'dt' in kwargs.keys():
             kwargs.update(dict(dt=self.dt))
-            
+
+        # Sanity check
+        if not self.compiled:
+            Messages._error("The copied network should be compiled before calling Network.copy().")
+
         # Create an instance of the child class
         net = self.__class__(*args, **kwargs)
+
+        # Transfer the compiled state from "parent" network
+        net.compiled = self.compiled
 
         # Instantiate the network with the current id.
         net._instantiate(self.id)
@@ -1122,9 +1132,9 @@ class Network (metaclass=NetworkMeta):
         return self._data.compiled
     
     @compiled.setter
-    def compiled(self, value) -> None:
-        self._data.compiled = True
-    
+    def compiled(self, compilation_state: bool) -> None:
+        self._data.compiled = compilation_state
+
     @property
     def directory(self) -> str:
         """
@@ -1133,7 +1143,7 @@ class Network (metaclass=NetworkMeta):
         return self._data.directory
     
     @directory.setter
-    def directory(self, directory) -> None :
+    def directory(self, directory: str) -> None:
         self._data.directory = directory
 
     @property
