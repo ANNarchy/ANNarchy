@@ -65,7 +65,7 @@ _deprecated = {
     "reset", "get_population", "get_projection", "populations", "projections", "monitors",
     "enable_learning", "disable_learning", "get_time", "set_time", "get_current_step",
     "set_current_step", "dt", "set_seed", "step", "callbacks_enabled", "disable_callbacks",
-    "enable_callbacks", "clear_all_callbacks", "save", "load",
+    "enable_callbacks", "clear_all_callbacks", "save", "load", "save_parameters", "load_parameters",
 }
 def _deprecated_wrapper(obj, name, message=None):
     if isinstance(obj, types.FunctionType):
@@ -99,6 +99,10 @@ for name in _deprecated:
             message = "compile is deprecated. Please use ann.Network().compile() instead.\n\t Since ANNarchy 5.0 the compilation of shadow networks is not supported anymore\n\t and using them possibly could generate errorneous simulation results or crash.\n\t You need to construct a Network object, please refer to the documentation."
         elif name == "set_seed":
             message = "set_seed is deprecated. Please use ann.Network().seed() instead."
+        elif name == "save_parameters":
+            message = "save_parameters is deprecated and will be removed in future releases."
+        elif name == "load_parameters":
+            message = "load_parameters is deprecated. Parameters can be directly loaded and used as dictionaries in Neuron and Synapse definitions."
         else:
             message = None
         globals()[name] = _deprecated_wrapper(obj, name, message)
