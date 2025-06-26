@@ -6,7 +6,7 @@ This file is part of ANNarchy.
 """
 import unittest
 
-from ANNarchy import LeakyIntegrator, Network, setup, Synapse
+from ANNarchy import LeakyIntegrator, Network, Synapse
 
 
 class test_StructuralPlasticityModel(unittest.TestCase):
@@ -23,8 +23,6 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         Compile the network for this test, this was an example defintion
         provided by the reporter.
         """
-        setup(structural_plasticity=True)
-
         value_synapse = Synapse(
             parameters="""
                 tau_utility = 1000
@@ -38,6 +36,7 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         )
 
         cls.test_net = Network()
+        cls.test_net.config(structural_plasticity=True)
 
         v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
 
@@ -52,14 +51,6 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         In our *setUp()* function we call *reset()* to reset the network.
         """
         self.test_net.reset()
-
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Remove the structural_plasticity global flag to not interfere with
-        further tests.
-        """
-        setup(structural_plasticity=False)
 
     def test_invoke_compile(self):
         """
@@ -84,8 +75,6 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         Compile the network for this test, this was an example defintion
         provided by the reporter.
         """
-        setup(structural_plasticity=True)
-
         value_synapse = Synapse(
             parameters="""
                 tau_utility = 1000
@@ -99,6 +88,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         )
 
         cls.test_net = Network()
+        cls.test_net.config(structural_plasticity=True)
 
         v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
 
@@ -108,19 +98,10 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         # build the network
         cls.test_net.compile(silent=True)
 
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Remove the structural_plasticity global flag to not interfere with
-        further tests.
-        """
-        setup(structural_plasticity=False)
-
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        setup(structural_plasticity=True)
         self.test_net.reset()
 
     def test_invoke_compile(self):

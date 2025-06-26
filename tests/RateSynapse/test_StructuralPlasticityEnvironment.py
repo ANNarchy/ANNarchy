@@ -7,7 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
-from ANNarchy import Network, Neuron, Synapse, Uniform, setup
+from ANNarchy import Network, Neuron, Synapse, Uniform
 
 class test_StructuralPlasticityEnvironment(unittest.TestCase):
     """
@@ -25,8 +25,6 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         Compile the network for this test
         """
-        setup(structural_plasticity=True)
-
         neuron = Neuron(
             parameters="tau = 10",
             equations="r += 1/tau * t"
@@ -40,6 +38,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         )
 
         cls.test_net = Network()
+        cls.test_net.config(structural_plasticity=True)
 
         pop1 = cls.test_net.create(geometry=(10), neuron=neuron)
 
@@ -67,14 +66,6 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         cls.test_proj3.alpha = Uniform(0.1,1)
 
         cls.test_net.compile(silent=True)
-
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Remove the structural_plasticity global flag to not interfere with
-        further tests.
-        """
-        setup(structural_plasticity=False)
 
     def setUp(self):
         """
