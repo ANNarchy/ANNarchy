@@ -7,10 +7,9 @@ for more details: https://annarchy.readthedocs.io/en/latest/manual/Connector.htm
 """
 import numpy as np
 
-from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
+from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 try:
@@ -21,7 +20,7 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-def connect_one_to_one(self, 
+def connect_one_to_one(self: "Projection", 
                        weights: float | RandomDistribution = 1.0, 
                        delays: float | RandomDistribution = 0.0, 
                        force_multiple_weights:bool=False, 
@@ -54,12 +53,13 @@ def connect_one_to_one(self,
 
     return self
 
-def connect_all_to_all(self, 
-                       weights: float | RandomDistribution, 
-                       delays: float | RandomDistribution =0.0, 
-                       allow_self_connections:bool=False, 
-                       force_multiple_weights:bool=False, 
-                       storage_format:str=None, storage_order:str=None)  -> "Projection":
+def connect_all_to_all(self: "Projection",
+                       weights: float | RandomDistribution,
+                       delays: float | RandomDistribution =0.0,
+                       allow_self_connections:bool=False,
+                       force_multiple_weights:bool=False,
+                       storage_format:str=None,
+                       storage_order:str=None)  -> "Projection":
     """
     all-to-all (fully-connected) connection pattern.
 
@@ -89,7 +89,7 @@ def connect_all_to_all(self,
 
     return self
 
-def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
+def connect_gaussian(self: "Projection", amp:float, sigma:float, delays: float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
     """
     Gaussian connection pattern.
 
@@ -117,7 +117,7 @@ def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistrib
     
     return self
 
-def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:float, delays:float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
+def connect_dog(self: "Projection", amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:float, delays:float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
     """
     Difference-Of-Gaussians connection pattern.
 
@@ -147,7 +147,7 @@ def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:f
 
     return self
 
-def connect_fixed_probability(self, probability:float, weights:float | RandomDistribution, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
+def connect_fixed_probability(self: "Projection", probability:float, weights:float | RandomDistribution, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Probabilistic sparse connection pattern.
 
@@ -176,7 +176,7 @@ def connect_fixed_probability(self, probability:float, weights:float | RandomDis
 
     return self
 
-def connect_fixed_number_pre(self, number:int, weights: float | RandomDistribution, delays: float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
+def connect_fixed_number_pre(self: "Projection", number:int, weights: float | RandomDistribution, delays: float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Connection pattern where each post-synaptic neuron receives a fixed number of pre-synaptic neurons.
 
@@ -206,7 +206,7 @@ def connect_fixed_number_pre(self, number:int, weights: float | RandomDistributi
 
     return self
 
-def connect_fixed_number_post(self, number:int, weights:float | RandomDistribution=1.0, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
+def connect_fixed_number_post(self: "Projection", number:int, weights:float | RandomDistribution=1.0, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Each pre-synaptic neuron randomly sends a fixed number of connections to the post-synaptic neurons.
 
@@ -236,7 +236,7 @@ def connect_fixed_number_post(self, number:int, weights:float | RandomDistributi
     return self
 
 
-def connect_with_func(self, method, storage_format:str=None, storage_order:str=None, **args) -> "Projection":
+def connect_with_func(self: "Projection", method, storage_format:str=None, storage_order:str=None, **args) -> "Projection":
     """
     Connection pattern based on a user-defined function.
 
@@ -251,52 +251,49 @@ def connect_with_func(self, method, storage_format:str=None, storage_order:str=N
         # Create a LIL structure for the connectivity matrix
         synapses = ann.LILConnectivity()
         # For all neurons in the post-synaptic population
-        for post_rank in xrange(post.size):
+        for post_rank in range(post.size):
             # Decide which pre-synaptic neurons should form synapses
             ranks = []
-            for pre_rank in xrange(pre.size):
-                if random.random() < probability:
+            for pre_rank in range(pre.size):
+                if numpy.random.random() < probability:
                     ranks.append(pre_rank)
             # Create weights and delays arrays of the same size
-            values = [weight for i in xrange(len(ranks)) ]
-            delays = [0 for i in xrange(len(ranks)) ]
+            values = [weight for i in range(len(ranks)) ]
+            delays = [0 for i in range(len(ranks)) ]
             # Add this information to the LIL matrix
             synapses.add(post_rank, ranks, values, delays)
 
         return synapses
 
-    proj = ann.Projection(pop1, pop2, target = 'inh')
-    proj.connect_with_func(
+    proj = net.connect(pop1, pop2, target = 'inh')
+    proj.from_function(
         method=probabilistic_pattern, 
         weight=1.0, 
         probability=0.3
-    ) 
-
+    )
     ```
 
     :param method: Method to call. The method **must** return a LILConnectivity object.
     :param args: List of additional arguments needed by the function.
     """
-    # Invoke the method directly, we need the delays already....
+    # Construct the pattern
     synapses = method(self.pre, self.post, **args)
+
+    # Sanity check: doublons, ascending order of ranks
     synapses.validate()
 
-    # Treat delays
-    if synapses.uniform_delay != -1: # uniform delay
-        d = synapses.max_delay * ConfigManager().get('dt', self.net_id)
-        self.connector_delay_dist = None
-    else:
-        # Just to trick _store_connectivity(), the real delays are in the CSR
-        d = DiscreteUniform(0., synapses.max_delay * ConfigManager().get('dt', self.net_id))
-        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * ConfigManager().get('dt', self.net_id))
+    # No delay or uniform delay: single value / non-uniform delay: LIL
+    delays = synapses.max_delay if synapses.uniform_delay != -1 else synapses.delay
 
-    self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format, storage_order=storage_order)
+    # Store for later initialization
+    self._store_connectivity(self._load_from_lil, (synapses, ), delays, storage_format=storage_format, storage_order=storage_order)
 
+    # Report
     self.connector_name = "User-defined"
     self.connector_description = "Created by the method " + method.__name__
     return self
 
-def connect_from_matrix_market(self, filename:str, storage_format:str=None, storage_order:str=None) -> "Projection":
+def connect_from_matrix_market(self: "Projection", filename:str, storage_format:str=None, storage_order:str=None) -> "Projection":
     """
     Loads a weight matrix encoded in the Matrix Market format. This connector is intended for benchmarking purposes.
 
@@ -304,7 +301,6 @@ def connect_from_matrix_market(self, filename:str, storage_format:str=None, stor
     """
     from scipy.io import mmread
     from scipy.sparse import coo_matrix
-    import tarfile
 
     from ANNarchy.cython_ext import LILConnectivity
     if not filename.endswith(".mtx"):
@@ -347,10 +343,13 @@ def connect_from_matrix_market(self, filename:str, storage_format:str=None, stor
     self.connector_description = "A weight matrix load from .mtx file"
     return self
 
-def _load_from_lil(self, pre, post, synapses):
+def _load_from_lil(self: "Projection", pre: "Population", post: "Population", synapses: LILConnectivity):
     """
     Load from LILConnectivity instance.
     """
+    if not isinstance(synapses, LILConnectivity):
+        Messages._error(f"_load_from_lil(): expected a LILConnectivty instance (Projection: pre={pre.name}, post={post.name}, name='{self.name}').")
+
     return synapses
 
 def connect_from_matrix(self, weights: np.array, delays=0.0, pre_post=False, storage_format=None, storage_order=None) -> "Projection":
