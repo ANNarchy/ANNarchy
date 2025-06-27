@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, TimedArray
 
 class test_TimedArray(unittest.TestCase):
@@ -61,7 +62,7 @@ class test_TimedArray(unittest.TestCase):
         proj4 = cls._network.connect(inp4, cls.output, 'exc4')
         proj4.one_to_one(1.0)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -184,7 +185,7 @@ class test_TimedArrayLateInit(unittest.TestCase):
         proj4 = cls._network.connect(inp4, cls.output, 'exc4')
         proj4.one_to_one(1.0)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -303,7 +304,7 @@ class test_TimedArrayUpdate(unittest.TestCase):
         proj2 = cls._network.connect(cls.input2, cls.output, 'exc_2')
         proj2.one_to_one(1.0)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

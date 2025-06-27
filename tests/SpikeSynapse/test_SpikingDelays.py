@@ -6,6 +6,7 @@ This file is part of ANNarchy.
 """
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import clear, DiscreteUniform, Network, Neuron, Population, \
     Projection, Synapse, Uniform
 
@@ -48,7 +49,7 @@ class test_SpikingNoDelay():
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -169,7 +170,7 @@ class test_SpikingUniformDelay():
         # Build up network
         cls._network = Network()
         cls._network.add([pop1, pop2, proj, proj2])
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
         # Store references for easier usage in test cases
         cls._proj = cls._network.get(proj)
@@ -323,7 +324,7 @@ class test_SpikingNonuniformDelay():
         # Build up network
         cls._network = Network()
         cls._network.add([pop1, pop2, proj])
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
         # Store references for easier usage in test cases
         cls._proj = cls._network.get(proj)
@@ -420,7 +421,7 @@ class test_SynapseOperations():
 
         cls._network = Network()
         cls._network.add([pop1, pop2, proj1, proj2, proj3])
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
         cls._pop1 = cls._network.get(pop1)
         cls._pop2 = cls._network.get(pop2)
@@ -527,7 +528,7 @@ class test_SynapticAccess():
         cls._network = Network()
         cls._network.add([pre, post, proj])
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
         cls.net_pop = cls._network.get(post)
 

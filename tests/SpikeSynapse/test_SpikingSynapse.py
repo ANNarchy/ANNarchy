@@ -5,6 +5,8 @@ This file is part of ANNarchy.
 :license: GPLv2, see LICENSE for details.
 """
 import numpy
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network, Izhikevich, Uniform
 
 class test_PreSpike():
@@ -40,7 +42,7 @@ class test_PreSpike():
         cls.test_proj.all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -106,7 +108,7 @@ class test_PostSpike():
         cls.test_proj.all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -170,7 +172,7 @@ class test_TimeDependentUpdate():
         proj = cls._network.connect(pop, pop, 'exc', STDP)
         proj.all_to_all(Uniform(-1.0, 1.0), storage_format=cls.storage_format,storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

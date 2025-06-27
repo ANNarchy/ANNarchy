@@ -5,6 +5,8 @@ This file is part of ANNarchy.
 :license: GPLv2, see LICENSE for details.
 """
 import numpy
+
+from conftest import TARGET_FOLDER
 from ANNarchy import DiscreteUniform, Network, Neuron
 from ANNarchy.intern.Messages import InvalidConfiguration
 
@@ -45,7 +47,7 @@ class test_SpikeTransmissionNoDelay():
 
         # build network and store required object
         # instances
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -117,7 +119,7 @@ class test_SpikeTransmissionUniformDelay():
         # build network and store required object
         # instances
         try:
-            cls._network.compile(silent=True)
+            cls._network.compile(silent=True, directory=TARGET_FOLDER)
         except InvalidConfiguration:
             cls._network = None
 
@@ -194,7 +196,7 @@ class test_SpikeTransmissionNonUniformDelay():
 
         # build network and store required object
         # instances
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

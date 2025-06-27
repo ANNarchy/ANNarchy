@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network, Synapse
 
 neuron = Neuron(
@@ -78,7 +79,7 @@ class test_PopulationMonitor(unittest.TestCase):
         )
         proj.all_to_all(weights = 1.0)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

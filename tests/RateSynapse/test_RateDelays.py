@@ -6,6 +6,8 @@ This file is part of ANNarchy.
 """
 import numpy
 import unittest
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, DiscreteUniform, Uniform
 
 class test_NoDelay(unittest.TestCase):
@@ -65,7 +67,7 @@ class test_NoDelay(unittest.TestCase):
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -197,7 +199,7 @@ class test_UniformDelay(unittest.TestCase):
         )
 
         # Build up network
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """
@@ -339,7 +341,7 @@ class test_NonUniformDelay(unittest.TestCase):
             storage_order=cls.storage_order)
 
         # Build up network
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -431,7 +433,7 @@ class test_SynapseOperations(unittest.TestCase):
         proj3.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -534,7 +536,7 @@ class test_SynapticAccess(unittest.TestCase):
         proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

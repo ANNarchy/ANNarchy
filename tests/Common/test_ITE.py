@@ -5,7 +5,10 @@ This file is part of ANNarchy.
 :license: GPLv2, see LICENSE for details.
 """
 import unittest
+import pytest
 import numpy
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network
 
 class test_ITE(unittest.TestCase):
@@ -77,7 +80,7 @@ class test_ITE(unittest.TestCase):
         cls.net_pop5 = cls._network.create(geometry=1, neuron=NestedITE2)
         cls.net_pop6 = cls._network.create(geometry=1, neuron=ITEinODE2)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

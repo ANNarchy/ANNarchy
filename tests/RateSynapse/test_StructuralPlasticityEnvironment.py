@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, Uniform
 
 class test_StructuralPlasticityEnvironment(unittest.TestCase):
@@ -65,7 +66,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         cls.test_proj3.one_to_one(weights=1.0)
         cls.test_proj3.alpha = Uniform(0.1,1)
 
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """

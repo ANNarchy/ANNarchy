@@ -4,12 +4,14 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 from ANNarchy.intern.Messages import ANNarchyException
 
-class test_DendriteDefaultSynapse():
+class test_DendriteDefaultSynapse(unittest.TestCase):
     """
     This class tests the *Dendrite* object, which gathers all synapses
     belonging to a post-synaptic neuron in a *Projection*:
@@ -51,7 +53,7 @@ class test_DendriteDefaultSynapse():
             force_multiple_weights=True
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -112,7 +114,7 @@ class test_DendriteDefaultSynapse():
         numpy.testing.assert_allclose(self._proj.dendrite(6).w,
                                       [2.0, 2.0, 3.0, 2.0, 2.0])
 
-class test_DendriteModifiedSynapse():
+class test_DendriteModifiedSynapse(unittest.TestCase):
     """
     This class tests the *Dendrite* object, which gathers all synapses
     belonging to a post-synaptic neuron in a *Projection*:
@@ -167,7 +169,7 @@ class test_DendriteModifiedSynapse():
             storage_order=cls.storage_order
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -288,7 +290,6 @@ class test_DendriteModifiedSynapse():
         update = dict( {'tau': 7000 } )
         self._proj.dendrite(1).set(update)
         numpy.testing.assert_allclose(self._proj.tau, new_value)
-
 
     def test_get_by_name(self):
         """

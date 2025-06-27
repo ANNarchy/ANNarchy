@@ -6,9 +6,11 @@ This file is part of ANNarchy.
 """
 import numpy
 import unittest
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse
 
-class test_MonitorRatePSP():
+class test_MonitorRatePSP(unittest.TestCase):
     """
     This test covers the recording of the post-synaptic potential in rate-coded
     networks.
@@ -43,7 +45,7 @@ class test_MonitorRatePSP():
 
         cls._mon_sum_exc = cls._network.monitor(post, "sum(exc)", start=False)
 
-        cls._network.compile()
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -113,7 +115,7 @@ class test_MonitorLocalVariable(unittest.TestCase):
 
         cls._mon_m = cls._network.monitor(proj, ['y'])
         
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

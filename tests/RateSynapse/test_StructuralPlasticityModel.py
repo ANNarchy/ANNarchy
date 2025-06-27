@@ -6,6 +6,7 @@ This file is part of ANNarchy.
 """
 import unittest
 
+from conftest import TARGET_FOLDER
 from ANNarchy import LeakyIntegrator, Network, Synapse
 
 
@@ -44,7 +45,7 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         value_proj.fixed_number_pre(number=1, weights=1.0)
 
         # build the network
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """
@@ -96,7 +97,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         value_proj.fixed_number_pre(number=1, weights=1.0, delays=2.0)
 
         # build the network
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """

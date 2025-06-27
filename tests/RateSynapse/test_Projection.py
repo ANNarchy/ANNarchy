@@ -8,6 +8,7 @@ import unittest
 import numpy
 from scipy import sparse
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 
 class test_Projection(unittest.TestCase):
@@ -65,7 +66,7 @@ class test_Projection(unittest.TestCase):
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
         )
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """
@@ -170,7 +171,7 @@ class test_SliceProjections(unittest.TestCase):
         cls._both = cls._network.connect(cls._pop1[1:4], cls._pop2[1:3], target="bothv")
         cls._both.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """

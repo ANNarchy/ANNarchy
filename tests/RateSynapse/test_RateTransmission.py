@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
 class test_RateTransmission(unittest.TestCase):
@@ -45,7 +46,7 @@ class test_RateTransmission(unittest.TestCase):
         cls._proj_fnp = cls._network.connect(pre=pop1, post=pop2, target="exc")
         cls._proj_fnp.fixed_number_pre(3, weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

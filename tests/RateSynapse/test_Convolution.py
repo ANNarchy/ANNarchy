@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 from ANNarchy.extensions.convolution import Convolution
 
@@ -74,7 +75,7 @@ class test_Convolution(unittest.TestCase):
         proj6 = cls.test_net.connect(Convolution(pre=cls.pop0, post=cls.pop1, target="exc_delay"))
         proj6.connect_filter(conv_filter, delays=3.0)
 
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

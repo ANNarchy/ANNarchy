@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Uniform
 
 # neuron defintions common used for test cases
@@ -36,7 +37,7 @@ class test_Population1D(unittest.TestCase):
         cls._network = Network()
         cls._population_1 = cls._network.create(3, neuron)
         cls._population_2 = cls._network.create(3, neuron2)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -234,7 +235,7 @@ class test_Population2D(unittest.TestCase):
         cls._network = Network()
         cls._population_1 = cls._network.create(geometry=(3, 3), neuron=neuron)
         cls._population_2 = cls._network.create(geometry=(3, 3), neuron=neuron2)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -445,7 +446,7 @@ class test_Population3D(unittest.TestCase):
         cls._network = Network()
         cls._population_1 = cls._network.create(geometry=(3, 3, 3), neuron=neuron)
         cls._population_2 = cls._network.create(geometry=(3, 3, 3), neuron=neuron2)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -679,7 +680,7 @@ class test_Population2x3D(unittest.TestCase):
         cls._network = Network()
         cls._population_1 = cls._network.create(geometry=(3, 2), neuron=neuron)
         cls._population_2 = cls._network.create(geometry=(3, 2), neuron=neuron2)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

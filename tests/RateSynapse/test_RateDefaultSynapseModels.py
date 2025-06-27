@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network, models
 
 class test_RateDefaultSynapseModels(unittest.TestCase):
@@ -35,7 +36,7 @@ class test_RateDefaultSynapseModels(unittest.TestCase):
         IBCM = cls._network.connect(cls._inp, cls._out, synapse=models.IBCM, target="IBCM")
         IBCM.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

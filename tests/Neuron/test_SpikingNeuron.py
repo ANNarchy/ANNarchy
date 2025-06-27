@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
 class test_SpikingCondition(unittest.TestCase):
@@ -51,7 +52,7 @@ class test_SpikingCondition(unittest.TestCase):
         cls._population_1 = cls._network.create(geometry=3, neuron=neuron1)
         cls._population_2 = cls._network.create(geometry=3, neuron=neuron2)
         cls._population_3 = cls._network.create(geometry=3, neuron=neuron3)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

@@ -10,6 +10,8 @@ from shutil import rmtree
 import unittest
 from unittest.mock import patch
 import numpy
+
+from conftest import TARGET_FOLDER
 from ANNarchy import load_parameters, save_parameters
 
 
@@ -47,7 +49,7 @@ class test_IO_Rate(unittest.TestCase):
         Compile the network for this test
         """
         cls.network = RateCodedNetwork()
-        cls.network.compile(silent=True)
+        cls.network.compile(silent=True, directory=TARGET_FOLDER)
 
         cls.attribute_names = ["Population Parameter", "Population Rate",
                                "Default Projection Parameter",
@@ -165,7 +167,7 @@ class test_IO_Spiking(unittest.TestCase):
         Compile the network for this test
         """
         cls.network = SpikingNetwork()
-        cls.network.compile(silent=True)
+        cls.network.compile(silent=True, directory=TARGET_FOLDER)
 
         cls.attribute_names = ["Population Parameter", "Population V",
                                "STDP Projection Parameter",

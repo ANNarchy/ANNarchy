@@ -6,8 +6,10 @@ This file is part of ANNarchy.
 """
 
 import unittest
-import numpy as np
-import ANNarchy as ann
+import numpy
+
+from conftest import TARGET_FOLDER
+from ANNarchy import Network, Neuron, DiscreteUniform
 
 class test_SingleCondition(unittest.TestCase):
     """
@@ -18,17 +20,17 @@ class test_SingleCondition(unittest.TestCase):
         """
         Compile the network for this test.
         """
-        simple_t = ann.Neuron(
+        simple_t = Neuron(
             equations = "r += 1",
         )
 
-        cls._network = ann.Network()
+        cls._network = Network()
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t)
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
+        cls._pop2.r = DiscreteUniform(-4,-2, rng=numpy.random.default_rng(56789))
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -62,17 +64,17 @@ class test_TwoConditionWithOr(unittest.TestCase):
         """
         Compile the network for this test.
         """
-        simple_t = ann.Neuron(
+        simple_t = Neuron(
             equations = "r += 1",
         )
 
-        cls._network = ann.Network()
+        cls._network = Network()
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
+        cls._pop2.r = DiscreteUniform(-4,-2, rng=numpy.random.default_rng(56789))
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
 
     @classmethod
@@ -106,17 +108,17 @@ class test_TwoConditionWithAnd(unittest.TestCase):
         """
         Compile the network for this test.
         """
-        simple_t = ann.Neuron(
+        simple_t = Neuron(
             equations = "r += 1",
         )
 
-        cls._network = ann.Network()
+        cls._network = Network()
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
+        cls._pop2.r = DiscreteUniform(-4,-2, rng=numpy.random.default_rng(56789))
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

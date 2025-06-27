@@ -7,7 +7,8 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
-from ANNarchy import Monitor, Network, Neuron, Population
+from conftest import TARGET_FOLDER
+from ANNarchy import Network, Neuron
 
 class test_BuiltinFunctions(unittest.TestCase):
     """
@@ -34,7 +35,7 @@ class test_BuiltinFunctions(unittest.TestCase):
         cls._network = Network()
         pop1 = cls._network.create(geometry=1, neuron=BuiltinFuncs)
         cls._test_mon = cls._network.monitor(pop1, ['r', 'pr', 'clip_below', 'clip_within', 'clip_above'])
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

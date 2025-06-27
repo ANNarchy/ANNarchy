@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
 neuron = Neuron(
@@ -26,7 +27,7 @@ class test_PopulationView(unittest.TestCase):
         """
         cls._network = Network()
         cls._population = cls._network.create(geometry=(8, 8), neuron=neuron)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

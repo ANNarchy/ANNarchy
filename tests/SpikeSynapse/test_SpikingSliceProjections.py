@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Population, Neuron, Network, Projection
 
 
@@ -48,7 +49,7 @@ class test_SpikingPopulationView(unittest.TestCase):
 
         cls.test_net = Network()
         cls.test_net.add([inp, out, STP, STDP])
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
         cls.inp = cls.test_net.get(inp)
         cls.out = cls.test_net.get(out)

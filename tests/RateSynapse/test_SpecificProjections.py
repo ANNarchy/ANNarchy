@@ -8,6 +8,7 @@ import unittest
 import numpy
 import math
 
+from conftest import TARGET_FOLDER
 from ANNarchy import CurrentInjection, Network, Neuron
 
 class test_CurrentInjection(unittest.TestCase):
@@ -37,7 +38,7 @@ class test_CurrentInjection(unittest.TestCase):
         proj = cls.test_net.connect(CurrentInjection(inp, cls.output, 'exc'))
         proj.connect_current()
 
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

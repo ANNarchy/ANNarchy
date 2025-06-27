@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import add_function, Network, Neuron, Synapse
 
 add_function("glob_pos(x) = pos(x)")
@@ -46,7 +47,7 @@ class test_CustomFunc(unittest.TestCase):
         cls._proj = cls._network.connect(cls._pop1, cls._pop1, 'exc', synapse)
         cls._proj.all_to_all(1.0, storage_format="lil", storage_order="post_to_pre")
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

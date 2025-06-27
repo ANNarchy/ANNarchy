@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, LeakyIntegrator
 
 class test_NeuronRandomVariables(unittest.TestCase):
@@ -36,7 +37,7 @@ class test_NeuronRandomVariables(unittest.TestCase):
         cls._tc_loc_pop = cls._network.create(3, LocalEquation)
         cls._tc_glob_pop = cls._network.create(3, GlobalEquation)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -96,7 +97,7 @@ class test_SynapseRandomVariables(unittest.TestCase):
         cls._test_proj = cls._network.connect(pre=v, post=v, target="exc", synapse=my_synapse)
         cls._test_proj.fixed_number_pre(number = 1, weights=0.0)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

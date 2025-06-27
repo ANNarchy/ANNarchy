@@ -4,9 +4,12 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import unittest
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 
-class test_Locality():
+class test_Locality(unittest.TestCase):
     """
     ANNarchy support several three different localities for
     variables/parameters: synaptic, postsynaptic, projection. This test should
@@ -46,9 +49,9 @@ class test_Locality():
         """
         Tests if the network description is compilable.
         """
-        self._network.compile(silent=True)
+        self._network.compile(silent=True, directory=TARGET_FOLDER)
 
-class test_AccessPSP():
+class test_AccessPSP(unittest.TestCase):
     """
     In this setup we test, if the access to post-synaptic potential, more
     detailed the statements pre.sum(exc) or post.sum(exc), is correctly
@@ -99,9 +102,9 @@ class test_AccessPSP():
         """
         Tests if the network description is compilable.
         """
-        self._network.compile(silent=True)
+        self._network.compile(silent=True, directory=TARGET_FOLDER)
 
-class test_ModifiedPSP():
+class test_ModifiedPSP(unittest.TestCase):
     """
     Test modified psp statements
     """
@@ -144,4 +147,4 @@ class test_ModifiedPSP():
         """
         Tests if the network description is compilable.
         """
-        self._network.compile(silent=True)
+        self._network.compile(silent=True, directory=TARGET_FOLDER)

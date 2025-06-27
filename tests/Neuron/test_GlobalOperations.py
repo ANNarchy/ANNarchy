@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
 class test_GlobalOps_1D(unittest.TestCase):
@@ -45,7 +46,7 @@ class test_GlobalOps_1D(unittest.TestCase):
 
         cls._network = Network()
         cls._population = cls._network.create(geometry=6, neuron=neuron)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -147,7 +148,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
 
         cls._network = Network()
         cls._population = cls._network.create(geometry=500, neuron=neuron)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -226,7 +227,7 @@ class test_GlobalOps_2D(unittest.TestCase):
         cls._network = Network()
         cls._population = cls._network.create(geometry=(2, 3), neuron=neuron)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -313,7 +314,7 @@ class test_GlobalOps_MultiUse(unittest.TestCase):
 
         cls._network = Network()
         cls._population = cls._network.create(geometry=6, neuron=neuron)
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

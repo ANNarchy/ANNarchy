@@ -6,6 +6,8 @@ This file is part of ANNarchy.
 """
 import unittest
 import numpy
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, Uniform
 
 class test_Explicit(object):
@@ -36,6 +38,8 @@ class test_Explicit(object):
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -44,7 +48,7 @@ class test_Explicit(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -77,6 +81,8 @@ class test_Implicit(object):
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -85,7 +91,7 @@ class test_Implicit(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -124,6 +130,8 @@ class test_ImplicitCoupled(object):
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -132,7 +140,7 @@ class test_ImplicitCoupled(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -166,6 +174,8 @@ class test_Midpoint(object):
         proj = cls._network.create(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -174,7 +184,7 @@ class test_Midpoint(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -213,6 +223,8 @@ class test_MidpointCoupled(object):
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -221,7 +233,7 @@ class test_MidpointCoupled(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -260,6 +272,8 @@ class test_Exponential(object):
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
         proj.all_to_all(weights=Uniform(1.0, 2.0))
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -268,7 +282,7 @@ class test_Exponential(object):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_work(self):
         self._network.simulate(1.0)
@@ -341,6 +355,8 @@ class test_Precision(unittest.TestCase):
         cls.m_midpoint = cls._network.monitor(pop_midpoint, ['v', 'u'])
         cls.m_exponential = cls._network.monitor(pop_exponential, ['v', 'u'])
 
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
     @classmethod
     def tearDownClass(cls):
         """
@@ -349,7 +365,7 @@ class test_Precision(unittest.TestCase):
         del cls._network
 
     def setUp(self):
-        self._network.compile(silent=True)
+        self._network.reset()
 
     def test_precision(self):
         """

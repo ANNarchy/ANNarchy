@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
 class test_NeuronUpdate(unittest.TestCase):
@@ -60,7 +61,7 @@ class test_NeuronUpdate(unittest.TestCase):
         
         cls.net_m = cls._network.monitor(cls._bound_attr, 'r')
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

@@ -5,6 +5,8 @@ This file is part of ANNarchy.
 :license: GPLv2, see LICENSE for details.
 """
 import unittest
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 
 class test_RateCodedContinuousUpdate(unittest.TestCase):
@@ -40,7 +42,7 @@ class test_RateCodedContinuousUpdate(unittest.TestCase):
             storage_order=cls.storage_order
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """

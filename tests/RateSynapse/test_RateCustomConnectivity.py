@@ -6,6 +6,7 @@ This file is part of ANNarchy.
 """
 import unittest
 
+from conftest import TARGET_FOLDER
 from ANNarchy import CSR, DiscreteUniform, Network, Neuron
 
 class test_CustomConnectivityNoDelay(unittest.TestCase):
@@ -49,7 +50,7 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
         cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc")
         cls._proj1.from_function(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -123,7 +124,7 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
             storage_format=cls.storage_format
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -198,7 +199,7 @@ class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
             storage_format=cls.storage_format
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

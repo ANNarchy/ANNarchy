@@ -8,8 +8,8 @@ import os
 import io
 import unittest
 from unittest.mock import patch
-from ANNarchy import Network, Hebb, IF_curr_exp, \
-    Monitor, Neuron, STDP, Synapse, Population, Projection, report, Uniform
+
+from ANNarchy import Network, Hebb, IF_curr_exp, Neuron, STDP, Synapse, report, Uniform
 
 class test_Report_Rate(unittest.TestCase):
     """

@@ -6,6 +6,7 @@ This file is part of ANNarchy.
 """
 import unittest
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network, models
 
 
@@ -55,7 +56,7 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
             storage_order=cls.storage_order
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):

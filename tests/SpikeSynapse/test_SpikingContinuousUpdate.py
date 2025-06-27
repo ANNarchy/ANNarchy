@@ -5,6 +5,8 @@ This file is part of ANNarchy.
 :license: GPLv2, see LICENSE for details.
 """
 import unittest
+
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 from ANNarchy.intern.Messages import InvalidConfiguration
 
@@ -49,7 +51,7 @@ class test_SpikingContinuousUpdate(unittest.TestCase):
             storage_order=cls.storage_order
         )
 
-        cls._network.compile(silent=True)
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
@@ -101,7 +103,7 @@ class test_ContinuousTransmission(unittest.TestCase):
         )
 
         try:
-            cls._network.compile(silent=True)
+            cls._network.compile(silent=True, directory=TARGET_FOLDER)
         except InvalidConfiguration:
             cls._network = None
 

@@ -7,6 +7,7 @@ This file is part of ANNarchy.
 import unittest
 import numpy
 
+from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network
 from ANNarchy.extensions.convolution import Pooling
 
@@ -57,7 +58,7 @@ class test_Pooling(unittest.TestCase):
         )
         cls.proj3.pooling(extent=(1, 1, 10), delays=3.0)
 
-        cls.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
     def setUp(self):
         """
