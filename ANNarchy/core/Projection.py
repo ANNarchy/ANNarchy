@@ -597,7 +597,10 @@ class Projection :
             storage_format = "lil"
 
         elif self.connector_name == "All-to-All":
-            storage_format = "dense"
+            if not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
+                storage_format = "dense"
+            else:
+                storage_format = "csr"
 
         elif self.connector_name == "One-to-One":
             if _check_paradigm("cuda", self.net_id):
