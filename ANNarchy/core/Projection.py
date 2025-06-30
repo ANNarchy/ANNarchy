@@ -612,7 +612,7 @@ class Projection :
 
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
-                if density >= 0.6:
+                if density >= 0.6 and not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
                     storage_format = "dense"
                 else:
                     storage_format = "csr"
@@ -626,7 +626,7 @@ class Projection :
                 avg_nnz_per_row, _, _, _ = self._lil_connectivity.compute_average_row_length()
 
                 # heuristic decision tree
-                if density >= 0.6:
+                if density >= 0.6 and not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
                     storage_format = "dense"
                 else:
                     if _check_paradigm("cuda", self.net_id):
