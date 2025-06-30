@@ -89,7 +89,7 @@ class Network (metaclass=NetworkMeta):
     To monitor a population or projection:
 
     ```python
-    pop = net.monitor(pop, ['spike', 'v'])
+    m = net.monitor(pop, ['spike', 'v'])
     ```
 
     To compile the network:
