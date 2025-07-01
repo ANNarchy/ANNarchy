@@ -35,6 +35,7 @@ default_config = dict(
     disable_split_matrix = True,
     disable_SIMD_SpMV = True,
     disable_SIMD_Eq = False,
+    disable_bitmask = True,
     # SpM formats
     sparse_matrix_format = "default",
     sparse_matrix_storage_order = "post_to_pre",

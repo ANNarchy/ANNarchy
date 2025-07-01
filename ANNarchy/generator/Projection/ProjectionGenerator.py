@@ -101,7 +101,7 @@ class ProjectionGenerator(object):
         #                       has not been evaluated yet.
         #                       Therefore, I limit the application of bitmasks to spiking networks without
         #                       learning.
-        use_bitmask = False if proj.synapse_type.description['plasticity'] else True
+        use_bitmask = False if (proj.synapse_type.description['plasticity'] or ConfigManager().get('disable_bitmask', net_id=self._net_id)) else True
 
         # Some matrix formats like have additional hyper-parameters or specialized optimizations
         # which change the number of provided argument and/or required data types. If not defined
