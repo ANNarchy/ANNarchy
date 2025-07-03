@@ -316,24 +316,27 @@ class Compiler(object):
         # Network to compile
         self.network = NetworkManager().get_network(net_id)
 
-        # Get user-defined config
-        self.user_config = {
-            'openmp': {
-                'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
-                'flags' : "-march=native -O2",
-            },
-            'cuda': {
-                'compiler': "nvcc",
-                'device': 0
-            }
-        }
-
+        # Aside from arguments provided to compile, some configuration is stored in annarchy.json
         if len(path_to_json) == 0:
-            # check homedirectory
+            # check home-directory
             if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
                 with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
                     self.user_config = json.load(rfile)
+            else:
+                # Set default user-defined config
+                self.user_config = {
+                    'openmp': {
+                        'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
+                        'flags' : "-march=native -O3",
+                    },
+                    'cuda': {
+                        'compiler': "nvcc",
+                        'device': 0
+                    }
+                }
+
         else:
+            # Load user-defined annarchy.json
             with open(path_to_json, 'r') as rfile:
                 self.user_config = json.load(rfile)
 
@@ -574,12 +577,6 @@ class Compiler(object):
         if self.profile_enabled:
             cpu_flags += " -g"
 
-        # HD (13th Feb. 2025): nanobind passes all the compiler flags to the nvcc.
-        #                      However, the march=native flag is not supported at least for lower
-        #                      cmake versions.
-        if _check_paradigm("cuda"):
-            cpu_flags = cpu_flags.replace("-march=native", "")
-
         # OpenMP flag
         omp_flag = ""
         if ConfigManager().get('paradigm', self.net_id) == "openmp" :
@@ -617,7 +614,6 @@ class Compiler(object):
             # -Xcompiler expects the arguments seperated by ','
             if len(cpu_flags.strip()) > 0:
                 xcompiler_flags = cpu_flags.replace(" ",",")
-                xcompiler_flags += ","
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
