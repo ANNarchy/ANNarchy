@@ -597,10 +597,7 @@ class Projection :
             storage_format = "lil"
 
         elif self.connector_name == "All-to-All":
-            if not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
-                storage_format = "dense"
-            else:
-                storage_format = "csr"
+            storage_format = "dense"
 
         elif self.connector_name == "One-to-One":
             if _check_paradigm("cuda", self.net_id):
@@ -615,7 +612,7 @@ class Projection :
 
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
-                if density >= 0.6 and not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
+                if density >= 0.6:
                     storage_format = "dense"
                 else:
                     storage_format = "csr"
@@ -629,7 +626,7 @@ class Projection :
                 avg_nnz_per_row, _, _, _ = self._lil_connectivity.compute_average_row_length()
 
                 # heuristic decision tree
-                if density >= 0.6 and not isinstance(self.post, PopulationView) and not isinstance(self.pre, PopulationView):
+                if density >= 0.6:
                     storage_format = "dense"
                 else:
                     if _check_paradigm("cuda", self.net_id):
@@ -1342,10 +1339,7 @@ class Projection :
         # fill row-by-row with real values
         for rank in self.post_ranks:
             # row-rank
-            if self._storage_format == "dense":
-                idx = rank
-            else:
-                idx =  self.post_ranks.index(rank)
+            idx =  self.post_ranks.index(rank)
             # pre-ranks
             preranks = self.cyInstance.pre_rank(idx)
             # get the values

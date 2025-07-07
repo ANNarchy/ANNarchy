@@ -200,10 +200,6 @@ def _check_storage_formats(projections):
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.")
 
-        # HD: the combination of dense formats and population views is not tested well enough yet ...
-        if (isinstance(proj.post, PopulationView) or isinstance(proj.pre, PopulationView)) and proj._storage_format in ["dense", "bsr"]:
-            raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is not allowed for projections between population views.")
-
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
             if _check_paradigm("cuda", proj.net_id):
