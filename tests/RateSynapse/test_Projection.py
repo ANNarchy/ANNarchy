@@ -11,7 +11,93 @@ from scipy import sparse
 from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
 
-class test_Projection(unittest.TestCase):
+class test_DefaultProjection(unittest.TestCase):
+    """
+    Tests the functionality of the *Projection* object using a list-in-list
+    representation (currently the default in ANNarchy). We test:
+
+        *access to parameters
+        *method to get the ranks of post-synaptic neurons recieving synapses
+        *method to get the number of post-synaptic neurons recieving synapses
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        simple = Neuron(
+            parameters = "r=0",
+        )
+
+        # define a sparse matrix
+        weight_matrix = sparse.lil_matrix((4,8))
+        # HD (01.07.20): its not possible to use slicing here, as it produces
+        #                FutureWarnings in scipy/numpy (for version >= 1.17)
+        for i in range(8):
+            weight_matrix[1, i] = 0.2
+        for i in range(2,6):
+            weight_matrix[3, i] = 0.5
+
+        # we need to flip the matrix (see 2.9.3.2 in documentation)
+        cls.weight_matrix = weight_matrix.T
+
+        cls._network = Network()
+        pop1 = cls._network.create(geometry=(8), neuron=simple)
+        pop2 = cls._network.create(geometry=(4), neuron=simple)
+
+        cls._proj = cls._network.connect(
+            pre = pop1,
+            post = pop2,
+            target = "exc"
+        )
+        cls._proj.from_sparse(
+            cls.weight_matrix,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
+    def setUp(self):
+        """
+        In our *setUp()* function we reset the network before every test.
+        """
+        self._network.reset()
+
+    def test_get_w(self):
+        """
+        Test the direct access to the synaptic weight.
+        """
+        # test row 1 (idx 0) with 8 elements should be 0.2
+        numpy.testing.assert_allclose(self._proj.w[0], 0.2)
+
+        # test row 3 (idx 1) with 8 elements should be 0.5
+        numpy.testing.assert_allclose(self._proj.w[1], 0.5)
+
+    def test_get_dendrite_w(self):
+        """
+        Test the access through dendrite to the synaptic weight.
+        """
+        # test row 1 with 8 elements should be 0.2
+        numpy.testing.assert_allclose(self._proj.dendrite(1).w, 0.2)
+
+        # test row 3 with 4 elements should be 0.5
+        numpy.testing.assert_allclose(self._proj.dendrite(3).w, 0.5)
+
+    def test_get_size(self):
+        """
+        Tests the *size* method, which returns the number of post-synaptic
+        neurons recieving synapses.
+        """
+        self.assertEqual(self._proj.size, 2)
+
+    def test_get_post_ranks(self):
+        """
+        Tests the *post_ranks* method, which returns the ranks of post-synaptic
+        neurons recieving synapses.
+        """
+        self.assertEqual(self._proj.post_ranks, [1, 3])
+
+class test_ModifiedProjection(unittest.TestCase):
     """
     Tests the functionality of the *Projection* object using a list-in-list
     representation (currently the default in ANNarchy). We test:

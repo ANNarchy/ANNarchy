@@ -5,7 +5,7 @@ from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from .test_RateTransmission import test_RateTransmission
 from .test_RateCustomConnectivity import test_CustomConnectivityNoDelay, test_CustomConnectivityUniformDelay
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
-from .test_Projection import test_Projection, test_SliceProjections
+from .test_Projection import test_DefaultProjection, test_ModifiedProjection, test_SliceProjections
 
 # Recording
 from .test_Monitor import test_MonitorRatePSP, test_MonitorLocalVariable

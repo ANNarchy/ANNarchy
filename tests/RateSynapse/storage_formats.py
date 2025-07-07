@@ -21,7 +21,8 @@ single_thread = {
     # test_RateDefaultSynapseModels.py
     "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
     # from test_Projection.py
-    "test_Projection":                          ["lil", "csr"],
+    "test_DefaultProjection":                   ["lil", "csr", "dense", "bsr"],
+    "test_ModifiedProjection":                  ["lil", "csr", "dense"],
     "test_SliceProjections":                    ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
@@ -57,7 +58,8 @@ open_mp = {
     # test_RateDefaultSynapseModels.py
     "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
     # from test_Projection.py
-    "test_Projection":                          ["lil", "csr"],
+    "test_DefaultProjection":                   ["lil", "csr", "dense", "bsr"],
+    "test_ModifiedProjection":                  ["lil", "csr", "dense"],    
     "test_SliceProjections":                    ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
@@ -92,7 +94,8 @@ cuda = {
     # test_RateDefaultSynapseModels.py
     "test_RateDefaultSynapseModels":        ["csr", "ellr"],
     # from test_Projection.py
-    "test_Projection":                      ["csr", "ellr"],
+    "test_DefaultProjection":               ["csr", "ellr"],
+    "test_ModifiedProjection":              ["csr", "ellr"],
     "test_SliceProjections":                ["csr", "ellr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["csr", "ellr"],
