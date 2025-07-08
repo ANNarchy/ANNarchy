@@ -20,7 +20,7 @@
  */
 #pragma once
 
-/*
+/**
  *  @brief              Connectivity representation using a full matrix.
  *  @details            Contrary to all other classes in this template library this matrix format is not a sparse matrix.
  *                      Please take care on the indices. Many accessors in this class uses the row_idx directly and not the lil_idx.
@@ -32,7 +32,7 @@
  *                      - unsigned short int (2 byte):   [0 .. 65.535]
  *                      - unsigned int (4 byte):         [0 .. 4.294.967.295]
  *
- *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
+ *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and LILMatrix::num_columns_)
  * 
  *   @tparam    ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
@@ -48,13 +48,12 @@
 template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
 class DenseMatrixBitmask {
 protected:
-    const IT num_rows_;         ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
-    const IT num_columns_;      ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
-
-    IT mask_size_;              ///< number of elements encoded in one mask entry (depends on MT).
-    IT num_mask_cols_;          ///< number of mask entries in one row.
-
-    std::vector<MT> mask_;      ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
+    const IT num_rows_;             ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
+    const IT num_columns_;          ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
+    const IT mask_size_;            ///< number of elements encoded in one mask entry (depends on MT).
+    const IT num_mask_cols_;        ///< number of mask entries in one row.
+    std::vector<MT> mask_;          ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
+    std::vector<IT> post_ranks_;    ///< encodes the indices of rows with at least one non-zero.
 
     /*
      *  @brief      Decode the column indices for nonzeros in the matrix.
@@ -84,23 +83,21 @@ public:
      *
      * @param[in]   num_rows      number of rows in the matrix
      * @param[in]   num_columns   number of columns in the matrix
+     * @note        The matrix dimensions can not be changed afterwards. This function also
+     *              initializes DenseMatrixBitmask::mask_size_ and DenseMatrixBitmask::num_mask_cols_.
      */
     explicit DenseMatrixBitmask(const IT num_rows, const IT num_columns):
-        num_rows_(num_rows), num_columns_(num_columns) {
-    #ifdef _DEBUG
-        std::cout << "DenseMatrixBitmask::DenseMatrixBitmask(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
-    #endif
-
+        num_rows_(num_rows), num_columns_(num_columns),
+        mask_size_(static_cast<IT>(sizeof(MT)) * 8),
+        num_mask_cols_(static_cast<IT>(ceil(static_cast<double>(num_columns_)/static_cast<double>(this->mask_size_))))
+    {
         // we check if we can encode all possible values
         assert( (static_cast<long long>(num_rows_ * num_columns_) < static_cast<long long>(std::numeric_limits<ST>::max())) );
 
-        this->mask_size_ = static_cast<IT>(sizeof(MT)) * 8;
-        this->num_mask_cols_ = ceil(static_cast<double>(num_columns_)/static_cast<double>(this->mask_size_));
-
     #ifdef _DEBUG
+        std::cout << "DenseMatrixBitmask::DenseMatrixBitmask(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
         std::cout << "  using per row " << this->num_mask_cols_ <<  " mask entries that encodes " << this->mask_size_ << " matrix elements each." << std::endl;
     #endif
-        
     }
 
     /**
@@ -141,10 +138,7 @@ public:
      *  @returns    a list of row indices for all rows comprising of at least one element
      */
     std::vector<IT> get_post_rank() {
-        auto post_ranks = std::vector<IT>(num_rows_, 0);
-        for (IT r = 0; r < num_rows_; r++)
-            post_ranks[r] = r;
-        return post_ranks;
+        return post_ranks_;
     }
 
     /**
@@ -153,19 +147,20 @@ public:
      */
     std::vector<std::vector<IT>> get_pre_ranks() {
         auto pre_ranks = std::vector<std::vector<IT>>();
-        for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-            pre_ranks.push_back(std::move(get_dendrite_pre_rank(row_idx)));
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            pre_ranks.push_back(std::move(get_dendrite_pre_rank(lil_idx)));
         }
         return pre_ranks;
     }
 
     /**
      *  @details    get column indices of a specific row.
-     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  lil_idx     index of the selected row.
      *  @returns    a list of column indices of a specific row.
      */
-    std::vector<IT> get_dendrite_pre_rank(IT row_idx) {
-        return decode_column_indices(row_idx);
+    std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
+        assert(lil_idx < post_ranks_.size());
+        return decode_column_indices(post_ranks_[lil_idx]);
     }
 
     /**
@@ -174,8 +169,8 @@ public:
      */
     ST nb_synapses() {
         ST size = 0;
-        for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-            size += dendrite_size(row_idx);
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            size += dendrite_size(lil_idx);
         }
         return size;
     }
@@ -186,7 +181,10 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    IT dendrite_size(int row_idx) {
+    IT dendrite_size(IT lil_idx) {
+        assert(lil_idx < post_ranks_.size());
+
+        IT row_idx = post_ranks_[lil_idx];
         IT size = 0;
         ST idx;
 
@@ -217,12 +215,7 @@ public:
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
     IT nb_dendrites() {
-        IT num_dendrites = 0;
-        for(IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-            if (dendrite_size(row_idx) > 0)
-                num_dendrites++;
-        }
-        return num_dendrites;
+        return post_ranks_.size();
     }
 
     /**
@@ -267,6 +260,9 @@ public:
         // Sanity check: enough memory?
         if (!check_free_memory( num_mask_cols_ * num_rows_ * sizeof(MT)))
             return false;
+
+        // Store row indices
+        post_ranks_ = post_ranks;
 
         // Allocate mask
         mask_ = std::vector<MT>(num_rows_ * num_mask_cols_, static_cast<MT>(0.0));
@@ -367,23 +363,27 @@ public:
     #endif
         // sanity check: target large enough?
         assert( (num_rows_ * num_columns_ == variable.size()) );
-        assert( (num_rows_ == data.size()) );
+        assert( (post_ranks_.size() == data.size()) );
 
-        for (IT row_idx = 0; row_idx < data.size(); row_idx++) {
-            update_matrix_variable_row(variable, row_idx, data[row_idx]);
+        for (IT lil_idx = 0; lil_idx < data.size(); lil_idx++) {
+            update_matrix_variable_row(variable, lil_idx, data[lil_idx]);
         }
     }
 
     /**
-     *  @details    Updates all *existing* entries of a matrix row.
-     *  @tparam     VT          data type of the variable.
-     *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  row_idx     index of the selected row.
-     *  @param[in]  values      new values for the row indicated by row_idx.
+     *  @details        Updates all *existing* entries of a matrix row.
+     *  @tparam         VT          data type of the variable.
+     *  @param[inout]   variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
+     *  @param[in]      lil_idx     index of the selected row.
+     *  @param[in]      values      new values for the row indicated by row_idx.
      */
     template <typename VT>
-    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT row_idx, const std::vector<VT> values)
+    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> values)
     {
+        // select correct row
+        assert(lil_idx < post_ranks_.size());
+        auto row_idx = post_ranks_[lil_idx];
+
         // get the indices of nonzeros in the present row
         auto col_idx = decode_column_indices(row_idx);
 
@@ -406,12 +406,17 @@ public:
      *  @details    Updates a single *existing* entry within the matrix.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  lil_idx     index of the selected row.
      *  @param[in]  value       new matrix value
      *  @todo       Maybe one should check the mask if the nonzero existed before?
      */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT col_idx, const VT value) {
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT col_idx, const VT value) {
+        // select correct row
+        assert(lil_idx < post_ranks_.size());
+        auto row_idx = post_ranks_[lil_idx];
+
+        // update the position
         if (row_major) {
             variable[row_idx * num_columns_ + col_idx] = value;
         } else {
@@ -427,19 +432,10 @@ public:
      */
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT>& variable) {
-        auto values = std::vector< std::vector < VT > >(nb_dendrites(), std::vector < VT >());
+        auto values = std::vector< std::vector < VT > >();
 
-        for (IT row_idx = 0; row_idx < nb_dendrites(); row_idx++) {
-            auto col_idx = decode_column_indices(row_idx);
-
-            // copy the data
-            for (auto col_it = col_idx.cbegin(); col_it != col_idx.cend(); col_it++) {
-                if (row_major) {
-                    values[row_idx].push_back(variable[row_idx * num_columns_ + *col_it]);
-                } else {
-                    values[row_idx].push_back(variable[*col_it * num_rows_ + row_idx]);
-                }
-            }
+        for (auto idx = 0; idx < post_ranks_.size(); idx++) {
+            values.push_back(std::move(get_matrix_variable_row(variable, idx)));
         }
 
         return values;
@@ -449,11 +445,13 @@ public:
      *  @brief      retrieve a specific row from the given variable.
      *  @details    this function is only called by the Python interface to retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
-     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  lil_idx     index of the selected row.
      *  @returns    a vector containing all elements of the provided variable and row_idx
      */
     template <typename VT>
-    inline std::vector< VT > get_matrix_variable_row(const std::vector<VT>& variable, const IT &row_idx) {
+    inline std::vector< VT > get_matrix_variable_row(const std::vector<VT>& variable, const IT &lil_idx) {
+        assert(lil_idx < post_ranks_.size());
+        auto row_idx = post_ranks_[lil_idx];
         auto col_idx = decode_column_indices(row_idx);
         auto values = std::vector< VT >();
         values.reserve(col_idx.size());
@@ -474,12 +472,14 @@ public:
      *  @brief      retruns a single value from the given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
-     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  lil_idx     index of the selected row.
      *  @param[in]  col_idx     index of the selected column.
      *  @returns    the value at position (lil_idx, col_idx)
      */
     template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &row_idx, const IT &col_idx) {
+    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
+        assert(lil_idx < post_ranks_.size());
+        auto row_idx = post_ranks_[lil_idx];
         if (row_major) {
             return variable[row_idx * num_columns_ + col_idx];
         } else {
@@ -506,9 +506,19 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable_all(std::vector<VT> &variable, std::vector<VT> values) {
-        assert ( (variable.size() == values.size()) );
+        // storage target has the right size?
+        assert (variable.size() == num_rows_);
+        // enough elements?
+        assert (post_ranks_.size() == values.size());
 
-        std::copy(values.begin(), values.end(), variable.begin());
+        // Update the vector
+        if (post_ranks_.size() < num_rows_) {
+            for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+                variable[post_ranks_[lil_idx]] = values[lil_idx]; 
+            }
+        }else{
+            std::copy(values.begin(), values.end(), variable.begin());
+        }
     }
 
     /**
@@ -519,10 +529,10 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
-        assert( (num_rows_ != variable.size()) );
-        assert( (lil_idx < num_rows_) );
+        assert(num_rows_ != variable.size());
+        assert(lil_idx < post_ranks_.size());
 
-        variable[lil_idx] = value;
+        variable[post_ranks_[lil_idx]] = value;
     }
 
     /**
@@ -532,7 +542,15 @@ public:
      */
     template <typename VT>
     inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
-        return variable;
+        if (post_ranks_.size() < num_rows_) {
+            std::vector<VT> res;
+            res.reserve(post_ranks_.size());
+            for (const auto idx : post_ranks_)
+                res.push_back(variable[idx]);
+            return res;
+        } else {
+            return variable;
+        }
     }
 
     /**
@@ -542,9 +560,8 @@ public:
     */
     template <typename VT>
     inline VT get_vector_variable(std::vector<VT> variable, const IT lil_idx) {
-        assert( (lil_idx < num_rows_) );
-
-        return variable[lil_idx];
+        assert(lil_idx < post_ranks_.size());
+        return variable[post_ranks_[lil_idx]];
     }
 
     /**
