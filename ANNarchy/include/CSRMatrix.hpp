@@ -22,7 +22,6 @@
 #pragma once
 
 #include "LILMatrix.hpp"
-#include "helper_functions.hpp"
 
 /**
  *  @brief      Implementation of a *compressed sparse row* (CSR) format.

@@ -28,14 +28,6 @@
 template<typename IT = unsigned int, typename ST = unsigned int>
 class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
 protected:
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
 
     void free_device_memory() {
     #ifdef _DEBUG
@@ -69,7 +61,7 @@ protected:
         free_device_memory();
 
         // Sanity check: can we allocate the data?
-        if (!check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size()))
+        if (!check_free_memory_cuda(sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size()))
             return false;
 
         //
@@ -178,7 +170,7 @@ public:
     #endif
         assert( (this->nb_synapses() == host_variable.size()) );
         size_t size_in_bytes = this->nb_synapses()*sizeof(VT);
-        if (!check_free_memory(size_in_bytes)) {
+        if (!check_free_memory_cuda(size_in_bytes)) {
             std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
             return nullptr;
         }
@@ -202,7 +194,7 @@ public:
     #endif
         assert( (this->post_ranks_.size() == host_variable.size()) );
         size_t size_in_bytes = this->post_ranks_.size() * sizeof(VT);
-        if(!check_free_memory(size_in_bytes)) {
+        if(!check_free_memory_cuda(size_in_bytes)) {
             std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
             return nullptr;
         }

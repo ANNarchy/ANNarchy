@@ -21,6 +21,7 @@
 #pragma once
 
 #include "COOMatrix.hpp"
+#include "helper_functions.cuh"
 
 /**
  *  @brief      Implementation of the *coordinate* format on CUDA devices.
@@ -34,15 +35,6 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     ST* gpu_segments_;
 
     std::vector<ST> segments_;
-
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
 
     void free_device_memory() {
         if (gpu_row_indices_) {
@@ -65,7 +57,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
     bool host_to_device_transfer() {
 
-        if(!check_free_memory(this->row_indices_.size()*sizeof(IT) + this->column_indices_.size()*sizeof(IT) + this->segments_.size() * sizeof(ST)))
+        if(!check_free_memory_cuda(this->row_indices_.size()*sizeof(IT) + this->column_indices_.size()*sizeof(IT) + this->segments_.size() * sizeof(ST)))
             return true;
 
         cudaMalloc((void**)&gpu_row_indices_, this->row_indices_.size()*sizeof(IT));
@@ -207,7 +199,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
         // Sanity check
         size_t required = this->row_indices_.size()*sizeof(VT);
-        check_free_memory(required);
+        check_free_memory_cuda(required);
 
         // Allocate and copy
         VT* gpu_variable;

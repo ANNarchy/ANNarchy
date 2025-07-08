@@ -20,8 +20,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *  @brief      ELLPACK sparse matrix representation according to Kincaid et al. (1989) with some
  *              minor modifications as described below.
@@ -84,44 +82,6 @@ class ELLMatrix {
 
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
-
-    /**
-     *  @brief      check if the matrix fits into RAM
-     *  @details    Unlike CUDA it appears that the standard C++ API does not
-     *              provide a function to get the available RAM at a present time.
-     *              Many sources recommended to use the /proc/meminfo file
-     */
-    bool check_free_memory(size_t required) {
-    #ifdef __linux__
-        FILE *meminfo = fopen("/proc/meminfo", "r");
-        
-        // TODO:    I'm not completely sure, what we want to do
-        //          in this case. Currently, we would hope for the best ...
-        if(meminfo == nullptr) {
-            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
-            return true;
-        }
-
-        char line[256];
-        int ram;
-
-        while(fgets(line, sizeof(line), meminfo))
-        {
-            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
-                break;  // hit
-        }
-
-        fclose(meminfo);
-        size_t available = static_cast<size_t>(ram) * 1024;
-    #ifdef _DEBUG
-        std::cout << "ELLMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
-    #endif
-        return required < available;
-
-    #else
-        return true;
-    #endif
-    }
 
   public:
     /**

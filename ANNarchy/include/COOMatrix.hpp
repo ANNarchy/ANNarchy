@@ -20,8 +20,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *  @brief      Implementation of the *coordinate* (COO) sparse matrix format.
  *  @details    The coordinate format is probably the easiest format to represent sparse connectivity.

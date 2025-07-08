@@ -25,16 +25,6 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
   protected:
-    bool check_free_memory(size_t required) {
-          size_t free, total;
-          cudaMemGetInfo(&free, &total);
-
-    #ifdef _DEBUG
-          std::cout << "Allocate " << required << " and have " << free << "( " << (double(required) / double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return (required < free);
-    }
-
     void free_device_memory() {
         if(d_row_ptr) {
             cudaFree(d_row_ptr);
@@ -56,7 +46,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         size_t col_idx_size = this->col_idx_.size() * sizeof(IT);
 
         // Sanity check: can we allocate the data?
-        check_free_memory(row_ptr_size + col_idx_size);
+        check_free_memory_cuda(row_ptr_size + col_idx_size);
 
         // Allocate the data arrays
         cudaMalloc((void**)&d_row_ptr, row_ptr_size);
@@ -180,7 +170,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        if (!check_free_memory(size_in_bytes))
+        if (!check_free_memory_cuda(size_in_bytes))
             return nullptr;
 
         // Allocate
@@ -208,7 +198,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     VT* init_vector_variable_gpu(const std::vector<VT>& host_variable) {
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        check_free_memory(size_in_bytes);
+        check_free_memory_cuda(size_in_bytes);
 
         // Allocate
         VT* new_variable;

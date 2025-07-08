@@ -45,15 +45,6 @@ class DenseMatrixCUDA : public DenseMatrix<IT, ST, MT, row_major> {
 protected:
     MT* gpu_mask_;
 
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
-
     void free_device_memory() {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::free_device_memory()" << std::endl;
@@ -184,7 +175,7 @@ public:
     #endif
         assert( (this->num_rows_ == host_variable.size()) );
         size_t size_in_bytes = this->num_rows_ * sizeof(VT);
-        check_free_memory(size_in_bytes);
+        check_free_memory_cuda(size_in_bytes);
 
         VT* gpu_variable;
         cudaMalloc((void**)&gpu_variable, size_in_bytes);

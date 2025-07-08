@@ -25,7 +25,6 @@
 #include <algorithm>
 
 #include "BSRMatrix.hpp"
-#include "helper_functions.hpp"
 
 /**
  *	\brief		Implementation of a blocked compressed sparse row (BSR) format.

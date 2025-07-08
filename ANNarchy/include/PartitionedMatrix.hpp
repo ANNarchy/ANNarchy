@@ -21,8 +21,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *  @brief      Wrapper class for handling multiple instances of SPARSE_MATRIX_TYPE.
  *  @details    In order to support the parallel evaluation of expecially spiking networks

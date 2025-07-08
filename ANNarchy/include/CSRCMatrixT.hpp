@@ -21,7 +21,6 @@
 #pragma once
 
 #include "LILMatrix.hpp"
-#include "helper_functions.hpp"
 
 /**
  *  @brief      A flipped CSRC representation.

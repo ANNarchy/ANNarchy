@@ -22,9 +22,8 @@
 #pragma once
 
 #include "LILMatrix.hpp"
-#include "helper_functions.hpp"
 
-/*
+/**
  *   \brief     sliced ELLPACK sparse matrix representation according to Alexander Monakov et al. (2010) 
  *              and Moritz Kreutzer et al. (2013) with some minor modifications as described below.
 

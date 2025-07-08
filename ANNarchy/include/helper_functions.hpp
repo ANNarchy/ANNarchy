@@ -21,8 +21,15 @@
  */
 #pragma once
 
-// Sort criterion must be in a. The values
-// are sorted ascending.
+/**
+ * @brief           Sort two vectors of same length.
+ * @details         Sort criterion must be in a. The values are sorted ascending.
+ * @tparam Type1    Data type for the first vector. Must be iterable and support a sorting.
+ * @tparam Type2    Data type for the second vector.
+ * @param a         first vector defines the sort base.
+ * @param b         second vector will be sorted according to a.
+ * @param n         number of elements (must be the same for both vectors).
+ */
 template<typename Type1, typename Type2>
 void pairsort(Type1 *a, Type2 *b, int n)
 {
@@ -44,4 +51,45 @@ void pairsort(Type1 *a, Type2 *b, int n)
         a[i] = pairt[i].first;
         b[i] = pairt[i].second;
     }
+}
+
+/**
+ *  @brief      check if the matrix fits into RAM
+ *  @details    Unlike CUDA it appears that the standard C++ API does not
+ *              provide a function to get the available RAM at a present time.
+ *              Many sources recommended to use the /proc/meminfo file
+ *  @todo       1) I'm not completely sure, what we want to do if /proc/meminfo is not readable. This should normally
+ *                 not happen as far as I know. Currently, we would hope for the best ...
+ *              2) The function is currently only implemented for Linux, while for Windows/MacOS we simply return true ...
+ */
+inline bool check_free_memory(size_t required) {
+#ifdef __linux__
+    FILE *meminfo = fopen("/proc/meminfo", "r");
+
+    // TODO 1
+    if(meminfo == nullptr) {
+        std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
+        return true;
+    }
+
+    char line[256];
+    int ram;
+
+    while(fgets(line, sizeof(line), meminfo))
+    {
+        if(sscanf(line, "MemFree: %d kB", &ram) == 1)
+            break;  // hit
+    }
+
+    fclose(meminfo);
+    size_t available = static_cast<size_t>(ram) * 1024;
+#ifdef _DEBUG
+    std::cout << "  we will allocate on CPU " << required << " from " << available << " bytes " << std::endl;
+#endif
+    
+    return required < available;        
+#else
+    // TODO 2
+    return true;
+#endif
 }

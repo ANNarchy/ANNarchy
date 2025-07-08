@@ -50,44 +50,6 @@ protected:
     std::vector<IT> post_ranks_;    ///< encodes the indices of rows with at least one non-zero.
 
     /**
-     *  \brief      check if the matrix fits into RAM
-     *  \details    Unlike CUDA it appears that the standard C++ API does not
-     *              provide a function to get the available RAM at a present time.
-     *              Many sources recommended to use the /proc/meminfo file
-     */
-    bool check_free_memory(size_t required) {
-    #ifdef __linux__
-        FILE *meminfo = fopen("/proc/meminfo", "r");
-
-        // TODO:    I'm not completely sure, what we want to do
-        //          in this case. Currently, we would hope for the best ...
-        if(meminfo == nullptr) {
-            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
-            return true;
-        }
-
-        char line[256];
-        int ram;
-
-        while(fgets(line, sizeof(line), meminfo))
-        {
-            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
-                break;  // hit
-        }
-
-        fclose(meminfo);
-        size_t available = static_cast<size_t>(ram) * 1024;
-    #ifdef _DEBUG
-        std::cout << "DenseMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
-    #endif
-        return required < available;
-
-    #else
-        return true;
-    #endif
-    }
-
-    /**
      *  \brief      Decode the column indices for non-zeros in the matrix.
      *  \details    Many implementations denote a non-existing matrix entry by a 0.0, -1.0 or max(IT). However, as the matrix
      *              will be used as part of computations, one face the problem, that learning models could form new synapses

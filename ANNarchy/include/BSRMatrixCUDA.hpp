@@ -38,15 +38,6 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false>
     IT* gpu_block_column_index_;
     char* gpu_tile_data_;
 
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
-
     void free_device_memory() {
         if (gpu_block_row_pointer_) {
             cudaFree(gpu_block_row_pointer_);
@@ -145,7 +136,7 @@ public:
             return false;
 
         size_t required = this->block_row_pointer_.size() * sizeof(IT) + this->block_column_index_.size() * sizeof(IT) + this->tile_data_.size()*sizeof(char);
-        if( !check_free_memory(required) )
+        if( !check_free_memory_cuda(required) )
             return false;
 
         return transfer_to_device();
@@ -159,7 +150,7 @@ public:
         assert( this->tile_data_.size() == host_variable.size() );
 
         size_t required = host_variable.size() * sizeof(VT);
-        if (!check_free_memory(required))
+        if (!check_free_memory_cuda(required))
             return nullptr;
 
         // Allocate and copy

@@ -23,8 +23,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *  @brief      Implementation of the *list-in-list* (LIL) sparse matrix format.
  *  @details    The LIL format comprises of a nested vector *pre_rank*, where the top-level indicates a row and the sub-level vector
