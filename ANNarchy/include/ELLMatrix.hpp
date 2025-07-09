@@ -153,7 +153,7 @@ class ELLMatrix {
      *  @details    this value can differ but should be larger than the number of ELLMatrix::nb_dendrites()
      *  @returns    number of rows of the dense matrix.
      */
-    IT dense_num_rows() {
+    IT num_rows() {
         return num_rows_;
     }
 
@@ -162,7 +162,7 @@ class ELLMatrix {
      *  @details    this value can differ but should be larger than the number of ELLMatrix::dendrite_size(int lil_idx)
      *  @returns    number of columns of the dense matrix.
      */
-    IT dense_num_columns() {
+    IT num_columns() {
         return num_columns_;
     }
 

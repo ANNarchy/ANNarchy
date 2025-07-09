@@ -212,11 +212,11 @@ class HYBMatrix {
         coo_matrix_->clear();
     }
 
-    IT dense_num_rows() {
+    IT num_rows() {
         return num_rows_;
     }
 
-    IT dense_num_columns() {
+    IT num_columns() {
         return num_columns_;
     }
 

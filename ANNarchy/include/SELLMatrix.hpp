@@ -403,14 +403,14 @@ class SELLMatrix {
     /**
      *  @brief      returns number of rows of the dense matrix.
      */
-    IT dense_num_rows() {
+    IT num_rows() {
         return num_rows_;
     }
 
     /**
      *  @brief      returns number of columns of the dense matrix.
      */
-    IT dense_num_columns() {
+    IT num_columns() {
         return num_columns_;
     }
 

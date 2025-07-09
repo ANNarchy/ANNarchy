@@ -115,11 +115,11 @@ class CSRMatrix {
     //
     //  Accessor to member variables
     //
-    inline IT dense_num_rows() {
+    inline IT num_rows() {
         return num_rows_;
     }
 
-    inline IT dense_num_columns() {
+    inline IT num_columns() {
         return num_columns_;
     }
 
