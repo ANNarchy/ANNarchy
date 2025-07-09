@@ -43,3 +43,8 @@ dependencies = [
 Documentation = "https://annarchy.github.io"
 Issues = "https://github.com/ANNarchy/ANNarchy/issues"
 Source = "https://github.com/ANNarchy/ANNarchy"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["MyPackage*"]
+exclude = ["tests_*"]
