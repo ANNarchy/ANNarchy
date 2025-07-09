@@ -131,6 +131,10 @@ class CSRMatrix {
         return row_begin_;
     }
 
+    //
+    //  Initialization methods
+    //
+
     /**
      *  @brief      Initialize CSR based on a LIL representation.
      *  @see        LILMatrix::init_matrix_from_lil()

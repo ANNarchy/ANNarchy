@@ -152,6 +152,18 @@ public:
         pre_rank.shrink_to_fit();
     }
 
+    //
+    //  Accessor to member variables
+    //
+    inline IT num_rows() {
+        return num_rows_;
+    }
+
+    inline IT num_columns() {
+        return num_columns_;
+    }
+
+
     /**
      *  @details    get row indices
      *  @returns    a list of row indices for all rows comprising of at least one element
@@ -207,6 +219,10 @@ public:
     IT nb_dendrites() {
         return static_cast<IT>(post_rank.size());
     }
+
+    //
+    //  Initialization methods
+    //
 
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.
