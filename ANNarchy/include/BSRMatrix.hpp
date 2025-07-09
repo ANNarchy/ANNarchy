@@ -81,7 +81,6 @@ class BSRMatrix {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::BSRMatrix(num_rows=" << num_rows << ", num_columns=" << num_columns << ", tile_size=" << tile_size << ")" << std::endl;
     #endif
-
     }
 
     ~BSRMatrix() {
@@ -110,8 +109,12 @@ class BSRMatrix {
         tile_mask_.shrink_to_fit();
     }
 
-    inline IT get_num_rows() {
+    inline IT num_rows() {
         return this->num_rows_;
+    }
+
+    inline IT num_columns() {
+        return this->num_columns_;
     }
 
     //
@@ -395,8 +398,9 @@ class BSRMatrix {
     }
 
     //
-    //  Initialization and Update of variables.
+    //  Initialization and Update of matrix variables.
     //
+
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
@@ -413,7 +417,34 @@ class BSRMatrix {
             return std::vector<VT>();
         }
 
-        return std::vector<VT>(tile_mask_.size(), default_value);
+        auto variable = std::vector<VT>(tile_mask_.size());
+        auto v_it = variable.begin();
+        auto m_it = tile_mask_.cbegin();
+
+        for(; v_it != variable.end(); ++v_it, ++m_it)
+            *v_it = (*m_it) ? default_value : static_cast<VT>(0.0);
+        return variable;
+    }
+
+    template <typename VT>
+    std::vector< VT > init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::init_matrix_variable_uniform(" << a << ", " << b << ")" << std::endl;
+    #endif
+        if (!check_free_memory(tile_mask_.size() * sizeof(VT))) {
+            std::cerr << "BSRMatrix::init_matrix_variable_uniform() allocation failed." << std::endl;
+            return std::vector<VT>();
+        }
+
+        std::uniform_real_distribution<VT> dis (a,b);
+
+        auto variable = std::vector<VT>(tile_mask_.size());
+        auto v_it = variable.begin();
+        auto m_it = tile_mask_.cbegin();
+
+        for(; v_it != variable.end(); ++v_it, ++m_it)
+            *v_it = (*m_it) ? dis(rng) : static_cast<VT>(0.0);
+        return variable;
     }
 
     template <typename VT>
@@ -573,6 +604,11 @@ class BSRMatrix {
 
         return static_cast<VT>(0.0); // should not happen
     }
+
+    //
+    //  Initialization and Update of vector variables.
+    //
+
 
     //
     //  Other helpful functions
