@@ -45,6 +45,4 @@ Issues = "https://github.com/ANNarchy/ANNarchy/issues"
 Source = "https://github.com/ANNarchy/ANNarchy"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["MyPackage*"]
-exclude = ["tests_*"]
+exclude = ["tests_*"]	# ignore unittest folders
