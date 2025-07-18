@@ -113,8 +113,12 @@ class BSRMatrixBitmask {
         tile_bitmask_.shrink_to_fit();
     }
 
-    inline IT get_num_rows() {
+    inline IT num_rows() {
         return this->num_rows_;
+    }
+
+    inline IT num_columns() {
+        return this->num_columns_;
     }
 
     //
@@ -434,7 +438,62 @@ class BSRMatrixBitmask {
             return std::vector<VT>();
         }
 
-        return std::vector<VT>(this->num_tile_elems_, default_value);
+        auto variable = std::vector<VT>(this->num_tile_elems_, static_cast<VT>(0.0));
+
+        for (IT b_r_idx = 0; b_r_idx < this->block_row_pointer_.size(); b_r_idx++) {
+            for (IT b_c_idx = block_row_pointer_[b_r_idx]; b_c_idx < block_row_pointer_[b_r_idx+1]; b_c_idx++) {
+                for (IT row_in_tile = 0; row_in_tile < tile_size_; row_in_tile++) {
+                    if (row_major) {
+                        ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
+                        for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
+                            if (tile_bitmask_[b_c_idx * tile_size_ + row_in_tile] & (1<<(col_in_tile%tile_size_)))
+                                variable[col_in_tile] = default_value;
+                        }
+                    } else {
+                        ST col_in_tile_begin = b_c_idx * tile_size_ * tile_size_;
+                        auto current_tile_bitmask = &tile_bitmask_[b_c_idx * tile_size_];
+                        for (IT col = 0; col < tile_size_; col++) {
+                            if ((current_tile_bitmask[col] & (1<<row_in_tile)) ? 1 : 0) {
+                                variable[col_in_tile_begin + col * tile_size_ + row_in_tile] = default_value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return variable;
+    }
+
+    template <typename VT>
+    std::vector< VT > init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+
+        std::uniform_real_distribution<VT> dis (a,b);
+        auto variable = std::vector<VT>(this->num_tile_elems_, static_cast<VT>(0.0));
+
+        for (IT b_r_idx = 0; b_r_idx < this->block_row_pointer_.size(); b_r_idx++) {
+            for (IT b_c_idx = block_row_pointer_[b_r_idx]; b_c_idx < block_row_pointer_[b_r_idx+1]; b_c_idx++) {
+                for (IT row_in_tile = 0; row_in_tile < tile_size_; row_in_tile++) {
+                    if (row_major) {
+                        ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
+                        for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
+                            if (tile_bitmask_[b_c_idx * tile_size_ + row_in_tile] & (1<<(col_in_tile%tile_size_)))
+                                variable[col_in_tile] = dis(rng);
+                        }
+                    } else {
+                        ST col_in_tile_begin = b_c_idx * tile_size_ * tile_size_;
+                        auto current_tile_bitmask = &tile_bitmask_[b_c_idx * tile_size_];
+                        for (IT col = 0; col < tile_size_; col++) {
+                            if ((current_tile_bitmask[col] & (1<<row_in_tile)) ? 1 : 0) {
+                                variable[col_in_tile_begin + col * tile_size_ + row_in_tile] = dis(rng);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return variable;
     }
 
     template <typename VT>
@@ -598,6 +657,22 @@ class BSRMatrixBitmask {
         }
 
         return static_cast<VT>(0.0); // should not happen
+    }
+
+    //
+    //  Initialization and Update of vector variables.
+    //
+
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
     }
 
     //

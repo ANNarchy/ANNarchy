@@ -609,6 +609,17 @@ class BSRMatrix {
     //  Initialization and Update of vector variables.
     //
 
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
+    }
 
     //
     //  Other helpful functions

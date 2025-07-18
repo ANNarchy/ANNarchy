@@ -126,7 +126,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->tile_data_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->tile_mask_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -176,7 +176,7 @@ attribute_device_to_host = {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->tile_data_.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->tile_mask_.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
