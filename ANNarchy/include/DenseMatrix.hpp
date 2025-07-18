@@ -646,16 +646,12 @@ public:
      */
     template <typename VT>
     inline std::vector<VT> init_vector_variable(VT default_value) {
-        if (post_ranks_.size() < num_rows_) {
-            auto res = std::vector<VT>(num_rows_, static_cast<VT>(0.0));
-            
-            for (const auto row_idx : post_ranks_) {
-                res[row_idx] = default_value;
-            }
-            return res;
-        } else {
-            return std::vector<VT>(num_rows_, default_value);
+        auto res = std::vector<VT>(num_rows_, static_cast<VT>(0.0));
+
+        for (const auto row_idx : post_ranks_) {
+            res[row_idx] = default_value;
         }
+        return res;
     }
 
     /**
