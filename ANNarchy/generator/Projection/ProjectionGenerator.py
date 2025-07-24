@@ -354,7 +354,7 @@ class ProjectionGenerator(object):
                 # CPP template parameter: index type, size type, mask type, use row major
                 if proj._storage_order == "post_to_pre":
                     if _check_paradigm("openmp", self._net_id):
-                        sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, false>"
+                        sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, true>"
                         sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
                         single_matrix = True
 
