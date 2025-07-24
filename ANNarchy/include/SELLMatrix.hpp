@@ -67,13 +67,13 @@ class SELLMatrix {
   protected:
     IT num_rows_;                       ///< maximum number of rows 
     IT num_columns_;                    ///< maximum number of columns 
-    IT block_size_;                      ///< size of each block (maximum number of rows in each block)
+    IT block_size_;                     ///< size of each block (maximum number of rows in each block)
     IT num_blocks_;                     ///< number of blocks in the dense matrix
     ST num_non_zeros_;                  ///< number of nonzeros
 
     std::vector<IT> post_ranks_;        ///< which rows does contain entries
     std::vector<IT> col_idx_;           ///< column indices for accessing dense vector
-    std::vector<ST> row_ptr_;            ///< points to first element in each block
+    std::vector<ST> row_ptr_;           ///< points to first element in each block
     std::vector<char> mask_;            ///< mask of entries
 
   public:
@@ -157,6 +157,7 @@ class SELLMatrix {
     //
     // INITIALIZATION METHODS
     //
+
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.        
      */
@@ -261,16 +262,17 @@ class SELLMatrix {
         col_idx_.shrink_to_fit();
         mask_.shrink_to_fit();
 
-        // sanity check
+        // sanity check (did we allocate enough dense blocks?)
         if (lil_row_idx != row_indices.size()) {
             std::cerr << "SELLMatrix::init_matrix_from_lil() something went wrong ..." << std::endl;
             return false;
         }
 
-        // sanity check (did we allocate enough dense blocks?)
+    #ifdef _DEBUG
         std::cout << num_blocks_ << " times " << block_size_ << " rows." << std::endl;
         std::cout << "  min. size: " << min_block_length << std::endl;
         std::cout << "  max. size: " << max_block_length << std::endl;
+    #endif
         return true;
     }
 
@@ -337,9 +339,6 @@ class SELLMatrix {
             }
         }
     }
-
-
-
 
     //
     // ACCESSOR METHODS
@@ -515,11 +514,41 @@ class SELLMatrix {
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
+     *  @param[in]  default_value   the default value for all nonzeros in the matrix.
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
-        ST variable_size = col_idx_.size();
-        return std::vector<VT>(variable_size, default_value);        
+        auto variable = std::vector<VT>(mask_.size());
+        for (ST idx = 0; idx < mask_.size(); idx++) {
+            variable[idx] = (mask_[idx]) ? default_value : static_cast<VT>(0.0);
+        }
+
+        return variable;
+    }
+
+    /**
+     *  @details    Allocates and initialize a num_rows_ by num_columns_ matrix based on the stored
+     *              connectivity and where the nonzero values serves an uniform distribution (a, b).
+     *  @tparam     VT      data type of the variable.
+     *  @param[in]  a       minimum of the distribution
+     *  @param[in]  b       maximum of the distribution
+     *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
+     */
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
+    #endif
+        auto variable = std::vector<VT>(mask_.size());
+        std::uniform_real_distribution<VT> dis (a,b);
+
+        for (ST idx = 0; idx < mask_.size(); idx++) {
+            variable[idx] = (mask_[idx]) ? dis(rng) : static_cast<VT>(0.0);
+        }
+
+        return variable;
     }
 
     //
@@ -531,7 +560,8 @@ class SELLMatrix {
      *  @tparam     VT          data type of the variable.
      */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT>& variable, const IT row_idx, const IT column_idx, const VT value) {
+    inline void update_matrix_variable(std::vector<VT>& variable, const IT lil_idx, const IT column_idx, const VT value) {
+        IT row_idx = post_ranks_[lil_idx];
 
         if (row_major) {
             IT block_idx = row_idx / block_size_;
@@ -629,7 +659,8 @@ class SELLMatrix {
      *  @tparam     VT          data type of the variable.
      */
     template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT row_idx, const IT column_idx) {
+    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT lil_idx, const IT column_idx) {
+        IT row_idx = post_ranks_[lil_idx];
         IT block_idx = row_idx / block_size_;
         //first should compute block length in this block
         IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
@@ -687,4 +718,25 @@ class SELLMatrix {
         }        
         return values;
     }
+
+    //
+    //  Initialization and Update of vector variables.
+    //
+
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
+    }
+
+    //
+    //  Other helpful functions
+    //
+
 };

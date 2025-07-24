@@ -88,6 +88,18 @@ class COOMatrix {
         column_indices_.shrink_to_fit();
     }
 
+    inline IT num_rows() {
+        return this->num_rows_;
+    }
+
+    inline IT num_columns() {
+        return this->num_columns_;
+    }
+
+    //
+    //  Accessors for the computation
+    //
+
     inline IT* get_row_indices() {
         return row_indices_.data();
     }
@@ -353,8 +365,25 @@ class COOMatrix {
     }
 
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "Not implemented" << std::endl;
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+        assert( (lil_idx < post_ranks_.size()) );
+
+        auto row_beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        auto row_end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
+
+        // sanity print-out
+        if ( (row_beg == row_indices_.end()) && (row_end == row_indices_.rend()) ) {
+            std::cout << "COOMatrix::update_matrix_variable no row with idx " << post_ranks_[lil_idx] << std::endl;
+            return;
+        }
+
+        auto beg_idx = std::distance(row_indices_.begin(), row_beg);
+        auto end_idx = std::distance(row_indices_.rend(), row_end) * -1; // reversed!
+
+        for (IT idx = beg_idx; idx < end_idx; idx++) {
+            if (column_indices_[idx] == column_idx)
+                variable[idx] = value;
+        }
     }
    
     /**
@@ -407,8 +436,39 @@ class COOMatrix {
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
+        assert( (lil_idx < post_ranks_.size()) );
+
+        auto row_beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        auto row_end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
+
+        if ( (row_beg == row_indices_.end()) && (row_end == row_indices_.rend()) )
+            return static_cast<VT>(0.0); // empty row
+
+        auto beg_idx = std::distance(row_indices_.begin(), row_beg);
+        auto end_idx = std::distance(row_indices_.rend(), row_end) * -1; // reversed!
+
+        for (IT idx = beg_idx; idx < end_idx; idx++) {
+            if (column_indices_[idx] == col_idx)
+                return variable[idx];
+        }
 
         return static_cast<VT>(0.0); // should not happen
+    }
+
+    //
+    //  Initialization and Update of vector variables.
+    //
+
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
     }
 
     /**
