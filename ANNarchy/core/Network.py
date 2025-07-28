@@ -111,11 +111,13 @@ class Network (metaclass=NetworkMeta):
     """
 
     def __init__(self, dt:float=None, seed:int=None):
-
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
             return
         self._initialized = True
+
+        # Object tracking
+        Messages._debug("Instantiate Network object", self)
 
         # Register the network in the NetworkManager()
         self.id = NetworkManager().add_network(self)
