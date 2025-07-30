@@ -92,6 +92,7 @@ class SELLMatrix {
         col_idx_ = std::vector<IT>();
         row_ptr_ = std::vector<ST>();
         mask_ = std::vector<char>();
+        num_non_zeros_ = 0;
     }
 
     /**
@@ -111,6 +112,7 @@ class SELLMatrix {
     #ifdef _DEBUG
         std::cout << "SELLMatrix::clear()" << std::endl;
     #endif
+        num_blocks_ = 0;
 
         post_ranks_.clear();
         post_ranks_.shrink_to_fit();
@@ -478,16 +480,6 @@ class SELLMatrix {
     IT get_block_size() {
         return block_size_;
     }
-
-    /**
-    *  @brief      get the number of nonzero element in the matrix.
-    *  @returns    the number of nonzero element in the matrix.
-    */
-    ST get_num_nonzeros() {
-        return num_non_zeros_;
-    }
-
-
 
     /**
     *  @brief      get row ptr
