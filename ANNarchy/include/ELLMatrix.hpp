@@ -203,16 +203,9 @@ class ELLMatrix {
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        if (row_major) {
-            for(IT r = 0; r < post_ranks_.size(); r++) {
-                auto beg = col_idx_.begin() + r*maxnzr_;
-                auto end = std::find(beg, beg+maxnzr_, zero_marker_);
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++)
+            pre_ranks.push_back(std::move(get_dendrite_pre_rank(lil_idx)));
 
-                pre_ranks.push_back(std::vector<IT>(beg, end));
-            }
-        } else {
-            std::cerr << "ELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
-        }
         return pre_ranks;
     }
 
@@ -471,6 +464,45 @@ class ELLMatrix {
     }
 
     /**
+     *  @details    Allocates and initialize a num_rows_ by num_columns_ matrix based on the stored
+     *              connectivity and where the nonzero values serves an uniform distribution (a, b).
+     *  @tparam     VT      data type of the variable.
+     *  @param[in]  a       minimum of the distribution
+     *  @param[in]  b       maximum of the distribution
+     *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
+     */
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros_ << std::endl;
+    #endif
+        check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
+
+        // fill all places with 0
+        auto variable = std::vector<VT> (post_ranks_.size() * maxnzr_, static_cast<VT>(0.0));
+
+        // construct RNG distribution object
+        std::uniform_real_distribution<VT> dis (a,b);
+
+        // only "set" nonzeros should be updated
+        for (IT r = 0; r < post_ranks_.size(); r++) {
+            for(IT c = 0; c < this->maxnzr_; c++) {
+                if (row_major) {
+                    ST idx = r*this->maxnzr_+c;
+                    if (this->col_idx_[idx] != zero_marker_)
+                        variable[idx] = dis(rng);
+                } else {
+                    ST idx = c*post_ranks_.size()+r;
+                    if (this->col_idx_[idx] != zero_marker_)
+                        variable[idx] = dis(rng);
+                }
+            }
+        }
+        return variable;        
+    }
+
+    /**
      *  @details    Updates all matrix values based on a LIL representation
      *  @tparam     VT              data type of the variable.
      *  @param[in]  variable        ELLPACK variable container
@@ -483,19 +515,8 @@ class ELLMatrix {
     #endif
         assert( (post_ranks_.size() == data.size()) );
 
-        if (row_major) {
-            for(IT r = 0; r < post_ranks_.size(); r++) {
-                auto beg = variable.begin() + r*maxnzr_;
-                std::copy(data[r].begin(), data[r].end(), beg);
-            }
-        } else {
-            int num_rows = post_ranks_.size();
-            for(IT r = 0; r < num_rows; r++) {
-                for(IT c = 0; c < data[r].size(); c++) {
-                    variable[c*num_rows+r] = data[r][c];
-                }
-            }
-        }
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++)
+            update_matrix_variable_row(variable, lil_idx, data[lil_idx]);
     }
 
     /**
@@ -530,15 +551,22 @@ class ELLMatrix {
     inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
         if (row_major) {
             for (ST idx = lil_idx * maxnzr_; idx < (lil_idx+1) * maxnzr_; idx++) {
-                if (col_idx_[idx] == std::numeric_limits<IT>::max())
+                // early stopping of search
+                if (col_idx_[idx] == std::numeric_limits<IT>::max()) {
+                    std::cerr << "The position (" << post_ranks_[lil_idx] << "," << column_idx << ") could not be updated ..." << std::endl;
                     return;
+                }
 
                 if (col_idx_[idx] == column_idx) {
                     variable[idx] = value;
                 }
             }
         } else {
-            std::cerr << "ELLMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
+            for (ST idx = lil_idx; idx < post_ranks_.size() * maxnzr_; idx+= post_ranks_.size()) {
+                if (col_idx_[idx] == column_idx) {
+                    variable[idx] = value;
+                }
+            }
         }
     }
    
@@ -615,7 +643,23 @@ class ELLMatrix {
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-        std::cerr << "ELLMatrix::get_matrix_variable() is not implemented" << std::endl;
+        assert( (lil_idx < post_ranks_.size()) );
+
+        auto row_size = dendrite_size(lil_idx);
+        auto num_rows = post_ranks_.size();
+
+        for (IT c = 0; c < row_size; c++) {
+            if (row_major) {
+                ST idx = lil_idx*maxnzr_+c;
+                if (col_idx_[idx] == col_idx)
+                    return variable[idx];
+            } else {
+                ST idx = c*num_rows+lil_idx;
+                if (col_idx_[idx] == col_idx)
+                    return variable[idx];
+            }
+        }
+
         return static_cast<VT>(0.0); // should not happen
     }
 

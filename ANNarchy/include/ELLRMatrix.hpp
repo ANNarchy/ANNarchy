@@ -131,6 +131,24 @@ public:
         maxnzr_ = 0;
     }
 
+    /**
+     *  @brief      returns number of rows of the dense matrix.
+     *  @details    this value can differ but should be larger than the number of ELLMatrix::nb_dendrites()
+     *  @returns    number of rows of the dense matrix.
+     */
+    IT num_rows() {
+        return dense_num_rows_;
+    }
+
+    /**
+     *  @brief      returns number of columns of the dense matrix.
+     *  @details    this value can differ but should be larger than the number of ELLMatrix::dendrite_size(int lil_idx)
+     *  @returns    number of columns of the dense matrix.
+     */
+    IT num_columns() {
+        return dense_num_columns_;
+    }
+
     inline IT get_maxnzr() {
         return maxnzr_;
     }
@@ -158,15 +176,9 @@ public:
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        if (row_major) {
-            for(IT r = 0; r < post_ranks_.size(); r++) {
-                auto beg = col_idx_.begin() + r*maxnzr_;
-                auto end = col_idx_.begin() + r*maxnzr_ + rl_[r];
-                pre_ranks.push_back(std::vector<IT>(beg, end));
-            }
-        } else {
-            std::cerr << "ELLRMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
-        }
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++)
+            pre_ranks.push_back(std::move(get_dendrite_pre_rank(lil_idx)));
+
         return pre_ranks;
     }
 
@@ -438,7 +450,25 @@ public:
     #endif
         check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
 
-        return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
+        // fill all places with 0
+        auto new_variable = std::vector<VT> (post_ranks_.size() * maxnzr_, static_cast<VT>(0.0));
+
+        // only "set" nonzeros should be updated
+        if (row_major) {
+            for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+                auto beg = new_variable.begin() + row_idx * maxnzr_;
+                auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
+                std::generate(beg, end, [&]{ return default_value; });
+            }
+        } else {
+            for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+                for (IT col_idx = 0; col_idx < rl_[row_idx]; col_idx++) {
+                    new_variable[col_idx * post_ranks_.size() + row_idx] = default_value;
+                }
+            }
+        }
+        
+        return new_variable;
     }
 
     template <typename VT>
@@ -448,13 +478,31 @@ public:
     #endif
         check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
 
+        // Init RNG distribution object
         std::uniform_real_distribution<VT> dis (a,b);
+
+        // fill all places with 0
         auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
-        for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
-            auto beg = new_variable.begin() + row_idx * maxnzr_;
-            auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
-            std::generate(beg, end, [&]{ return dis(rng); });
+
+        // only "set" nonzeros should be updated
+        if (row_major) {
+            for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+                auto beg = new_variable.begin() + row_idx * maxnzr_;
+                auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
+                std::generate(beg, end, [&]{ return dis(rng); });
+            }
+        } else {
+            // HD (5th Aug 2025):   I'm aware the fact that this access pattern
+            //                      is not run-time efficient, but this ensures that
+            //                      forward and backward matrix is initialized in the same way
+            for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+                for (IT col_idx = 0; col_idx < rl_[row_idx]; col_idx++) {
+                    new_variable[col_idx * post_ranks_.size() + row_idx] = dis(rng);
+                }
+            }
+
         }
+
         return new_variable;
     }
 
@@ -467,11 +515,18 @@ public:
 
         std::normal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
-        for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
-            auto beg = new_variable.begin() + row_idx * maxnzr_;
-            auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
-            std::generate(beg, end, [&]{ return dis(rng); });
+
+        // only "set" nonzeros should be updated
+        if (row_major) {
+            for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+                auto beg = new_variable.begin() + row_idx * maxnzr_;
+                auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
+                std::generate(beg, end, [&]{ return dis(rng); });
+            }
+        } else {
+            std::cerr << "ELLRMatrix::init_matrix_variable is not implemented for column-major." << std::endl;
         }
+
         return new_variable;
     }
 
