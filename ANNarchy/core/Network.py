@@ -158,27 +158,11 @@ class Network (metaclass=NetworkMeta):
         #       that the function will be called twice. The better approach is to trigger this function
         #       by del on the network object
 
-        for pop in self._data.populations:
-            pop._clear()
-            del pop
+        # clear attached objects
+        self.clear()
 
-        for proj in self._data.projections:
-            proj._clear()
-            del proj
-
-        for mon in self._data.monitors:
-            mon._clear()
-            del mon
-
-        for ext in self._data.extensions:
-            ext._clear()
-            del ext
-
-        for const in self._data.constants:
-            del const
-
+        # de-register the network instance
         NetworkManager().remove_network(self)
-
 
     def create(
             self,
@@ -587,17 +571,22 @@ class Network (metaclass=NetworkMeta):
         """
         for pop in self._data.populations:
             pop._clear()
+            del pop
 
         for proj in self._data.projections:
             proj._clear()
+            del proj
 
         for mon in self._data.monitors:
             mon._clear()
+            del mon
 
         for ext in self._data.extensions:
             ext._clear()
+            del ext
 
-        NetworkManager().get_network(self.id).instance = None
+        for const in self._data.constants:
+            del const
 
     ###################################
     # Parallel run
