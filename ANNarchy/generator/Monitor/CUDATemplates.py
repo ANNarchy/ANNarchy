@@ -50,7 +50,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
+        std::cout << "PopRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_all_container_code)s
 
@@ -170,13 +170,13 @@ public:
 
     void record_targets() { /* nothing to do here */ }
     long int size_in_bytes() {
-        std::cout << "ProjMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
+        std::cout << "ProjRecorder::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
         return 0;
     }
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "ProjMonitor%(id)s::clear()." << std::endl;
+        std::cout << "ProjRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container_code)s
     }

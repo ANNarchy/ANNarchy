@@ -15,7 +15,7 @@ public:
         : Monitor(ranks, period, period_offset, offset)
     {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s (" << this << ") instantiated." << std::endl;
+        std::cout << "PopRecorder%(id)s (this = " << this << ") instantiated." << std::endl;
     #endif
 %(init_code)s
 
@@ -28,7 +28,7 @@ public:
 
     ~PopRecorder%(id)s() {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s() - this = " << this << std::endl;
+        std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s(this = " << this << ")" << std::endl;
     #endif
     }
 
@@ -53,7 +53,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
+        std::cout << "PopRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_all_container_code)s
 
@@ -187,7 +187,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "ProjMonitor%(id)s::clear()." << std::endl;
+        std::cout << "ProjRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container_code)s
     }

@@ -137,7 +137,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::clear() - this = " << this << std::endl;
+        std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container)s
     }
