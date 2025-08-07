@@ -108,8 +108,8 @@ class test_IO_Rate(unittest.TestCase):
             
                 self.set_attributes(self.new_attr)
             
-                with patch('sys.stdout', new=io.StringIO()): # suppress print
-                    self.network.save(self.savefolder + "ratenet" + ext)
+                #with patch('sys.stdout', new=io.StringIO()): # suppress print
+                self.network.save(self.savefolder + "ratenet" + ext)
             
                 self.network.reset(projections=True, synapses=True)
             
@@ -156,6 +156,20 @@ class test_IO_Rate(unittest.TestCase):
             
                 self.network.proj2.load(self.savefolder + "pr2rate" + ext)
 
+    def test_projection_save_and_load_connectivity(self):
+        """
+        Save/load connectivity is a special case from the default save/load method.
+        """
+
+        # single-weight    
+        self.network.proj0.save_connectivity(self.savefolder + "pr2rate_proj0_conn.npz")
+        # multi-weight    
+        self.network.proj1.save_connectivity(self.savefolder + "pr2rate_proj1_conn.npz")
+
+        self.network.reset(projections=True, synapses=True)
+
+        self.network.proj0.from_file(self.savefolder + "pr2rate_proj0_conn.npz")
+        self.network.proj1.from_file(self.savefolder + "pr2rate_proj1_conn.npz")
 
 class test_IO_Spiking(unittest.TestCase):
     """
@@ -226,6 +240,19 @@ class test_IO_Spiking(unittest.TestCase):
                 assert_allclose_named(self.get_attributes(), self.new_attr,
                                       self.attribute_names)
 
+    def test_projection_save_and_load_connectivity(self):
+        """
+        Save/load connectivity is a special case from the default save/load method.
+        """
+
+        # single-weight    
+        self.network.proj0.save_connectivity(self.savefolder + "pr2spike_proj0_conn.npz")
+        # multi-weight    
+        self.network.proj1.save_connectivity(self.savefolder + "pr2spike_proj1_conn.npz")
+
+        self.network.proj0.from_file(self.savefolder + "pr2spike_proj0_conn.npz")
+        self.network.proj1.from_file(self.savefolder + "pr2spike_proj1_conn.npz")
+
     def test_save_mat(self):
         """
         Save the network in the non-loadable .mat format
@@ -256,7 +283,3 @@ class test_IO_Spiking(unittest.TestCase):
                 with patch('sys.stdout', new=io.StringIO()): # suppress print
                     self.network.proj2.save(self.savefolder + "pr2spike" + ext)
                 self.network.proj2.load(self.savefolder + "pr2spike" + ext)
-
-
-if __name__ == "__main__":
-    unittest.main()
