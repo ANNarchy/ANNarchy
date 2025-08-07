@@ -11,6 +11,7 @@ from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
 from ANNarchy.intern import Messages
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 try:
     from ANNarchy.cython_ext import *
@@ -540,14 +541,25 @@ def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_form
         lil.pre_rank = list(data['pre_ranks'])
 
         # Weights
+        single_w = False
         if isinstance(data['w'], (int, float)):
-            self._single_constant_weight = True
+            single_w = True
             lil.w = [[float(data['w'])]]
         elif isinstance(data['w'], (np.ndarray,)) and data['w'].size == 1:
-            self._single_constant_weight = True
+            single_w = True
             lil.w = [[float(data['w'])]]
         else:
             lil.w = data['w']
+
+        if NetworkManager().get_network(net_id = self.net_id).compiled:
+            # We have already compiled the network, so changing the flag will result in crashes when accessing 'w'
+            if single_w != self._single_constant_weight:
+                Messages._print("Projection (name="+self.name+"): potential mismatch between weight vector in the projection and the save file.")
+                Messages._print("    single weight in file:", single_w)
+                Messages._print("    single weight in network:", self._single_constant_weight)
+        else:
+            # we have not yet compiled, so simply adjust the flag
+            self._single_constant_weight = single_w
 
         # Delays
         lil.max_delay = data['max_delay']
