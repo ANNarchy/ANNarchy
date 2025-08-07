@@ -926,7 +926,9 @@ class Projection :
         # Determine C++ data type
         ctype = self._get_attribute_cpp_type(attribute=attribute)
 
-        if attribute in self.synapse_type.description["local"]:
+        if attribute == "w" and self._has_single_weight():
+            return getattr(self.cyInstance, 'get_global_attribute_'+ctype)(attribute)
+        elif attribute in self.synapse_type.description["local"]:
             return getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
         elif attribute in self.synapse_type.description["semiglobal"]:
             return getattr(self.cyInstance, "get_semiglobal_attribute_all_"+ctype)(attribute)
@@ -1428,7 +1430,7 @@ class Projection :
         attributes = self.attributes
         if not 'w' in self.attributes:
             attributes.append('w')
- 
+
         # Save all attributes
         for var in attributes:
             try:
@@ -1451,7 +1453,7 @@ class Projection :
 
             except Exception as e:
                 Messages._print(e)
-                Messages._warning('Can not save the attribute ' + var + ' in the projection.')
+                Messages._warning('Can not save the attribute ' + var + ' in the projection (name='+str(self.name)+').')
 
         return desc
 
