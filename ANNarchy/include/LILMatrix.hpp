@@ -95,9 +95,9 @@
  *                      - unsigned short int (2 byte):   [0 .. 65.535]
  *                      - unsigned int (4 byte):         [0 .. 4.294.967.295]
  *
- *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
+ *                      The chosen data type should be able to represent the maximum values (i.e., @ref num_rows_ and @ref num_columns_ )
  *
- *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
+ *  @tparam     ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
  */
 template<typename IT = unsigned int, typename ST = unsigned long int>
@@ -155,14 +155,19 @@ public:
     //
     //  Accessor to member variables
     //
+    /**
+     * @brief   Get the maximum number of rows in the matrix.
+     */
     inline IT num_rows() {
         return num_rows_;
     }
 
+    /**
+     * @brief   Get the maximum number of column in the matrix.
+     */
     inline IT num_columns() {
         return num_columns_;
     }
-
 
     /**
      *  @details    get row indices
@@ -332,6 +337,7 @@ public:
      *  @param[in]  pre_ranks               list of list, where the i-th sub-vector should contain a list of potential
      *                                      connection candidates for the i-th post-synaptic neuron.
      *  @param[in]  allow_self_connections  whether neurons with the same rank should be connected or not.
+     *  @returns    Whether the construction of the pattern was successfull.
      */
     bool all_to_all_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, bool allow_self_connections) {
     #ifdef _DEBUG
@@ -366,6 +372,7 @@ public:
      *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.
      *  @param[in]  nnz_per_row number of pre-synaptic neurons which should be randomly selected from the list.
      *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    Whether the construction of the pattern was successfull.
      */
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
@@ -398,7 +405,9 @@ public:
      *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.
      *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.
      *  @param[in]  p           probability for a connection being set between two neurons.
+     *  @param[in]  allow_self_connections  whether neurons with the same rank should be connected or not.
      *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    Whether the construction of the pattern was successfull.
      */
     bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
@@ -585,6 +594,7 @@ public:
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  col_idx     column index of the matrix entry.
      *  @param[in]  value       new matrix value
      */
     template <typename VT>
@@ -646,6 +656,7 @@ public:
      *  @brief      retrieve a LIL representation for a given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the matrix variable which should be read-out.
      *  @returns    a LIL representation from the given variable.
      */
     template <typename VT>
@@ -657,6 +668,7 @@ public:
      *  @brief      retrieve a specific row from the given variable.
      *  @details    this function is only called by the Python interface to retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the matrix variable which should be read-out.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    a vector containing all elements of the provided variable and lil_idx
      */
@@ -671,6 +683,7 @@ public:
      *  @brief      retruns a single value from the given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the matrix variable which should be read-out.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @param[in]  col_idx     index of the selected column.
      *  @returns    the value at position (lil_idx, col_idx)
@@ -703,6 +716,7 @@ public:
      *  @brief      Initialize a vector variable
      *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be updated.
      *  @param[in]  values      new values for the row indicated by lil_idx.
      */
     template <typename VT>
@@ -713,15 +727,11 @@ public:
     }
 
     /**
-     *  @brief      Get a vector variable
-     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
-     *  @tparam     VT          data type of the variable.
-     */
-    template <typename VT>
-    inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
-        return variable;
-    }
-
+     *  @brief      Updates a single item from a vector variable
+     *  @param[in]  variable    the vector variable which should be read-out.
+     *  @param[in]  lil_idx     position of the vector to be updated.
+     *  @param[in]  value       new value for the matrix entry.
+     */    
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, IT lil_idx, VT value) {
         assert ( (lil_idx < post_rank.size()) );
@@ -730,9 +740,22 @@ public:
     }
 
     /**
+     *  @brief      Get a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be read-out.
+     */
+    template <typename VT>
+    inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
+        return variable;
+    }
+
+    /**
      *  @brief      Get a single item from a vector variable
      *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be read-out.
+     *  @param[in]  lil_idx     position of the vector to be read-out.
      */
     template <typename VT>
     inline VT get_vector_variable(std::vector<VT> variable, IT lil_idx) {
@@ -763,11 +786,18 @@ public:
         return size;
     }
 
-    LILMatrix<IT>* slice_across_rows(IT beg, IT end) {
+    /**
+     * @brief       creates a partition from the matrix.
+     * @details     Intended for the use by @ref PartitionedMatrix.
+     * @param[in]   beg     index of the begin of the created partition.
+     * @param[in]   end     index of the end of the created partition.
+     * @return      reference to a new instance of LILMatrix<IT, ST>
+     */
+    LILMatrix<IT, ST>* slice_across_rows(IT beg, IT end) {
         assert( (beg >= 0) );
         assert( (end >= 0) );
 
-        auto sliced_matrix = new LILMatrix<IT>(num_rows_, num_columns_);
+        auto sliced_matrix = new LILMatrix<IT, ST>(num_rows_, num_columns_);
 
         sliced_matrix->post_rank = std::vector<IT>(post_rank.begin()+beg, post_rank.begin()+end);
         sliced_matrix->pre_rank = std::vector<std::vector<IT>>(pre_rank.begin()+beg, pre_rank.begin()+end);
@@ -775,11 +805,16 @@ public:
         return sliced_matrix;
     }
 
-    LILMatrix<IT>* transpose() {
+    /**
+     * @brief       creates a transposed instance of the present matrix.
+     * @details     used by matrix formats which use a pre-to-post storage scheme, i.e., formats with a *T* postfix.
+     * @return      reference to a new instance of LILMatrix<IT, ST>
+     */
+    LILMatrix<IT, ST>* transpose() {
     #ifdef _DEBUG
         std::cout << "LILMatrix::transpose() - origin matrix ( " << num_rows_ << ", " << num_columns_ << " )" << std::endl;
     #endif
-        auto transposed_matrix = new LILMatrix<IT>(num_columns_, num_rows_);
+        auto transposed_matrix = new LILMatrix<IT, ST>(num_columns_, num_rows_);
         auto tmp_row_idx = std::vector< std::vector<IT> >(num_columns_, std::vector<IT>());
 
         // we need to use the forward view, the column indices in bwd_view_ are relative to the CSR
@@ -813,6 +848,7 @@ public:
 
     /**
      *  @brief      print some matrix characteristics to the standard out (i. e. command-line)
+     *  @details    Intended for debug.
      */
     void print_matrix_statistics() {
         std::cout << "  #rows: " << num_rows_ << std::endl;
@@ -823,6 +859,7 @@ public:
 
     /**
      *  @brief      print the matrix representation to the standard out (i. e. command-line)
+     *  @details    Intended for debug.
      */
     void print_data_representation() {
         std::cout << "LILMatrix instance at " << this << std::endl;
@@ -843,6 +880,10 @@ public:
         std::cout << "]" << std::endl;
     }
 
+    /**
+     *  @brief      print a stored matrix variable representation to the standard out (i. e. command-line)
+     *  @details    Intended for debug.
+     */
     template<typename VT>
     void print_variable(const std::vector<std::vector<VT>> &variable) {
         std::cout << "LILMatrix variable instance: " << this << std::endl;
