@@ -121,6 +121,9 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrix::clear()" << std::endl;
     #endif
+        post_ranks_.clear();
+        post_ranks_.shrink_to_fit();
+
         mask_.clear();
         mask_.shrink_to_fit();
     }
