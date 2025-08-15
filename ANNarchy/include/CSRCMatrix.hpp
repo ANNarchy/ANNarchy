@@ -58,13 +58,13 @@ public:
     /**
      * \details     Clear the STL container
      */
-    void clear() {
-        // clear forward view
-        static_cast<CSRMatrix<IT, ST>*>(this)->clear();
-
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::clear()" << std::endl;
     #endif
+        // clear forward view
+        CSRMatrix<IT, ST>::clear();
+
         // clear backward view
         _col_ptr.clear();
         _col_ptr.shrink_to_fit();
@@ -243,11 +243,11 @@ public:
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 0;
 
         // forward view of CSR
-        size += static_cast<CSRMatrix<IT, ST>*>(this)->size_in_bytes();
+        size += CSRMatrix<IT, ST>::size_in_bytes();
 
         // backward view
         size += sizeof(std::vector<ST>);

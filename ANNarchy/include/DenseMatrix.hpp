@@ -50,11 +50,11 @@ protected:
     std::vector<IT> post_ranks_;    ///< encodes the indices of rows with at least one non-zero.
 
     /**
-     *  \brief      Decode the column indices for non-zeros in the matrix.
+     *  \brief      Decode the column indices for nonzeros in the matrix.
      *  \details    Many implementations denote a non-existing matrix entry by a 0.0, -1.0 or max(IT). However, as the matrix
      *              will be used as part of computations, one face the problem, that learning models could form new synapses
      *              "by accident". Therefore, we need to store an additional mask array. This function extracts for a given
-     *              row (indicated by row_idx) all corresponding column indices of non-zeros.
+     *              row (indicated by row_idx) all corresponding column indices of nonzeros.
      *  \note       This function expects a dense row idx.
      */
     virtual std::vector<IT> decode_column_indices(IT row_idx) {
@@ -117,7 +117,7 @@ public:
      *  \details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "DenseMatrix::clear()" << std::endl;
     #endif
@@ -391,7 +391,7 @@ public:
         // Allocate mask
         mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
-        // iterate over rows which should contain non-zeros.
+        // iterate over rows which should contain nonzeros.
         for (const auto row_idx : post_ranks_) {
 
             // over all possible connections: if condition is true then add a non-zero
@@ -427,7 +427,7 @@ public:
         // fill the matrix with zeros
         auto new_variable = std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
 
-        // fill in the positions of non-zeros
+        // fill in the positions of nonzeros
         for (const auto row_idx : post_ranks_) {
             auto col_idx = decode_column_indices(row_idx);
 
@@ -518,7 +518,7 @@ public:
         std::cout << "DenseMatrix::update_matrix_variable_row(lil_idx="<<lil_idx<<") --> access row_idx="<<row_idx << std::endl;
     #endif
 
-        // get the column indices of all non-zeros in the present row
+        // get the column indices of all nonzeros in the present row
         auto col_idx = decode_column_indices(row_idx);
 
         // sanity check: enough values for this row?
@@ -757,7 +757,7 @@ public:
      *  \returns    size in bytes for stored connectivity
      *  \see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
 
         size += mask_.capacity() * sizeof(MT);

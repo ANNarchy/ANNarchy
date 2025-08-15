@@ -203,7 +203,7 @@ class HYBMatrix {
         coo_matrix_ = coo_ptr;
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "HYBMatrix::clear()" << std::endl;
     #endif
@@ -483,7 +483,7 @@ class HYBMatrix {
         return static_cast<VT>(0.0); // should not happen
     }
 
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
 
         size += static_cast<ELLMatrix<IT, ST, row_major>*>(ell_matrix_)->size_in_bytes();

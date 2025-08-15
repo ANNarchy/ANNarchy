@@ -141,12 +141,13 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
      *  @brief      clear the matrix
      *  @details    should be called before destructor.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<COOMatrix<IT, ST>*>(this)->clear();
+        COOMatrix<IT, ST>::clear();
+        
         this->segments_.clear();
         this->segments_.shrink_to_fit();
 
@@ -227,9 +228,9 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         // standard coordinate size
-        size_t size = static_cast<COOMatrix<IT, ST>*>(this)->size_in_bytes();
+        size_t size = COOMatrix<IT, ST>::size_in_bytes();
 
         // segments host container
         size += sizeof(std::vector<ST>);

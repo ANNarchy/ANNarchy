@@ -24,10 +24,11 @@
 #include "LILMatrix.hpp"
 
 /**
- *   \brief     sliced ELLPACK sparse matrix representation according to Alexander Monakov et al. (2010) 
+ *   @brief     sliced ELLPACK sparse matrix representation according to Alexander Monakov et al. (2010) 
  *              and Moritz Kreutzer et al. (2013) with some minor modifications as described below.
 
- *   \details   more details can be found in the paper:
+ *   @details   more details can be found in the paper:
+ *
  *              Automatically tuning sparse matrix-vector multiplication for GPU architectures by Alexander Monakov et al. (2010)
  *              A unified sparse matrix data format for modern processors with wide SIMD units by Moritz Kreutzer et al. (2013)
  *  
@@ -59,31 +60,21 @@
  *
  * 	            row_ptr = [0, 4, 6]
  *              
- *  \tparam     IT      intended to be used for all values related to row/column
- *  \tparam     ST      intended to be used for running indices across the matrix (e.g. if the value would overflow for IT)
+ *  @tparam     IT          intended to be used for all values related to row/column
+ *  @tparam     ST          intended to be used for running indices across the matrix (e.g. if the value would overflow for IT)
+ *  @tparam     row_major   the individual slices are stored as *dense* blocks. They can either stored using row-major (=true) or
+ *                          column-major (=false) scheme.
  */
 template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major = true>
 class SELLMatrix {
-  protected:
-    IT num_rows_;                       ///< maximum number of rows 
-    IT num_columns_;                    ///< maximum number of columns 
-    IT block_size_;                     ///< size of each block (maximum number of rows in each block)
-    IT num_blocks_;                     ///< number of blocks in the dense matrix
-    ST num_non_zeros_;                  ///< number of nonzeros
-
-    std::vector<IT> post_ranks_;        ///< which rows does contain entries
-    std::vector<IT> col_idx_;           ///< column indices for accessing dense vector
-    std::vector<ST> row_ptr_;           ///< points to first element in each block
-    std::vector<char> mask_;            ///< mask of entries
-
   public:
 
     /**
-     *  \brief      Constructor
-     *  \details    Does not initialize any data.
-     *  \param[in]  num_rows        number of rows of the original matrix 
-     *  \param[in]  num_columns     number of columns of the original matrix 
-     *  \param[in]  blocksize       size of each block (number of rows in each block)
+     *  @brief      Constructor
+     *  @details    Does not initialize any data.
+     *  @param[in]  num_rows        number of rows of the original matrix 
+     *  @param[in]  num_columns     number of columns of the original matrix 
+     *  @param[in]  blocksize       size of each block (number of rows in each block)
      */
     explicit SELLMatrix(const IT num_rows, const IT num_columns, const IT blocksize):
         num_rows_(num_rows), num_columns_(num_columns), block_size_(blocksize) {
@@ -100,17 +91,16 @@ class SELLMatrix {
      */
     ~SELLMatrix() {
     #ifdef _DEBUG
-        std::cout << "SELLMatrix::~SELLMatrix()" << std::endl;
+        std::cout << "SELLMatrix::~SELLMatrix(this=" << this << ")" << std::endl;
     #endif
-        clear();
     }
 
     /**
      *  @brief      clear the contained data
      */
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
-        std::cout << "SELLMatrix::clear()" << std::endl;
+        std::cout << "SELLMatrix::clear(this=" << this << ")" << std::endl;
     #endif
         num_blocks_ = 0;
 
@@ -129,41 +119,173 @@ class SELLMatrix {
         num_non_zeros_ = 0;
     }
 
+/************************************************************************************************************/
+/*  Accessors to member variables                                                                            */
+/************************************************************************************************************/
 
     /**
-     *  @brief      computes the size in bytes
-     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
-     *  @returns    size in bytes for stored connectivity
-     *  @see        LILMatrix::size_in_bytes()
+     *  @brief      returns number of rows of the dense matrix.
      */
-    size_t size_in_bytes() {
-
-        size_t size = 4 * sizeof(IT);
-        size += sizeof(ST);
-
-        size += sizeof(std::vector<IT>);
-        size += post_ranks_.capacity() * sizeof(IT);
-
-        size += sizeof(std::vector<IT>);
-        size += col_idx_.capacity() * sizeof(IT);
-
-        size += sizeof(std::vector<ST>);
-        size += row_ptr_.capacity() * sizeof(ST);
-
-        size += sizeof(std::vector<char>);
-        size += mask_.capacity() * sizeof(char); 
-
-        return size;
+    IT num_rows() {
+        return num_rows_;
     }
 
-    //
-    // INITIALIZATION METHODS
-    //
+    /**
+     *  @brief      returns number of columns of the dense matrix.
+     */
+    IT num_columns() {
+        return num_columns_;
+    }
+
+    /**
+     *  @return     a list of those row indices which belongs to a non-empty row.
+     */
+    std::vector<IT> get_post_rank() { return post_ranks_; }
+
+    /**
+     *  @details    get column indices
+     *  @return     a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
+     */
+    std::vector<std::vector<IT>> get_pre_ranks() {
+        std::vector<std::vector<IT>> lil_pre_ranks;
+
+        if (row_major) {
+            for (int i = 0; i < post_ranks_.size(); i++) {
+                lil_pre_ranks.push_back(std::move(get_dendrite_pre_rank(i)));
+            }            
+        }else {
+            std::cerr << "SELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
+        }
+        return lil_pre_ranks;
+    }
+
+    /**
+     *  @details    get column indices of a specific row.
+     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @returns    a list of column indices of a specific row.
+     */
+    typename std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
+        assert((lil_idx < post_ranks_.size()));
+
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT local_row = row_idx % block_size_;
+
+        if (row_major) {            
+            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
+            auto end = std::find(beg + 1, beg + block_length, 0);
+            return std::vector<IT>(beg, end);
+        } else {
+            std::vector<IT> tmp;
+            auto offset = row_ptr_[block_idx] + local_row;
+
+            tmp.push_back(col_idx_[offset]); // push directly into the 0-th element
+
+            for (int c = 1; c < block_length; c++) {
+                auto col = col_idx_[c * block_size_ + offset];
+                if (col == 0)break;
+                tmp.push_back(col);
+            }
+            return tmp;
+        }        
+    }
+
+    /**
+     *  @brief      number of synapses in the complete matrix
+     *  @returns    number of synapses for all rows
+     */
+    ST nb_synapses() {
+        return this->num_non_zeros_;
+    }
+
+    /**
+    *  @details    returns the number of stored rows. (i. e. each of these rows contains at least one connection).
+    */
+    IT nb_dendrites() {
+        return static_cast<IT>(post_ranks_.size());
+    }
+
+    /*
+    *  @details    return the number of non-zero in this matrix for a given row.
+    */
+    IT dendrite_size(IT lil_idx) {
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT local_row = row_idx % block_size_;
+
+        if (row_major) {            
+            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
+            auto end = std::find(beg + 1, beg + block_length, 0);
+            return static_cast<IT>(std::distance(beg, end));
+        }
+        else {
+            IT nnz_given_row = 0;
+            auto offset = row_ptr_[block_idx] + local_row;
+
+            for (int c = 0; c < block_length; c++) {
+                if (mask_[c * block_size_ + offset])nnz_given_row++;                
+            }
+
+            return nnz_given_row;
+        }    
+    }
+
+    /**
+    *  @brief      get column indices
+    *  @returns    the column indices as std::vector<IT>
+    */
+    std::vector<IT> column_indices() {
+        return col_idx_;
+    }
+
+    /**
+    *  @brief      get number of blocks
+    *  @returns    number of blocks 
+    */
+    IT get_num_blocks() {
+        return num_blocks_;
+    }
+
+    /**
+    *  @brief      get the size of block
+    *  @returns    the size of block
+    */
+    IT get_block_size() {
+        return block_size_;
+    }
+
+    /**
+    *  @brief      get row ptr
+    *  @returns    the row ptr as std::vector<ST>
+    */
+    std::vector<ST> row_ptr() {
+        return row_ptr_;
+    }
+
+    /**
+    *  @brief      get mask
+    *  @returns    the mask as std::vector<short int>
+    */
+    std::vector<char> get_mask() {
+        return mask_;
+    }
+
+/************************************************************************************************************/
+/*  Initialize the sparse matrix representation                                                             */
+/************************************************************************************************************/
 
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.        
      */
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
+    #ifdef _DEBUG
+        std::cout << "SELLMatrix::init_matrix_from_lil()" << std::endl;
+    #endif
 
         post_ranks_ = row_indices;
         auto lil_row_idx = 0;        
@@ -271,237 +393,17 @@ class SELLMatrix {
         }
 
     #ifdef _DEBUG
-        std::cout << num_blocks_ << " times " << block_size_ << " rows." << std::endl;
-        std::cout << "  min. size: " << min_block_length << std::endl;
-        std::cout << "  max. size: " << max_block_length << std::endl;
+        print_matrix_statistics();
+        std::cout << "  created " << num_blocks_ << " blocks with " << block_size_ << " rows each" << std::endl;
+        std::cout << "    min. size: " << min_block_length << std::endl;
+        std::cout << "    max. size: " << max_block_length << std::endl;
     #endif
         return true;
     }
 
-    /**
-     *  @brief      print the matrix representation to console.
-     *  @details    All important fields are printed. 
-     */
-    virtual void print_data_representation() {
-        std::cout << "SELLMatrix instance at " << this << std::endl;
-        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
-        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
-        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
-        std::cout << "  #blocksize: " << block_size_ << std::endl;
-        std::cout << "  #num of blocks: " << num_blocks_ << std::endl;
-        std::cout << "  #stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
-        std::cout << "  post_ranks = [ " << std::endl;
-        for (IT r = 0; r < post_ranks_.size(); r++) {
-            std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
-        }
-        std::cout << "]" << std::endl;
-
-        std::cout << "  row_ptr_ = [ " << std::endl;
-        for (IT i = 0; i < row_ptr_.size(); i++) {
-            std::cout << row_ptr_[i] << " ";
-        }
-        std::cout << "]" << std::endl;
-
-        std::cout << "  col_idx_ = [ " << std::endl;
-        for (ST i = 0; i < col_idx_.size(); i++) {
-            std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
-        }
-        std::cout << "]" << std::endl;
-
-        std::cout << "  mask_ = [ " << std::endl;
-        for (ST i = 0; i < mask_.size(); i++) {
-            if (mask_[i])std::cout << "T ";
-            else std::cout << "F ";
-        }
-        std::cout << "]" << std::endl;
-    }
-
-    /**
-     *  @brief      print col_idx_ of the matrix representation to console.
-     */
-    void print_data() {
-        std::cout << " #blocksize: " << block_size_ << std::endl;
-        std::cout << " #num of blocks: " << num_blocks_ << std::endl;
-
-        std::cout << "col indices " << std::endl;
-        unsigned int rowbegin = 0;
-        //i-th block
-        for (int i = 0; i < num_blocks_; i++) {
-            int len = (row_ptr_[i + 1] - row_ptr_[i]) / block_size_;
-            //j-th row in i-th block
-            for (int j = 0; j < block_size_; j++) {
-                rowbegin = j + i * block_size_;
-                std::cout << "(" << rowbegin << ") [";
-                int location = row_ptr_[i] + j * len;
-                //k-th element in j-th row 
-                for (int k = 0; k < len; k++) {
-                    std::cout << col_idx_[location + k] << " ";
-                }
-                std::cout << "]" << std::endl;
-            }
-        }
-    }
-
-    //
-    // ACCESSOR METHODS
-    //
-
-    /*
-     *  @return     a list of those row indices which belongs to a non-empty row.
-     */
-    std::vector<IT> get_post_rank() { return post_ranks_; }
-
-    /**
-    *  @details    get column indices
-    *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
-       */
-    std::vector<std::vector<IT>> get_pre_ranks() {
-        std::vector<std::vector<IT>> lil_pre_ranks;
-
-        if (row_major) {
-            for (int i = 0; i < post_ranks_.size(); i++) {
-                lil_pre_ranks.push_back(std::move(get_dendrite_pre_rank(i)));
-            }            
-        }else {
-            std::cerr << "SELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
-        }
-        return lil_pre_ranks;
-    }
-
-    /**
-     *  @details    get column indices of a specific row.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
-     *  @returns    a list of column indices of a specific row.
-     */
-    typename std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
-        assert((lil_idx < post_ranks_.size()));
-
-        IT row_idx = post_ranks_[lil_idx];
-        IT block_idx = row_idx / block_size_;
-        //first should compute block length in this block
-        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-        IT local_row = row_idx % block_size_;
-
-        if (row_major) {            
-            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
-            auto end = std::find(beg + 1, beg + block_length, 0);
-            return std::vector<IT>(beg, end);
-        } else {
-            std::vector<IT> tmp;
-            auto offset = row_ptr_[block_idx] + local_row;
-
-            tmp.push_back(col_idx_[offset]); // push directly into the 0-th element
-
-            for (int c = 1; c < block_length; c++) {
-                auto col = col_idx_[c * block_size_ + offset];
-                if (col == 0)break;
-                tmp.push_back(col);
-            }
-            return tmp;
-        }        
-    }
-    
-    /**
-     *  @brief      returns number of rows of the dense matrix.
-     */
-    IT num_rows() {
-        return num_rows_;
-    }
-
-    /**
-     *  @brief      returns number of columns of the dense matrix.
-     */
-    IT num_columns() {
-        return num_columns_;
-    }
-
-    /**
-     *  @brief      number of synapses in the complete matrix
-     *  @returns    number of synapses for all rows
-     */
-    ST nb_synapses() {
-        return this->num_non_zeros_;
-    }
-
-    /**
-    *  @details    returns the number of stored rows. (i. e. each of these rows contains at least one connection).
-    */
-    IT nb_dendrites() {
-        return post_ranks_.size();
-    }
-
-    /*
-    *  @details    return the number of non-zero in this matrix for a given row.
-    */
-    IT dendrite_size(IT lil_idx) {
-        IT row_idx = post_ranks_[lil_idx];
-        IT block_idx = row_idx / block_size_;
-        //first should compute block length in this block
-        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-        IT local_row = row_idx % block_size_;
-
-        if (row_major) {            
-            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
-            auto end = std::find(beg + 1, beg + block_length, 0);
-            return static_cast<IT>(std::distance(beg, end));
-        }
-        else {
-            IT nnz_given_row = 0;
-            auto offset = row_ptr_[block_idx] + local_row;
-
-            for (int c = 0; c < block_length; c++) {
-                if (mask_[c * block_size_ + offset])nnz_given_row++;                
-            }
-
-            return nnz_given_row;
-        }    
-    }
-
-    /**
-    *  @brief      get column indices
-    *  @returns    the column indices as std::vector<IT>
-    */
-    std::vector<IT> column_indices() {
-        return col_idx_;
-    }
-
-    /**
-    *  @brief      get number of blocks
-    *  @returns    number of blocks 
-    */
-    IT get_num_blocks() {
-        return num_blocks_;
-    }
-
-    /**
-    *  @brief      get the size of block
-    *  @returns    the size of block
-    */
-    IT get_block_size() {
-        return block_size_;
-    }
-
-    /**
-    *  @brief      get row ptr
-    *  @returns    the row ptr as std::vector<ST>
-    */
-    std::vector<ST> row_ptr() {
-        return row_ptr_;
-    }
-
-    /**
-    *  @brief      get mask
-    *  @returns    the mask as std::vector<short int>
-    */
-    std::vector<char> get_mask() {
-        return mask_;
-    }
-
-
-
-    //
-    //  Initialize Variables
-    //
+/************************************************************************************************************/
+/*  Initialize Matrix Variables                                                                             */
+/************************************************************************************************************/
 
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
@@ -543,9 +445,9 @@ class SELLMatrix {
         return variable;
     }
 
-    //
-    //  Update Variables
-    //
+/************************************************************************************************************/
+/*  Update Values of Matrix Variables                                                                       */
+/************************************************************************************************************/
 
     /**
      *  @details    Updates a single *existing* entry within the matrix.
@@ -644,27 +546,22 @@ class SELLMatrix {
         
     }
 
+/************************************************************************************************************/
+/*  Read-out Values of Matrix Variables                                                                     */
+/************************************************************************************************************/
 
     /**
-     *  @brief      retruns a single value from the given variable.
+     *  @brief      retrieve a LIL representation for a given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
      */
     template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT lil_idx, const IT column_idx) {
-        IT row_idx = post_ranks_[lil_idx];
-        IT block_idx = row_idx / block_size_;
-        //first should compute block length in this block
-        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-        IT offset_in_block = row_idx % block_size_;
-        auto beg = col_idx_.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
-        auto end = std::find(beg + 1, beg + block_length, 0);
-
-        for (auto j = beg; j < end; j++) {
-            if (*j == column_idx)
-                return variable[std::distance(col_idx_.begin(), j)];
-        }            
-        return 0; // should not happen ...
+    inline std::vector< std::vector <VT> > get_matrix_variable_all(const std::vector<VT>& variable) {
+        auto values = std::vector< std::vector <VT> >();
+        for (unsigned int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            values.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
+        }        
+        return values;
     }
 
     /**
@@ -698,22 +595,30 @@ class SELLMatrix {
     }
 
     /**
-     *  @brief      retrieve a LIL representation for a given variable.
+     *  @brief      retruns a single value from the given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.
      */
     template <typename VT>
-    inline std::vector< std::vector <VT> > get_matrix_variable_all(const std::vector<VT>& variable) {
-        auto values = std::vector< std::vector <VT> >();
-        for (unsigned int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
-            values.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
-        }        
-        return values;
+    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT lil_idx, const IT column_idx) {
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT offset_in_block = row_idx % block_size_;
+        auto beg = col_idx_.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
+        auto end = std::find(beg + 1, beg + block_length, 0);
+
+        for (auto j = beg; j < end; j++) {
+            if (*j == column_idx)
+                return variable[std::distance(col_idx_.begin(), j)];
+        }            
+        return 0; // should not happen ...
     }
 
-    //
-    //  Initialization and Update of vector variables.
-    //
+/************************************************************************************************************/
+/*  Initialization and Update of vector variables                                                           */
+/************************************************************************************************************/
 
     /**
      *  \brief      Initialize a vector variable
@@ -727,8 +632,117 @@ class SELLMatrix {
         return std::vector<VT>(post_ranks_.size(), default_value);
     }
 
-    //
-    //  Other helpful functions
-    //
+/************************************************************************************************************/
+/*  Other helpful functions                                                                                 */
+/************************************************************************************************************/
 
+    /**
+     *  @brief      computes the size in bytes
+     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
+     *  @returns    size in bytes for stored connectivity
+     *  @see        LILMatrix::size_in_bytes()
+     */
+    virtual size_t size_in_bytes() {
+
+        size_t size = 4 * sizeof(IT);
+        size += sizeof(ST);
+
+        size += sizeof(std::vector<IT>);
+        size += post_ranks_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
+        size += col_idx_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<ST>);
+        size += row_ptr_.capacity() * sizeof(ST);
+
+        size += sizeof(std::vector<char>);
+        size += mask_.capacity() * sizeof(char); 
+
+        return size;
+    }
+
+  protected:
+    /**
+     *  @brief      print some matrix characteristics to the standard out (i. e. command-line)
+     *  @details    Intended for debug.
+     */
+    void print_matrix_statistics() {
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
+        std::cout << "  #blocksize: " << block_size_ << std::endl;
+        std::cout << "  #num of blocks: " << num_blocks_ << std::endl;
+        std::cout << "  #stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. 
+     */
+    void print_data_representation() {
+        std::cout << "SELLMatrix instance at " << this << std::endl;
+        print_matrix_statistics();
+
+        std::cout << "  post_ranks = [ " << std::endl;
+        for (IT r = 0; r < post_ranks_.size(); r++) {
+            std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  row_ptr_ = [ " << std::endl;
+        for (IT i = 0; i < row_ptr_.size(); i++) {
+            std::cout << row_ptr_[i] << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  col_idx_ = [ " << std::endl;
+        for (ST i = 0; i < col_idx_.size(); i++) {
+            std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  mask_ = [ " << std::endl;
+        for (ST i = 0; i < mask_.size(); i++) {
+            if (mask_[i])std::cout << "T ";
+            else std::cout << "F ";
+        }
+        std::cout << "]" << std::endl;
+    }
+
+    /**
+     *  @brief      print col_idx_ of the matrix representation to console.
+     */
+    void print_data() {
+
+        std::cout << "col indices " << std::endl;
+        unsigned int rowbegin = 0;
+        //i-th block
+        for (int i = 0; i < num_blocks_; i++) {
+            int len = (row_ptr_[i + 1] - row_ptr_[i]) / block_size_;
+            //j-th row in i-th block
+            for (int j = 0; j < block_size_; j++) {
+                rowbegin = j + i * block_size_;
+                std::cout << "(" << rowbegin << ") [";
+                int location = row_ptr_[i] + j * len;
+                //k-th element in j-th row 
+                for (int k = 0; k < len; k++) {
+                    std::cout << col_idx_[location + k] << " ";
+                }
+                std::cout << "]" << std::endl;
+            }
+        }
+    }
+
+  protected:
+    IT num_rows_;                       ///< maximum number of rows 
+    IT num_columns_;                    ///< maximum number of columns 
+    IT block_size_;                     ///< size of each block (maximum number of rows in each block)
+    IT num_blocks_;                     ///< number of blocks in the dense matrix
+    ST num_non_zeros_;                  ///< number of nonzeros
+
+    std::vector<IT> post_ranks_;        ///< which rows does contain entries
+    std::vector<IT> col_idx_;           ///< column indices for accessing dense vector
+    std::vector<ST> row_ptr_;           ///< points to first element in each block
+    std::vector<char> mask_;            ///< mask of entries
 };

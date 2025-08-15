@@ -113,12 +113,12 @@ public:
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<CSRMatrix<IT, ST>*>(this)->clear();
+        CSRMatrix<IT, ST>::clear();
 
         // clear device
         free_device_memory();
@@ -235,9 +235,9 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         // standard compressed sparse row size
-        size_t size = static_cast<CSRMatrix<IT, ST>*>(this)->size_in_bytes();
+        size_t size = CSRMatrix<IT, ST>::size_in_bytes();
 
         // GPU pointer
         size += 2 * sizeof(IT*);

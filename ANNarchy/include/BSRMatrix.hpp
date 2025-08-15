@@ -89,7 +89,7 @@ class BSRMatrix {
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::clear()" << std::endl;
     #endif
@@ -625,7 +625,7 @@ class BSRMatrix {
     //  Other helpful functions
     //
 
-    inline size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
 
         size += 3*sizeof(IT);               // constants

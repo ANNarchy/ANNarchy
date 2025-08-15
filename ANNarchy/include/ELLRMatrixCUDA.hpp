@@ -123,12 +123,12 @@ public:
      *  @brief      clear the matrix
      *  @details    should be called before destructor.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<ELLRMatrix<IT, ST, false>*>(this)->clear();
+        ELLRMatrix<IT, ST, false>::clear();
 
         // clear device
         free_device_memory();

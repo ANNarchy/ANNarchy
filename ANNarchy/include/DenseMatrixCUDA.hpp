@@ -102,7 +102,6 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::~DenseMatrixCUDA()" << std::endl;
     #endif
-        clear();
     }
 
     inline MT* device_mask() {
@@ -114,10 +113,15 @@ public:
      *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free 
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::clear()" << std::endl;
     #endif
+        // clear host side
+        DenseMatrix<IT, ST, MT, row_major>::clear();
+
+        // clear device side
+        free_device_memory();
     }
 
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
@@ -208,10 +212,10 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 2 * sizeof(IT);               // scalar values
 
-        size += static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->size_in_bytes();
+        size += DenseMatrix<IT, ST, MT, row_major>::size_in_bytes();
 
         return size;
     }

@@ -599,7 +599,7 @@ class CSRCMatrixT{
         clear();
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixT::clear()" << std::endl;
     #endif
@@ -613,7 +613,7 @@ class CSRCMatrixT{
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         //constants
         size_t size = 3 * sizeof(unsigned int);
 

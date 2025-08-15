@@ -105,22 +105,36 @@ public:
      */
     explicit BSRInvMatrix(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
         BSRMatrix<IT, ST, MT, row_major>(num_rows, num_columns, tile_size) {
-
+    #ifdef _DEBUG
+        std::cout << "BSRInvMatrix::BSRInvMatrix(this=" << this << ")" << std::endl;
+    #endif
     }
 
     ~BSRInvMatrix() {
     #ifdef _DEBUG
-        std::cout << "BSRInvMatrix::~BSRInvMatrix()" << std::endl;
+        std::cout << "BSRInvMatrix::~BSRInvMatrix(this=" << this << ")" << std::endl;
     #endif
     }
 
     /**
      * \details     Clear the STL container
      */
-    void clear() {
+    void clear() override {
+    #ifdef _DEBUG
+        std::cout << "BSRInvMatrix::clear()" << std::endl;
+    #endif
         // clear forward view
-        static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->clear();
+        BSRMatrix<IT, ST, MT, row_major>::clear();
 
+        // clear backward view        
+        block_column_pointer_.clear();
+        block_column_pointer_.shrink_to_fit();
+
+        block_row_index_.clear();
+        block_row_index_.shrink_to_fit();
+
+        block_inv_index_.clear();
+        block_inv_index_.shrink_to_fit();
     }
 
     //
@@ -176,11 +190,11 @@ public:
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 0;
 
         // forward view of BSR
-        size += static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->size_in_bytes();
+        size += BSRMatrix<IT, ST, MT, row_major>::size_in_bytes();
 
         // inverse view
         size += block_column_pointer_.capacity() * sizeof(IT);

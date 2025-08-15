@@ -102,14 +102,7 @@
  */
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class LILMatrix {
-public:
-    const IT num_rows_;                     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
-    const IT num_columns_;                  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
-
-    std::vector<IT> post_rank;              ///< indices of existing rows
-    std::vector<std::vector<IT> > pre_rank; ///< column indices sorted by rows
-
-public:
+  public:
     /**
      *  @brief      Constructor
      *  @details    Does **not** initialize any data of the matrix. It's just to store the maximum dimension
@@ -121,7 +114,7 @@ public:
         assert ( (static_cast<unsigned long int>(num_columns) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
     #ifdef _DEBUG
-        std::cout << "LILMatrix::LILMatrix() with dense dimensions " << static_cast<long>(this->num_rows_) << " times " << static_cast<long>(this->num_columns_) << std::endl;
+        std::cout << "LILMatrix::LILMatrix(this=" << this << ") with dense dimensions " << static_cast<long>(this->num_rows_) << " times " << static_cast<long>(this->num_columns_) << std::endl;
     #endif
     }
 
@@ -132,7 +125,7 @@ public:
      */
     ~LILMatrix() {
     #ifdef _DEBUG
-        std::cout << "LILMatrix::~LILMatrix()" << std::endl;
+        std::cout << "LILMatrix::~LILMatrix(this=" << this << ")" << std::endl;
     #endif
     }
 
@@ -141,9 +134,9 @@ public:
      *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
-        std::cout << "LILMatrix::clear()" << std::endl;
+        std::cout << "LILMatrix::clear(this=" << this << ")" << std::endl;
     #endif
         post_rank.clear();
         post_rank.shrink_to_fit();
@@ -152,9 +145,10 @@ public:
         pre_rank.shrink_to_fit();
     }
 
-    //
-    //  Accessor to member variables
-    //
+/************************************************************************************************************/
+/*  Accessors to member variables                                                                            */
+/************************************************************************************************************/
+
     /**
      * @brief   Get the maximum number of rows in the matrix.
      */
@@ -205,6 +199,15 @@ public:
     }
 
     /**
+     *  @brief      Get the number of stored rows.
+     *  @details    The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
+     *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
+     */
+    IT nb_dendrites() {
+        return static_cast<IT>(post_rank.size());
+    }
+
+    /**
      *  @brief      Get the number of stored connections in this matrix for a given row.
      *  @details    The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
@@ -216,18 +219,9 @@ public:
         return static_cast<IT>(pre_rank[lil_idx].size());
     }
 
-    /**
-     *  @brief      Get the number of stored rows.
-     *  @details    The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
-     *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
-     */
-    IT nb_dendrites() {
-        return static_cast<IT>(post_rank.size());
-    }
-
-    //
-    //  Initialization methods
-    //
+/************************************************************************************************************/
+/*  Initialize the sparse matrix representation                                                             */
+/************************************************************************************************************/
 
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.
@@ -441,6 +435,10 @@ public:
         return true;
     }
 
+/************************************************************************************************************/
+/*  Initialize Matrix Variables                                                                             */
+/************************************************************************************************************/
+
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
@@ -589,6 +587,10 @@ public:
         return new_variable;
     }
 
+/************************************************************************************************************/
+/*  Update Values of Matrix Variables                                                                       */
+/************************************************************************************************************/
+
     /**
      *  @details    Updates a single *existing* entry within the matrix.
      *  @tparam     VT          data type of the variable.
@@ -625,10 +627,7 @@ public:
      *  @param[in]  values      new values for the row indicated by lil_idx.
      */
     template <typename VT>
-    inline void update_matrix_variable_row(std::vector< std::vector<VT> > &variable,
-                             const IT lil_idx,
-                             const std::vector<VT> values)
-    {
+    inline void update_matrix_variable_row(std::vector< std::vector<VT> > &variable, const IT lil_idx, const std::vector<VT> values) {
         assert( (lil_idx < variable.size()) );
         assert( (values.size() == variable[lil_idx].size()) );
 
@@ -642,15 +641,17 @@ public:
      *  @param[in]  values      new values for the row indicated by lil_idx stored as a list of list according to LILMatrix::pre_rank
      */
     template <typename VT>
-    inline void update_matrix_variable_all(std::vector< std::vector<VT> > &variable,
-                             const std::vector< std::vector<VT> > &data)
-    {
-        assert( (data.size() == post_rank.size()) );
+    inline void update_matrix_variable_all(std::vector< std::vector<VT> > &variable, const std::vector< std::vector<VT> > &values) {
+        assert( (values.size() == post_rank.size()) );
 
         for (auto i = 0; i < post_rank.size(); i++) {
-            update_matrix_variable_row(variable, i, data[i]);
+            update_matrix_variable_row(variable, i, values[i]);
         }
     }
+
+/************************************************************************************************************/
+/*  Read-out Values of Matrix Variables                                                                     */
+/************************************************************************************************************/
 
     /**
      *  @brief      retrieve a LIL representation for a given variable.
@@ -700,6 +701,10 @@ public:
 
         return static_cast<VT>(0.0); // should not happen
     }
+
+/************************************************************************************************************/
+/*  Initialization and Update of vector variables                                                           */
+/************************************************************************************************************/
 
     /**
      *  @brief      Initialize a vector variable
@@ -764,13 +769,20 @@ public:
         return variable[lil_idx];
     }
 
+/************************************************************************************************************/
+/*  Other helpful functions                                                                                 */
+/************************************************************************************************************/
+
     /**
      *  @brief      computes the size in bytes
      *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::size_in_bytes(this=" << this << ")" << std::endl;
+    #endif
         size_t size = 2 * sizeof(IT);               // scalar values
 
         // post_ranks
@@ -809,6 +821,7 @@ public:
      * @brief       creates a transposed instance of the present matrix.
      * @details     used by matrix formats which use a pre-to-post storage scheme, i.e., formats with a *T* postfix.
      * @return      reference to a new instance of LILMatrix<IT, ST>
+     * @see         CSRCMatrixT
      */
     LILMatrix<IT, ST>* transpose() {
     #ifdef _DEBUG
@@ -846,6 +859,7 @@ public:
         return transposed_matrix;
     }
 
+  protected:
     /**
      *  @brief      print some matrix characteristics to the standard out (i. e. command-line)
      *  @details    Intended for debug.
@@ -898,4 +912,14 @@ public:
         }
         std::cout << "]" << std::endl;
     }
+
+  protected:
+    /// maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
+    const IT num_rows_;
+    /// maximum number of columns which equals the maximum available size in the sub-level vectors.
+    const IT num_columns_;
+    /// indices of existing rows
+    std::vector<IT> post_rank;
+    /// column indices sorted by rows
+    std::vector<std::vector<IT> > pre_rank;
 };

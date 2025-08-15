@@ -1016,10 +1016,10 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
 
         # Connectivity
         _, sparse_matrix_format, _, _ = self._select_sparse_matrix_format(proj)
-        code += """
+        code += f"""
         // connectivity
-        size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();
-""" % {'spm': sparse_matrix_format}
+        size_in_bytes += {sparse_matrix_format}::size_in_bytes();
+"""
 
         # Other variables
         for attr in proj.synapse_type.description['variables']+proj.synapse_type.description['parameters']:
@@ -1051,10 +1051,10 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         # Connectivity, either default format or overwritten by SpecificProjection
         _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
         if 'declare_connectivity_matrix' not in proj._specific_template.keys():
-            code = """
+            code = f"""
         // Connectivity
-        static_cast<%(spm)s*>(this)->clear();
-"""  % {'spm': spm_format}
+        {spm_format}::clear();
+"""
         else:
             code = ""
 

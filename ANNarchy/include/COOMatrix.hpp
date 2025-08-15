@@ -74,7 +74,7 @@ class COOMatrix {
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "COOMatrix::clear()" << std::endl;
     #endif
@@ -464,7 +464,7 @@ class COOMatrix {
      *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  \tparam     VT              data type of the variable.
      *  \param[in]  default_value   value to initialize all elements in the vector
-     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     *  \return     the initialized vector containing DenseMatrix::num_rows_ elements.
      */
     template <typename VT>
     inline std::vector<VT> init_vector_variable(VT default_value) {
@@ -474,10 +474,9 @@ class COOMatrix {
     /**
      *  @brief      computes the size in bytes
      *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
-     *  @returns    size in bytes for stored connectivity
-     *  @see        LILMatrix::size_in_bytes()
+     *  @return     size in bytes for stored connectivity
      */
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);
 
         size += sizeof(std::vector<IT>);

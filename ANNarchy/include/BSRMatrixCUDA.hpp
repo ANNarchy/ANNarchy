@@ -106,12 +106,12 @@ public:
      *  @brief      clear the BSR matrix
      *  @details    responsible to delete the allocated GPU memory.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<BSRMatrix<IT, ST, char, false>*>(this)->clear();
+        BSRMatrix<IT, ST, char, false>::clear();
 
         // clear device
         free_device_memory();

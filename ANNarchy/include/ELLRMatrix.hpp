@@ -115,7 +115,7 @@ public:
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::clear()" << std::endl;
     #endif
@@ -739,7 +739,7 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 3 * sizeof(IT);
 
         size += sizeof(std::vector<IT>);

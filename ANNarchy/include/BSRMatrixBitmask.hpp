@@ -50,7 +50,7 @@ class BSRMatrixBitmask {
     std::vector<IT> block_row_pointer_;
     std::vector<IT> block_column_index_;
     std::vector<MT> tile_bitmask_;
-    ST num_tile_elems_;                       ///< number of elements stored across all tiles. Note that must not be the number of non-zeros as padding zeros are counted too.
+    ST num_tile_elems_;                       ///< number of elements stored across all tiles. Note that must not be the number of nonzeros as padding zeros are counted too.
 
     // not typical for BSR, but helpful for the usage in ANNarchy
     std::vector<IT> post_ranks_;
@@ -93,7 +93,7 @@ class BSRMatrixBitmask {
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "BSRMatrixBitmask::clear()" << std::endl;
     #endif
@@ -222,7 +222,7 @@ class BSRMatrixBitmask {
                     // fill the complete tile with zeros
                     std::fill(current_tile_bitmask.begin(), current_tile_bitmask.end(), static_cast<MT>(0.0));
 
-                    // set the positions of non-zeros
+                    // set the positions of nonzeros
                     for (auto it = idx_pairs_per_block[b_c_idx].begin(); it != idx_pairs_per_block[b_c_idx].end(); it++) {
                         IT tile_r_idx = it->first % tile_size_;
                         IT tile_c_idx = it->second % tile_size_;
@@ -679,7 +679,7 @@ class BSRMatrixBitmask {
     //  Other helpful functions
     //
 
-    inline size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
 
         size += 4*sizeof(IT) + sizeof(ST);               // constants

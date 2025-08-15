@@ -125,8 +125,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(access_additional)s
 
     // Memory management
-    long int size_in_bytes() {
-        long int size_in_bytes = 0;
+    size_t size_in_bytes() override final {
+        size_t size_in_bytes = 0;
 %(size_in_bytes)s
         return size_in_bytes;
     }
@@ -135,7 +135,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(creating)s
 %(pruning)s
 
-    void clear() {
+    void clear() override final {
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
     #endif

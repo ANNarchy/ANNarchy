@@ -82,7 +82,7 @@ public:
         return this->chunk_size_;
     }
 
-    void clear() {
+    virtual void clear() {
         // delete old stuff
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
             delete *it;
@@ -588,7 +588,7 @@ public:
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         // constants
         size_t size = 4 * sizeof(IT);
 

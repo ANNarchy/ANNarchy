@@ -107,12 +107,12 @@ public:
      *  @brief      clear the matrix
      *  @details    should be called before destructor.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "ELLMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<ELLMatrix<IT, ST, false>*>(this)->clear();
+        ELLMatrix<IT, ST, false>::clear();
 
         // clear device
         free_device_memory();
@@ -222,9 +222,9 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         // standard ELLPACK size
-        size_t size = static_cast<ELLMatrix<IT, ST, false>*>(this)->size_in_bytes();
+        size_t size = ELLMatrix<IT, ST, false>::size_in_bytes();
 
         // GPU pointer
         size += 2 * sizeof(IT*);

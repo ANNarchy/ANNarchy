@@ -98,7 +98,7 @@ class CSRMatrix {
         row_begin_.shrink_to_fit();
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::clear()" << std::endl;
     #endif
@@ -531,7 +531,7 @@ class CSRMatrix {
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
         
         size += 2 * sizeof(IT);
