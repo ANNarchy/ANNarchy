@@ -30,6 +30,9 @@ omp_header_template = """#pragma once
     #include <immintrin.h>
 #endif
 
+// Useful functions
+#include "helper_functions.hpp"
+
 /*
  * Built-in functions
  *
@@ -898,6 +901,9 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
+
+// Useful functions
+#include "helper_functions.cuh"
 
 /*
  * Built-in functions (host side)

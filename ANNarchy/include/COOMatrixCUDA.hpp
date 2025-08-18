@@ -21,7 +21,6 @@
 #pragma once
 
 #include "COOMatrix.hpp"
-#include "helper_functions.cuh"
 
 /**
  *  @brief      Implementation of the *coordinate* format on CUDA devices.
