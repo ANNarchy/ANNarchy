@@ -31,46 +31,7 @@
  */
 template<typename SPARSE_MATRIX_TYPE, typename IT = unsigned int, typename ST = unsigned long int>
 class PartitionedMatrix {
-protected:
-    const IT num_rows_;     ///< number of rows in the original matrix
-    const IT num_columns_;  ///< number of columns in the original matrix
-    IT num_partitions_;     ///< stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
-    IT chunk_size_;         ///< number of rows computed by each thread
-
-    /**
-     *  @brief      Divide the matrix across rows in equally large partitions.
-     *  @details    Sets the chunk_size_ as well as the slices_ attribute.
-     */
-    void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
-        clear();
-
-        num_partitions_ = num_partitions;
-        chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));
-
-        for(int i = 0; i < num_partitions_; i++) {
-            int beg = i * chunk_size_;
-            int end = std::min(static_cast<int>((i+1) * chunk_size_), static_cast<int>(num_rows_));
-
-            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(num_rows_, num_columns_));
-        }
-
-        // ATTENTION: this assumes that row_indices are sorted ascending
-        int lower_bound = 0;
-        for (int part_idx = 0; part_idx < num_partitions_; part_idx++) {
-            int part_border = (part_idx+1) * chunk_size_;
-
-            auto it = std::partition(row_indices.begin(), row_indices.end(), [&part_border](int i){return i < part_border;});
-            int size = std::distance(row_indices.begin(), it);
-
-            slices_.push_back(std::pair<int,int>(lower_bound, size));
-            lower_bound = size;
-        }
-    }
-
-public:
-    std::vector<SPARSE_MATRIX_TYPE*> sub_matrices_;         // container which hold the partitions
-    std::vector<std::pair<IT, IT>> slices_;                 // Encodde begin and end of each partition
-
+  public:
     explicit PartitionedMatrix(const unsigned int num_rows, const unsigned int num_columns) :
         num_rows_(num_rows), num_columns_(num_columns) {
     }
@@ -78,21 +39,21 @@ public:
     ~PartitionedMatrix() {
     }
 
-    int chunk_size() {
-        return this->chunk_size_;
-    }
-
     virtual void clear() {
-        // delete old stuff
-        for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
+        for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
             delete *it;
         sub_matrices_.clear();
         slices_.clear();
     }
 
-    //
-    //  Connectivity accessors ( for Cython )
-    //
+/************************************************************************************************************/
+/*  Accessors to member variables                                                                            */
+/************************************************************************************************************/
+
+    int chunk_size() {
+        return this->chunk_size_;
+    }
+
     std::vector<IT> get_post_rank() {
         auto complete_post_ranks = std::vector<IT>();
 
@@ -131,18 +92,6 @@ public:
         return std::vector<IT>();
     }
 
-    int dendrite_size(int lil_idx) {
-        auto it = slices_.begin();
-        int part = 0;
-
-        for(; it != slices_.end(); it++, part++){
-            if ((lil_idx >= it->first) && (lil_idx < it->second)) {
-                return sub_matrices_[part]->dendrite_size(lil_idx-it->first);
-            }
-        }
-        return 0;
-    }
-
     int nb_synapses() {
         int size = 0;
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
@@ -159,6 +108,18 @@ public:
         return size;
     }
 
+    int dendrite_size(int lil_idx) {
+        auto it = slices_.begin();
+        int part = 0;
+
+        for(; it != slices_.end(); it++, part++){
+            if ((lil_idx >= it->first) && (lil_idx < it->second)) {
+                return sub_matrices_[part]->dendrite_size(lil_idx-it->first);
+            }
+        }
+        return 0;
+    }
+
     std::map<IT, IT> nb_efferent_synapses() {
         std::map<IT, IT> efferents;
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
@@ -168,6 +129,17 @@ public:
         return efferents;
     }
 
+/************************************************************************************************************/
+/*  Initialize the sparse matrix representation                                                             */
+/************************************************************************************************************/
+
+    /**
+     *  @brief      initialize connectivity based on a provided LIL representation.
+     *  @details    will initialize @ref slices_ and @ref sub_matrices_.
+     *  @param[in]  post_ranks      row indices
+     *  @param[in]  pre_ranks       column indices
+     *  @param[in]  num_partitions  The provided LIL presentation is divided into *num_partitions* partitions.
+     */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
     #ifdef _DEBUG
         std::cout << "PartitionedMatrix::init_matrix_from_lil():" << std::endl;
@@ -283,9 +255,6 @@ public:
         return value;
     }
 
-    //
-    //  ANNarchy connectivity patterns
-    //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::vector<std::mt19937>& rng, const unsigned int num_partitions) {
     #ifdef _DEBUG
         std::cout << "ParallelLIL::fixed_number_pre_pattern():" << std::endl;
@@ -346,9 +315,10 @@ public:
     #endif
     }
 
-    //
-    //  Initialize matrix variables ( post-size times pre-size divided into num_partitions chunks)
-    //
+/************************************************************************************************************/
+/*  Initialize Matrix Variables                                                                             */
+/************************************************************************************************************/
+
     /**
      *  @brief      Initialize a matrix variable
      *  @tparam     PART_TYPE   as the slice type depends on the format, e. g. LIL vector<vector<VT>> and CSRC vector<VT>
@@ -410,9 +380,10 @@ public:
     #endif
     }
 
-    //
-    //  Update matrix variables
-    //
+/************************************************************************************************************/
+/*  Update Values of Matrix Variables                                                                       */
+/************************************************************************************************************/
+
     template <typename VT, typename PART_TYPE>
     inline void update_matrix_variable(std::vector< PART_TYPE > &variable, const IT lil_idx, const IT col_idx, const VT value)
     {
@@ -458,9 +429,10 @@ public:
         }
     }
 
-    //
-    //  Access matrix variables
-    //
+/************************************************************************************************************/
+/*  Read-out Values of Matrix Variables                                                                     */
+/************************************************************************************************************/
+
     template <typename VT, typename PART_TYPE>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector< PART_TYPE > &variable) {
         auto new_variable = std::vector< std::vector < VT > >();
@@ -494,9 +466,10 @@ public:
         return static_cast<VT>(0.0); // should not happen
     }
 
-    //
-    //  Initialize matrix variables ( post-size divided into num_partitions chunks)
-    //
+/************************************************************************************************************/
+/*  Initialization and Update of vector variables                                                           */
+/************************************************************************************************************/
+
     template <typename VT>
     std::vector< std::vector< VT > > init_vector_variable(VT default_value) {
         auto new_variable = std::vector< std::vector<VT> >();
@@ -569,6 +542,34 @@ public:
         }
     }
 
+/************************************************************************************************************/
+/*  Other helpful functions                                                                                 */
+/************************************************************************************************************/
+
+    /**
+     *  @brief      computes the size in bytes
+     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
+     *  @return     size in bytes for stored connectivity
+     */
+    virtual size_t size_in_bytes() {
+        // constants
+        size_t size = 4 * sizeof(IT);
+
+        // partitions
+        size += sizeof(std::vector<SPARSE_MATRIX_TYPE*>);
+        size += sub_matrices_.capacity() * sizeof(SPARSE_MATRIX_TYPE*);
+        for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
+            size += static_cast<SPARSE_MATRIX_TYPE*>(*it)->size_in_bytes();
+
+        // ranges
+        size += sizeof(std::vector<std::pair<IT, IT>>);
+        size += slices_.capacity() * sizeof(std::pair<IT, IT>);
+
+        return size;
+    };
+
+  protected:
+
     void print_data_representation() {
         auto post_ranks = get_post_rank();
         std::cout << "ParallelLIL representation: "<< std::endl;
@@ -586,22 +587,48 @@ public:
             (*it)->print_data_representation();
   
     }
+  
+    /**
+     *  @brief      Divide the matrix across rows in equally large partitions.
+     *  @details    Sets the chunk_size_ as well as the slices_ attribute.
+     */
+    void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
+        clear();
 
-    // Returns size in bytes for connectivity
-    virtual size_t size_in_bytes() {
-        // constants
-        size_t size = 4 * sizeof(IT);
+        num_partitions_ = num_partitions;
+        chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));
 
-        // partitions
-        size += sizeof(std::vector<SPARSE_MATRIX_TYPE*>);
-        size += sub_matrices_.capacity() * sizeof(SPARSE_MATRIX_TYPE*);
-        for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
-            size += static_cast<SPARSE_MATRIX_TYPE*>(*it)->size_in_bytes();
+        for(int i = 0; i < num_partitions_; i++) {
+            int beg = i * chunk_size_;
+            int end = std::min(static_cast<int>((i+1) * chunk_size_), static_cast<int>(num_rows_));
 
-        // ranges
-        size += sizeof(std::vector<std::pair<IT, IT>>);
-        size += slices_.capacity() * sizeof(std::pair<IT, IT>);
+            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(num_rows_, num_columns_));
+        }
 
-        return size;
-    };
+        // ATTENTION: this assumes that row_indices are sorted ascending
+        int lower_bound = 0;
+        for (int part_idx = 0; part_idx < num_partitions_; part_idx++) {
+            int part_border = (part_idx+1) * chunk_size_;
+
+            auto it = std::partition(row_indices.begin(), row_indices.end(), [&part_border](int i){return i < part_border;});
+            int size = std::distance(row_indices.begin(), it);
+
+            slices_.push_back(std::pair<int,int>(lower_bound, size));
+            lower_bound = size;
+        }
+    }
+
+  protected:
+    /// number of rows in the original matrix
+    const IT num_rows_;
+    /// number of columns in the original matrix
+    const IT num_columns_;
+    /// stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
+    IT num_partitions_;
+    /// number of rows computed by each thread
+    IT chunk_size_;
+    /// container which hold the partitions
+    std::vector<SPARSE_MATRIX_TYPE*> sub_matrices_;
+    /// Encodes begin and end of each partition
+    std::vector<std::pair<IT, IT>> slices_;
 };

@@ -434,7 +434,9 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 ###############################################################
 spiking_summation_fixed_delay = """
 // Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
+    const auto& part_post_rank = sub_matrices_[tid]->get_post_rank(); 
+    const auto& part_inv_pre_rank = sub_matrices_[tid]->get_inv_pre_rank();
 
     // Iterate over all incoming spikes (possibly delayed constantly)
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
@@ -442,17 +444,15 @@ if (_transmission && %(post_prefix)s_active){
         int rk_j = %(pre_array)s[_idx_j];
 
         // Find the presynaptic neuron in the inverse connectivity matrix
-        auto inv_post_ptr = sub_matrices_[tid]->inv_pre_rank.find(rk_j);
-        if (inv_post_ptr == sub_matrices_[tid]->inv_pre_rank.end())
+        std::map<int, std::vector<std::pair<int, int>>>::const_iterator inv_post_ptr = part_inv_pre_rank.find(rk_j);
+        if (inv_post_ptr == part_inv_pre_rank.end())
             continue;
 
         // List of postsynaptic neurons receiving spikes from that neuron
-        std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
-        // Number of post neurons
-        int nb_post = inv_post.size();
+        const auto& inv_post = inv_post_ptr->second;
 
         // Iterate over connected post neurons
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+        for (int _idx_i = 0; _idx_i < inv_post.size(); _idx_i++){
             // Retrieve the correct indices
             int i = inv_post[_idx_i].first;
             int j = inv_post[_idx_i].second;
@@ -583,8 +583,8 @@ conn_ids = {
     'local_index': "[tid][i][j]",
     'semiglobal_index': '[tid][i]',
     'global_index': '',
-    'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
-    'post_index': '[sub_matrices_[tid]->post_rank[i]]',
+    'pre_index': '[part_pre_rank[i][j]]',
+    'post_index': '[part_post_rank[i]]',
     'delay_nu' : '[delay[tid][i][j]-1]', # non-uniform delay
     'delay_u' : '[delay-1]' # uniform delay
 }

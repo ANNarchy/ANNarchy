@@ -104,6 +104,12 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
         inv_pre_rank.clear();
     }
 
+    /// don't copy the container instead returns a reference
+    std::vector< IT >& get_inv_post_rank() { return inv_post_rank; }
+
+    /// don't copy the container instead returns a reference
+    const std::map< IT, std::vector< std::pair<IT, IT> > >& get_inv_pre_rank() const { return inv_pre_rank; }
+
     /**
      *  @see    LILMatrix::init_matrix_from_lil()
      */

@@ -152,9 +152,13 @@ class NanoBindGenerator:
         additional_func = ""
 
         # Connectivity as LIL
+        # HD (18th Aug. 2025):  The C++ template library offers in some cases a const- and non-const accessor.
+        #                       To ensure that Python accesses only using the non-const accessor an additional
+        #                       "nanobind::overload_cast<>" is needed. Otherwise, its compiler dependent which
+        #                       version is bound consequently resulting in strange side-effects ...
         connectivity = f"""
         .def("init_from_lil", &ProjStruct{proj.id}::init_from_lil)
-        .def("post_rank", &ProjStruct{proj.id}::get_post_rank)
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct{proj.id}::get_post_rank))
         .def("dendrite_size", &ProjStruct{proj.id}::dendrite_size)
         .def("nb_dendrites", &ProjStruct{proj.id}::nb_dendrites)
         .def("pre_ranks", &ProjStruct{proj.id}::get_pre_ranks)

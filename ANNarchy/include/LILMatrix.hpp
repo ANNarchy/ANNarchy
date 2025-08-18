@@ -164,10 +164,16 @@ class LILMatrix {
     }
 
     /**
-     *  @details    get row indices
-     *  @returns    a list of row indices for all rows comprising of at least one element
+     *  @brief      get row indices
+     *  @return     a list of row indices for all rows comprising of at least one element
      */
     std::vector<IT> get_post_rank() { return post_rank; }
+
+    /**
+     *  @brief      get row indices
+     *  @return     a reference to a list of row indices for all rows comprising of at least one element
+     */
+    const std::vector<IT>& get_post_rank() const { return post_rank; }
 
     /**
      *  @details    get column indices
@@ -777,7 +783,6 @@ class LILMatrix {
      *  @brief      computes the size in bytes
      *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
      *  @returns    size in bytes for stored connectivity
-     *  @see        LILMatrix::size_in_bytes()
      */
     virtual size_t size_in_bytes() {
     #ifdef _DEBUG
