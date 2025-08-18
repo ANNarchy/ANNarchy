@@ -29,11 +29,17 @@ class ANNarchyException(Exception):
         #         print(line)
 
 class CodeGeneratorException(Exception):
+    """
+    Custom exception that indicates a catched error in the code generation of ANNarchy.
+    """
     def __init__(self, msg):
         print("An error in the code generation occured:")
         print(msg)
 
 class InvalidConfiguration(Exception):
+    """
+    Custom exception that a configuration, e.g., the sparse matrix format and sparse matrix order, is not implemented.
+    """
     def __init__(self, msg):
         print("The configuration you requested is not implemented in ANNarchy:")
         print(msg)
