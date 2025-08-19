@@ -45,7 +45,7 @@ convolve_template_omp = {
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Connectivity
-        .def("post_rank", &ProjStruct%(id_proj)s::get_post_ranks)
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct%(id_proj)s::get_post_ranks))
         .def_rw("w", &ProjStruct%(id_proj)s::w)
         .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
         %(delays)s

@@ -188,7 +188,7 @@ class AccProjection(SpecificProjection):
 
         // Connectivity
         .def("init_from_lil", &ProjStruct{self.id}::init_from_lil)
-        .def("post_rank", &ProjStruct{self.id}::get_post_rank)
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct{self.id}::get_post_rank))
         .def("dendrite_size", &ProjStruct{self.id}::dendrite_size)
         .def("pre_ranks", &ProjStruct{self.id}::get_pre_ranks)
         .def("pre_rank", &ProjStruct{self.id}::get_dendrite_pre_rank)
