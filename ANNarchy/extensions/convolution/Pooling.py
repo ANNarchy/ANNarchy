@@ -187,6 +187,9 @@ class Pooling(SpecificProjection):
         # Create the Cython instance
         self.cyInstance = getattr(module, 'proj' + str(self.id) + '_wrapper')()
         self.cyInstance.pre_coords = self.pre_coordinates
+        if ConfigManager().get('paradigm', self.net_id) == "cuda":
+            # triggers host-to-device transfer at begin of simulate()
+            self.cyInstance.pre_coords_dirty = True
 
         return True
 

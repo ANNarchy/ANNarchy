@@ -18,8 +18,6 @@ convolve_template_omp = {
         std::iota (std::begin(v), std::end(v), 0);
         return v;
     }
-    std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
-    void set_pre_coords(std::vector<std::vector<int>> coords) { pre_coords = coords; }
 """ ,
 
     # Export the connectivity matrix
@@ -83,47 +81,51 @@ convolve_template_cuda = {
     'declare_connectivity_matrix': """
     // Connectivity data
     std::vector< std::vector<int> > pre_coords;
-    int* gpu_pre_coords;
-    bool pre_coords_dirty;
+    int* gpu_pre_coords = nullptr;
+    bool pre_coords_dirty = false;
     """,
 
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
-    void set_pre_coords(std::vector<std::vector<int>> coords) {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::set_pre_coords()"<< std::endl;
-    #endif
-        pre_coords = coords;
-        pre_coords_dirty = true;
-    }
+    std::vector<int> get_post_ranks() { 
+        std::vector<int> v(pre_coords.size());
+        std::iota (std::begin(v), std::end(v), 0);
+        return v;
+    }    
 """ ,
 
     # Export the connectivity matrix
     'export_connectivity': "",
 
-    # This template concerns only the connectivity where
-    # no read-back is required
-    "device_host_transfer": "",
-    "host_device_transfer": """
-        if (pre_coords_dirty) {
-        #ifdef _DEBUG
-            std::cout << "ProjStruct%(id_proj)s (convolution): update device coords." << std::endl;
-        #endif
-            auto flat_coords = transform_2d_to_1d<int>(pre_coords);
-            size_t size_in_bytes = flat_coords.size() * sizeof(int);
-
-            cudaMalloc((void**)&gpu_pre_coords, size_in_bytes);
-            cudaMemcpy(gpu_pre_coords, flat_coords.data(), size_in_bytes, cudaMemcpyHostToDevice);
-        }
-""",
-
-
     # Variables for the psp code
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=0.0;
+""",
+
+    # Nanobind
+    'wrapper': """
+    // Convolution ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Connectivity
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct%(id_proj)s::get_post_ranks))
+        .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+        .def_rw("pre_coords_dirty", &ProjStruct%(id_proj)s::pre_coords_dirty)
+        .def_rw("w", &ProjStruct%(id_proj)s::w)
+        .def_rw("w_dirty", &ProjStruct%(id_proj)s::host_w_dirty)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
 
     # Memory Management
@@ -138,7 +140,32 @@ convolve_template_cuda = {
 
         cudaFree(gpu_pre_coords);
 """,
-    'size_in_bytes': ""
+
+    'size_in_bytes': """
+        // pre-coords
+        size_in_bytes += sizeof(std::vector<std::vector<int>>);
+        size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            size_in_bytes += it->capacity() * sizeof(int);
+        }
+""",
+
+    # This template concerns only the connectivity where
+    # no read-back is required
+    "host_device_transfer": """
+        if (pre_coords_dirty) {
+        #ifdef _DEBUG
+            std::cout << "ProjStruct%(id_proj)s (convolution): update device coords." << std::endl;
+        #endif
+            auto flat_coords = transform_2d_to_1d<int>(pre_coords);
+            size_t size_in_bytes = flat_coords.size() * sizeof(int);
+
+            cudaMalloc((void**)&gpu_pre_coords, size_in_bytes);
+            cudaMemcpy(gpu_pre_coords, flat_coords.data(), size_in_bytes, cudaMemcpyHostToDevice);
+        }
+""",
+    "device_host_transfer": "",
+
 }
 
 conv_filter_template = {
@@ -217,10 +244,10 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
+    if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
         convolution_proj%(id_proj)s(
-            RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
-            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+            RunConfig(pop%(id_post)s->size, 1, 0, proj%(id_proj)s->stream),
+            pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
     
     #ifdef _DEBUG
@@ -252,10 +279,10 @@ cuda_convolution_bank_of_filter = {
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
+    if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
         convolution_proj%(id_proj)s(
-            RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
-            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+            RunConfig(pop%(id_post)s->size, 1, 0, proj%(id_proj)s->stream),
+            pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
     #ifdef _DEBUG
@@ -300,12 +327,12 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
-        auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
+    if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
+        auto num_blocks = dim3(pop%(id_post)s->size, 1, 1);
         auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
         convolution_proj%(id_proj)s(
-            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s.stream),
-            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s->stream),
+            pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
     #ifdef _DEBUG
@@ -313,7 +340,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {
             std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
         }
-    #endif        
+    #endif
     }
 """
 }
@@ -360,12 +387,12 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
-        auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
+    if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
+        auto num_blocks = dim3(pop%(id_post)s->size, 1, 1);
         auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
         convolution_proj%(id_proj)s(
-            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s.stream),
-            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s->stream),
+            pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
     #ifdef _DEBUG

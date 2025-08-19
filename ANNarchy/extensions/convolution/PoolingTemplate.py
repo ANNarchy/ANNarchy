@@ -20,8 +20,6 @@ pooling_template_omp = {
         std::iota (std::begin(v), std::end(v), 0);
         return v;
     }
-    std::vector< std::vector<int> > get_pre_coords() { return pre_coords; }
-    void set_pre_coords(std::vector< std::vector<int> > coords) { pre_coords = coords; }
 """,
 
     # Variables for the psp code
@@ -76,39 +74,23 @@ pooling_template_omp = {
 }
 
 pooling_template_cuda = {
-    'include_additional': '#include <cfloat>',
+    'include_additional': '#include <cfloat>\n#include "VecTransformation.hpp"',
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
     std::vector< std::vector<int> > pre_coords;
-    int *gpu_pre_coords;
+    int *gpu_pre_coords = nullptr;
+    bool pre_coords_dirty = false;
     """,
 
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
-    // Accessor to pre-synaptic coordinates (upper left corner)
-    std::vector< std::vector<int> > get_pre_coords() { return pre_coords; }
-    void set_pre_coords(std::vector< std::vector<int> > coords) {
-        // host side
-        pre_coords = coords;
-
-        // Flattening coords
-        auto num_coords = coords.size();
-        auto coord_width = coords[0].size();
-        auto flat_coords = std::vector<int>(num_coords*coord_width, 0);
-        for (auto i = 0; i < num_coords; i++) {
-            for( auto j = 0; j < coord_width; j++ ) {
-                flat_coords[i*coord_width+j] = coords[i][j];
-            }
-        }
-
-        cudaMalloc((void**)&gpu_pre_coords, flat_coords.size()*sizeof(int));
-        cudaMemcpy( gpu_pre_coords, flat_coords.data(), flat_coords.size()*sizeof(int), cudaMemcpyHostToDevice);
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
-        }
-    }
+    // Accessor to connectivity data
+    std::vector<int> get_post_ranks() { 
+        std::vector<int> v(pre_coords.size());
+        std::iota (std::begin(v), std::end(v), 0);
+        return v;
+    }    
 """,
     'init_connectivity_matrix': "",
 
@@ -128,15 +110,46 @@ pooling_template_cuda = {
         // Connectivity
 
         // Attributes
-        .def("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct%(id_proj)s::get_post_ranks))
+        .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+        .def_rw("pre_coords_dirty", &ProjStruct%(id_proj)s::pre_coords_dirty)
 
         // Other methods
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
 
 
-    # Memory transfer of variables
-    'host_device_transfer': "",
+    # This template concerns only the connectivity where
+    # no read-back is required
+    'host_device_transfer': """
+        if (pre_coords_dirty) {
+        #ifdef _DEBUG
+            std::cout << "ProjStruct%(id_proj)s (pooling): update device coords." << std::endl;
+        #endif
+            auto err = cudaGetLastError();
+            if (err != cudaSuccess)
+                std::cout << "something happened before ..." << std::endl;
+        
+            // Flattening coords
+            auto flat_coords = transform_2d_to_1d<int>(pre_coords);
+            size_t size_in_bytes = flat_coords.size() * sizeof(int);
+
+            // Allocate and transfer to device
+            cudaMalloc((void**)&gpu_pre_coords, flat_coords.size()*sizeof(int));
+            auto malloc_err = cudaGetLastError();
+            if (malloc_err != cudaSuccess) {
+                std::cerr << "ProjStruct%(id_proj)s (pooling): " << cudaGetErrorString(malloc_err) << std::endl;
+            }
+
+            cudaMemcpy( gpu_pre_coords, flat_coords.data(), flat_coords.size()*sizeof(int), cudaMemcpyHostToDevice);
+            auto copy_err = cudaGetLastError();
+            if (copy_err != cudaSuccess) {
+                std::cerr << "ProjStruct%(id_proj)s (pooling): " << cudaGetErrorString(copy_err) << std::endl;
+            }
+
+            pre_coords_dirty = false;
+        }
+""",
     'device_host_transfer': "",
 
     # Override the monitor to avoid recording the weights
@@ -156,7 +169,10 @@ pooling_template_cuda = {
     pre_coords.shrink_to_fit();
 
     // device side
-    cudaFree(gpu_pre_coords);
+    if (gpu_pre_coords != nullptr) {
+        cudaFree(gpu_pre_coords);
+        gpu_pre_coords = nullptr;
+    }
 """
 }
 
@@ -226,7 +242,7 @@ void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
     int shared_mem_size = thread_per_block * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s(RunConfig(num_blocks, thread_per_block, shared_mem_size, proj%(id_proj)s.stream), pop%(id_post)s->gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
+    pooling_proj%(id_proj)s(RunConfig(num_blocks, thread_per_block, shared_mem_size, proj%(id_proj)s->stream), pop%(id_post)s->gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s->gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
@@ -307,7 +323,7 @@ void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int share
     auto tpb = 32;
     auto shared_size = min(32, tpb);
     auto smem_size = 2 * shared_size * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s(RunConfig(%(size_post)s, tpb, smem_size, proj%(id_projs).stream), pop%(id_post)s->gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
+    pooling_proj%(id_proj)s(RunConfig(%(size_post)s, tpb, smem_size, proj%(id_projs).stream), pop%(id_post)s->gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s->gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the
     # several local results within the warp to the final result
@@ -412,8 +428,8 @@ cuda_pooling_code_3d = {
     'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     'psp_call': """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
-        pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s.stream), pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
+    if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
+        pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s->stream), pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 
     #ifdef _DEBUG
         auto proj%(id_proj)s_pool_err = cudaDeviceSynchronize();
