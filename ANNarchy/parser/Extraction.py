@@ -69,7 +69,7 @@ def extract_randomdist(description, net_id):
                     'args': processed_arguments,
                     'template': distributions_equivalents[dist],
                     'locality': variable['locality'],
-                    'ctype': 'double',
+                    'ctype': ConfigManager().get('precision', net_id),
                     'dependencies': dependencies
                 }
                 rk_rand += 1
