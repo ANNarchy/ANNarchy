@@ -195,15 +195,21 @@ class CodeGenerator(object):
 
         * source_dest: path to folder where generated files are stored.
         """
+        pop_desc = """pop%(id_pop)s, %(type_pop)s(name ='%(name_pop)s', neuron='%(neuron_type)s')\n"""
+        proj_desc = """proj%(id_proj)s, %(type_proj)s(pre='%(pre_name)s', post='%(post_name)s', target='%(target)s', synapse='%(synapse_type)s', name='%(name)s') using connector: %(pattern)s \n"""
+
         # Equal to target path in CodeGenerator.generate()
-        with open(source_dest+"codegen.log", 'w') as ofile:
+        with open(source_dest+"codegen.log", 'w', encoding="utf-8") as ofile:
             ofile.write("Filename, Object Description\n")
             for pop in self._populations:
                 pop_type = type(pop).__name__
-                desc = """pop%(id_pop)s, %(type_pop)s( name = %(name_pop)s )\n""" % {
-                    'id_pop': pop.id, 'name_pop': pop.name, 'type_pop': pop_type
+                desc_dict = {
+                    'id_pop': pop.id,
+                    'name_pop': pop.name,
+                    'neuron_type': pop.neuron_type.name,
+                    'type_pop': pop_type
                 }
-                ofile.write(desc)
+                ofile.write(pop_desc % desc_dict)
 
             for proj in self._projections:
                 proj_type = type(proj).__name__
@@ -213,6 +219,7 @@ class CodeGenerator(object):
                     'pre_name': proj.pre.name,
                     'post_name': proj.post.name,
                     'target': proj.target,
+                    'synapse_type': proj.synapse_type.name,
                     'name': proj.name
                 }
 
@@ -222,8 +229,7 @@ class CodeGenerator(object):
                 else:
                     desc_dict.update({'pattern': proj.connector_description.split(',')[0]})
 
-                desc = desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s, name = %(name)s ) using connector: %(pattern)s \n""" % desc_dict
-                ofile.write(desc)
+                ofile.write(proj_desc % desc_dict)
 
     def _propagate_global_ops(self):
         """
