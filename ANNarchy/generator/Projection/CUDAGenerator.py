@@ -982,7 +982,6 @@ if(%(condition)s){
             }
             invoke_kernel += template['invoke_kernel'] % {
                 'id_proj': proj.id,
-                'target_arg': proj.target,
                 'kernel_args': kernel_args_header,
                 'kernel_args_invoke': kernel_args_invoke,
                 'target_arg': targets_header,
@@ -1071,7 +1070,7 @@ if(%(condition)s){
         kernel_args_call = ""
 
         for dep in deps:
-            # The variable dep is part of pre-/post population
+            # Check whether the variable *dep* is part of pre-/post-population
             if dep in pop_deps:
 
                 if dep in proj.synapse_type.description['dependencies']['pre']:
@@ -1096,10 +1095,9 @@ if(%(condition)s){
                     kernel_args_invoke += ", post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
-            # The variable dep is part of the projection
-            else:
-                attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
-
+            # Check whether the variable *dep* is part of the projection
+            attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
+            if attr_type is not None:
                 if attr_type == "par":
                     ids = {
                         'id_proj': proj.id,
