@@ -7,11 +7,10 @@ object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
 :license: GPLv2, see LICENSE for details.
 """
 import re
-import ANNarchy
-
 from copy import deepcopy
 
-from ANNarchy.core import Global
+import ANNarchy
+
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 
@@ -332,6 +331,12 @@ class CUDAGenerator(ProjectionGenerator):
             'id_proj': proj.id
         }
         return init_code, update_code
+
+    def creating(self, proj):
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on CUDA devices.")
+
+    def pruning(self, proj):
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on CUDA devices.")
 
     def _computesum_rate(self, proj):
         """
@@ -1170,7 +1175,7 @@ if(%(condition)s){
         return kernel_args_decl, kernel_args_invoke, kernel_args_call
 
     def _header_structural_plasticity(self, proj):
-        Messages._error("Structural Plasticity is not supported on GPUs yet.")
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on GPUs.")
 
     def _local_functions(self, proj):
         """
@@ -1417,8 +1422,9 @@ _last_event%(local_index)s = t;
         try:
             templates = self._templates['post_event']
 
-        except KeyError:
-            raise Messages._error("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
+        except KeyError as err:
+            err_detail = f"No CUDA code template for post_event ( format ={proj._storage_format}, and order = {proj._storage_order})"
+            raise Messages.CodeGeneratorException(err_detail) from err
 
         # Fill code templates
         postevent_body = templates['device_kernel'] % {
@@ -1475,6 +1481,11 @@ _last_event%(local_index)s = t;
                 code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
         return code
+
+    def _update_random_distributions(self, proj):
+        # Nothing to do here, as the RNG values are drawn directly within the
+        # kernels.
+        pass
 
     def _memory_transfers(self, proj):
         """
