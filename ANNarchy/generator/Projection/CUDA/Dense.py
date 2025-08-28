@@ -538,9 +538,9 @@ void proj%(id_proj)s_semiglobal_step(RunConfig cfg, const %(idx_type)s post_size
 """
 }
 
-# Update of local synaptic equations, consist of body (annarchyDevice.cu),
-# header and call semantic (take place in ANNarchyHost.cu)
-local_synapse_update = {
+# Update of local synaptic equations
+# In this kernel variant, each thread computes one distinct column of the matrix.
+local_synapse_update_v1 = {
     'device_kernel': """
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_local_step(
@@ -553,7 +553,7 @@ __global__ void cuProj%(id_proj)s_local_step(
     /* plasticity enabled */
     bool plasticity
 ) {
-    
+
     %(idx_type)s rk_pre = blockIdx.x * blockDim.x + threadIdx.x;
     if (rk_pre < pre_size) {
 
@@ -565,8 +565,6 @@ __global__ void cuProj%(id_proj)s_local_step(
             if (mask[j]) {
 %(local_eqs)s
             }
-
-            j += blockDim.x * gridDim.x;
         }
     }
 }
@@ -592,6 +590,81 @@ void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_typ
     #else
         proj%(id_proj)s->_threads_per_block = 32;
         proj%(id_proj)s->_nb_blocks = static_cast<int>(ceil ( static_cast<%(float_prec)s>(pop%(id_pre)s->size) / static_cast<%(float_prec)s>(proj%(id_proj)s->_threads_per_block)));
+        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(proj%(id_proj)s->_nb_blocks, proj%(id_proj)s->_threads_per_block, 0, proj%(id_proj)s->stream);
+    #endif
+        proj%(id_proj)s_local_step(
+            proj%(id_proj)s_local_step_cfg,
+            /* default args*/
+            pop%(id_post)s->size, pop%(id_pre)s->size, proj%(id_proj)s->device_mask(), t, _dt
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
+            , proj%(id_proj)s->_plasticity
+        );
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        err = cudaGetLastError();
+        if ( err != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( err ) << std::endl;
+        }
+    #endif
+""",
+}
+
+# Update of local synaptic equations
+# In this kernel variant, each thread-block computes one row of the matrix.
+local_synapse_update_v2 = {
+    'device_kernel': """
+// gpu device kernel for projection %(id_proj)s
+__global__ void cuProj%(id_proj)s_local_step(
+    /* connectivity */
+    %(idx_type)s post_size, %(idx_type)s pre_size, char* mask,
+    /* default params */
+    const long int t, const %(float_prec)s dt
+    /* additional params */
+    %(kernel_args)s,
+    /* plasticity enabled */
+    bool plasticity
+) {
+    %(idx_type)s rk_post = blockIdx.x;
+    %(idx_type)s rk_pre = threadIdx.x;
+    %(size_type)s j = rk_post * pre_size + rk_pre;
+
+    %(pre_loop)s
+
+    // Updating local variables of projection %(id_proj)s
+    while (rk_pre < pre_size) {
+        if (mask[j]) {
+%(local_eqs)s
+        }
+
+        rk_pre += blockDim.x;
+        j += blockDim.x;
+    }
+}
+""",
+    'invoke_kernel': """
+void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* default args*/
+        post_size, pre_size, mask, t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+""",
+    'host_call': """
+        // local update
+    #if defined (__proj%(id_proj)s_%(target)s_tpb__)
+        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(__proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s->stream);
+    #else
+        proj%(id_proj)s->_threads_per_block = 32;
+        proj%(id_proj)s->_nb_blocks = pop%(id_post)s->size;
         RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(proj%(id_proj)s->_nb_blocks, proj%(id_proj)s->_threads_per_block, 0, proj%(id_proj)s->stream);
     #endif
         proj%(id_proj)s_local_step(
@@ -733,7 +806,7 @@ conn_templates = {
     'synapse_update': {
         'global': global_synapse_update,
         'semiglobal': semiglobal_synapse_update,
-        'local': local_synapse_update,
+        'local': local_synapse_update_v2,
         'call': synapse_update_call
     },
     'post_event': spike_postevent
