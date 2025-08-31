@@ -45,7 +45,6 @@ public:
     #ifdef _DEBUG
         std::cout << "DiaMatrix::~DiaMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

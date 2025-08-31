@@ -317,7 +317,6 @@ class ELLMatrix {
 
         // Test if the matrix fits into memory
         if (!check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(IT))) {
-            clear();
             return false;
         }
 

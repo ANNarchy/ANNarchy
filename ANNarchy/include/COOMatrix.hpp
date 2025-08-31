@@ -191,8 +191,6 @@ class COOMatrix {
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
 
-        clear();
-
         post_ranks_ = post_ranks;
 
         auto post_it = post_ranks.begin();

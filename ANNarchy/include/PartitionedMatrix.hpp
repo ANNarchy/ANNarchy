@@ -593,7 +593,6 @@ class PartitionedMatrix {
      *  @details    Sets the chunk_size_ as well as the slices_ attribute.
      */
     void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
-        clear();
 
         num_partitions_ = num_partitions;
         chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));

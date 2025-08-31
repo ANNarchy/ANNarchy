@@ -109,7 +109,6 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrix::~DenseMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

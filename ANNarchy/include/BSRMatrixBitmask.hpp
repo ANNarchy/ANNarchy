@@ -154,8 +154,6 @@ class BSRMatrixBitmask {
     #ifdef _DEBUG
         std::cout << "BSRMatrixBitmask::init_matrix_from_lil()" << std::endl;
     #endif
-        // clear previously instantiated matrix
-        clear();
 
         // Construct the BSR format from LIL
         post_ranks_ = row_indices;

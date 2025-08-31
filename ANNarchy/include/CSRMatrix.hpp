@@ -148,8 +148,6 @@ class CSRMatrix {
         assert( (row_indices.size() < std::numeric_limits<IT>::max()) );
         assert( (row_indices.size() <= num_rows_) );
 
-        clear();
-
         // construct the CSR from LIL
         post_ranks_ = row_indices;
 

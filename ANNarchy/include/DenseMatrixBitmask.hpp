@@ -109,7 +109,6 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrixBitmask::~DenseMatrixBitmask()" << std::endl;
     #endif
-        clear();
     }
 
     /**

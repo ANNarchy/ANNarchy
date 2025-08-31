@@ -1509,6 +1509,9 @@ void stream_setup()
     {
         cudaStreamCreate( &streams[i] );
     }
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cerr << "Error occured during stream_setup(): " << cudaGetErrorString(err) << std::endl;
 }
 
 void stream_assign()
@@ -1528,6 +1531,10 @@ void stream_destroy()
         // destroy
         cudaStreamDestroy( streams[i] );
     }
+
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cerr << "Error occured during stream_destroy(): " << cudaGetErrorString(err) << std::endl;
 }
 """
 

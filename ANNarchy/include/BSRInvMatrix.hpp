@@ -149,7 +149,6 @@ public:
     #ifdef _DEBUG
         std::cout << "BSRInvMatrix::init_matrix_from_lil()" << std::endl;
     #endif
-        clear();
 
         // Construct forward view
         bool success = static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
