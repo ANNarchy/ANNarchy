@@ -240,7 +240,6 @@ class CUDAGenerator(PopulationGenerator):
             pop_desc['gops_update'] = self._update_globalops(pop) % {'id': pop.id}
 
         pop_desc['host_to_device'] = tabify("pop%(id)s->host_to_device();" % {'id':pop.id}, 1)+"\n"
-        pop_desc['device_to_host'] = tabify("pop%(id)s->device_to_host();" % {'id':pop.id}, 1)+"\n"
 
         return pop_desc
 
@@ -1405,9 +1404,8 @@ class CUDAGenerator(PopulationGenerator):
         }
 """ % {'id': pop.id}
 
-        # Write back variables
-        device_host_transfer += """
-    // device to host transfers for %(name)s\n""" % {'name': pop.name}
+        # Write back variables. The operation should be performed only if it hasn't done
+        # since the last simulate() / step() and for a given variable. 
         for attr in pop.neuron_type.description['variables']:
             ids = {'attr_name': attr['name'], 'type': attr['ctype'], 'id': pop.id}
             if attr['name'] in pop.neuron_type.description['local']:

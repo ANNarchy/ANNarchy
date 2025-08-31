@@ -678,7 +678,7 @@ void set_%(name)s(%(float_prec)s value) {
             host_device_transfer, device_host_transfer = "", ""
             for pop in self._pop_desc:
                 host_device_transfer += pop['host_to_device']
-                device_host_transfer += pop['device_to_host']
+                # DtoH is performed only when an accessor is called.
 
             for proj in self._proj_desc:
                 host_device_transfer += proj['host_to_device']

@@ -2,14 +2,13 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import numpy as np
 
-from dataclasses import dataclass
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
-import numpy as np
 
 class Neuron :
     """
@@ -146,6 +145,8 @@ class IndividualNeuron :
                     else:
                         return val
                 else:
+                    if _check_paradigm("cuda", self.population.net_id):
+                        self.population.cyInstance.device_to_host(name)
                     if name in self.population.neuron_type.description['local']:
                         var = getattr(self.population.cyInstance, name)
                         return var[self.rank]

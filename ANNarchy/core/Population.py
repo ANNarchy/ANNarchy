@@ -398,6 +398,9 @@ class Population :
         :param attribute: should be a string representing the variables's name.
         """
         try:
+            if _check_paradigm("cuda", self.net_id):
+                self.cyInstance.device_to_host(attribute)
+
             if attribute in self.neuron_type.description['local']:
                 data = np.array(getattr(self.cyInstance, attribute))
                 return data.reshape(self.geometry)
@@ -547,18 +550,21 @@ class Population :
         if not self.initialized:
             Messages._warning('sum(): the population', self.name, 'is not initialized yet.')
             return np.zeros(self.geometry)
-        
+
         # Check if a projection has this type
         if not target in self.targets:
             Messages._warning('sum(): the population', self.name, 'receives no projection with the target', target)
             return np.zeros(self.geometry)
-        
-        # Spiking neurons already have conductances available
-        if self.neuron_type.type == 'spike':
-            return np.array(getattr(self, 'g_'+target))
-        
-        # Otherwise, call the Cython method
-        return np.array(getattr(self.cyInstance, "_sum_"+target))
+
+        # Variable prefix depends on model type
+        prefix = 'g_' if self.neuron_type.type == 'spike' else "_sum_"
+
+        # GPUs need to trigger memory transfer first
+        if _check_paradigm("cuda", self.net_id):
+            self.cyInstance.device_to_host(prefix+target)
+
+        # Return the value
+        return np.array(getattr(self.cyInstance, prefix+target))
 
     ################################
     ## Refractory period

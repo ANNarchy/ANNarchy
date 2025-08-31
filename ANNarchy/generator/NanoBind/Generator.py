@@ -96,7 +96,11 @@ class NanoBindGenerator:
         attributes = ""
 
         # synaptic delay
-        attributes += """\t\t.def("update_max_delay", &PopStruct{id}::update_max_delay)\n""".format(id=pop.id)
+        attributes += f"""\t\t.def("update_max_delay", &PopStruct{pop.id}::update_max_delay)\n"""
+
+        # On GPUs, we need to trigger a device-to-host explicitly
+        if _check_paradigm("cuda", self.net_id):
+            attributes += f"""\t\t.def("device_to_host", &PopStruct{pop.id}::device_to_host)\n"""
 
         # Model attributes
         for attr in pop.neuron_type.description['attributes']:
@@ -125,17 +129,16 @@ class NanoBindGenerator:
         for func in pop.neuron_type.description['functions']:
             # Wrapper
             additional_func += f"""
-        .def("{func['name']}", &PopStruct{pop.id}::{func['name']})"""    
-        
+        .def("{func['name']}", &PopStruct{pop.id}::{func['name']})"""
 
         # Type-specific functions
         if pop.neuron_type.type == "spike":
-            additional_func += """\t\t.def("compute_firing_rate", &PopStruct{id}::compute_firing_rate)\n""".format(id=pop.id)
+            additional_func += f"""\t\t.def("compute_firing_rate", &PopStruct{pop.id}::compute_firing_rate)\n"""
 
             if (pop.neuron_type.refractory or pop.refractory):
-                additional_func += """\t\t.def_rw("refractory", &PopStruct{id}::refractory)\n""".format(id=pop.id)
+                additional_func += f"""\t\t.def_rw("refractory", &PopStruct{pop.id}::refractory)\n"""
                 if _check_paradigm("cuda", self.net_id):
-                    additional_func += """\t\t.def_rw("refractory_dirty", &PopStruct{id}::refractory_dirty)\n""".format(id=pop.id)
+                    additional_func += f"""\t\t.def_rw("refractory_dirty", &PopStruct{pop.id}::refractory_dirty)\n"""
 
         wrapper_code = pop_struct_wrapper % {
             'id': pop.id,
