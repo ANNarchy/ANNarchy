@@ -75,18 +75,23 @@ public:
             auto err = cudaGetLastError();
             if ( err != cudaSuccess ) {
                 std::cout << "record %(name)s on pop%(id)s failed: " << cudaGetErrorString(err) << std::endl;
-            } else {
-                std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
             }
         #endif
-            if(!this->partial)
+
+            if(!this->partial) {
                 this->%(name)s.push_back(pop%(id)s->%(name)s);
-            else{
+            #ifdef _TRACE_SIMULATION_STEPS
+                std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
+            #endif
+            } else {
                 std::vector<%(type)s> tmp = std::vector<%(type)s>();
                 for (unsigned int i=0; i<this->ranks.size(); i++){
                     tmp.push_back(pop%(id)s->%(name)s[this->ranks[i]]);
                 }
                 this->%(name)s.push_back(tmp);
+            #ifdef _TRACE_SIMULATION_STEPS
+                std::cout << "record %(name)s - [min, max]: " << *std::min_element(tmp.begin(), tmp.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
+            #endif
             }
         }""",
     'clear': """
