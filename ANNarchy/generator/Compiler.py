@@ -752,18 +752,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     cython_module = load_cython_lib(libname, libpath)
     NetworkManager().get_network(net_id=net_id).instance = cython_module
 
-    # Set the CUDA device
-    if _check_paradigm("cuda", net_id):
-        device = 0
-        if cuda_config is not None:
-            device = int(cuda_config['device'])
-        elif user_config is not None and 'cuda' in user_config.keys():
-            device = int(user_config['cuda']['device'])
-
-        if ConfigManager().get('verbose', net_id):
-            Messages._print('Setting GPU device', device)
-        cython_module.set_device(device)
-
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
     if _check_paradigm("openmp", net_id):
@@ -810,16 +798,23 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if ConfigManager().get('verbose', net_id):
                 Messages._print('Running simulation single-threaded.')
 
-    # Sets the desired computation device for CUDA
-    if _check_paradigm("cuda", net_id) and (user_config!=None):
+    elif _check_paradigm("cuda", net_id):
         # check if there is a configuration,
         # otherwise fall back to default device
-        try:
-            dev_id = int(user_config['cuda']['device'])
-        except KeyError:
-            dev_id = 0
+        device = 0
+        if user_config is not None and 'cuda' in user_config.keys():
+            device = int(cuda_config['device'])
+        elif cuda_config is not None:
+            device = int(user_config['cuda']['device'])
 
-        cython_module.set_device(dev_id)
+        if ConfigManager().get('verbose', net_id):
+            Messages._print('Setting GPU device', device)
+
+        # Set the CUDA device
+        cython_module.set_device(device)
+
+    else:
+        raise NotImplementedError
 
     # Instantiate CPP objects
     cython_module.pyx_create()
