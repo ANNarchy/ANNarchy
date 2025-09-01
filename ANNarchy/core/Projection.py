@@ -1358,7 +1358,8 @@ class Projection :
         """
         Gathers all receptive fields within this projection.
 
-        The method only works when the pre- and post-synaptic populations have a 2d geometry. It concatenates all receptive fields of the `post` population into a 2d array.
+        The method only works when the pre- and post-synaptic populations have a 2d geometry. The function
+        concatenates all receptive fields of the `post` population into a 2d array.
 
         :param variable: Name of the variable.
         :param in_post_geometry: If False, the data will be plotted as square grid.
@@ -1371,15 +1372,21 @@ class Projection :
             y_size = int( math.ceil(math.sqrt(self.post.size)) )
 
 
-        def get_rf(rank): # TODO: IMPROVE
-            res = np.zeros( self.pre.size )
-            for n in range(len(self.post_ranks)):
-                if self.post_ranks[n] == n:
-                    pre_ranks = self.cyInstance.pre_rank(n)
-                    data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, rank)
-                    for j in range(len(pre_ranks)):
-                        res[pre_ranks[j]] = data[j]
-            return res.reshape(self.pre.geometry)
+        def get_rf(post_rank):
+            try:
+                lil_idx = self.post_ranks.index(post_rank)
+
+                res = np.zeros( self.pre.size )
+                pre_ranks = self.cyInstance.pre_rank(lil_idx)
+                data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, lil_idx)
+
+                if len(res) == len(pre_ranks):
+                    res[pre_ranks] = data
+
+                return res.reshape(self.pre.geometry)
+            except ValueError:
+                # post_rank is not listed
+                return np.zeros(self.pre.geometry)
 
         res = np.zeros((1, x_size*self.pre.geometry[1]))
         for y in range ( y_size ):
