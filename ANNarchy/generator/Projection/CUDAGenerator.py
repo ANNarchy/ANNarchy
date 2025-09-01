@@ -1080,7 +1080,7 @@ if(%(condition)s){
                         'name': attr_dict['name'],
                         'id': proj.pre.id
                     }
-                    kernel_args_decl += ", %(type)s* pre_%(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ pre_%(name)s" % ids
                     kernel_args_invoke += ", pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
@@ -1091,7 +1091,7 @@ if(%(condition)s){
                         'name': attr_dict['name'],
                         'id': proj.post.id
                     }
-                    kernel_args_decl += ", %(type)s* post_%(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ post_%(name)s" % ids
                     kernel_args_invoke += ", post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
@@ -1110,7 +1110,7 @@ if(%(condition)s){
                         kernel_args_invoke += ", %(name)s" % ids
                         kernel_args_call += ", proj%(id_proj)s->%(name)s" % ids
                     else:
-                        kernel_args_decl += ", %(type)s* %(name)s" % ids
+                        kernel_args_decl += ", %(type)s* __restrict__ %(name)s" % ids
                         kernel_args_invoke += ", %(name)s" % ids
                         kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
@@ -1120,7 +1120,7 @@ if(%(condition)s){
                         'type': attr_dict['ctype'],
                         'name': attr_dict['name']
                     }
-                    kernel_args_decl += ", %(type)s* %(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ %(name)s" % ids
                     kernel_args_invoke += ", %(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
