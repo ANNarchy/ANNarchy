@@ -397,7 +397,9 @@ class Projection :
 
         # Debug printout
         if ConfigManager().get('verbose', self.net_id):
-            print("Connectivity parameter ("+self.name+"):", self._connection_args )
+            print("  Initialize connectivity for Projection '"+self.name+"':")
+            print("    pattern  :", self.connector_name)
+            print("    arguments:", self._connection_args )
 
         # Instantiate the Cython wrapper
         if not self.cyInstance:

@@ -838,7 +838,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Creating population', pop.name)
+            Messages._print('Instantiate population ( name =', pop.name, ', size =', pop.size,')')
         if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
@@ -846,12 +846,12 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         pop._instantiate(cython_module)
 
         if ConfigManager().get('show_time', net_id):
-            Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('  instantiate of the popukatuib took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Instantiate projection ( pre =', proj.pre.name, ', post =', proj.post.name, ', target =', proj.target, ')')
         if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
@@ -859,7 +859,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         proj._instantiate(cython_module)
 
         if ConfigManager().get('show_time', net_id):
-            Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('  instantiate of the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
     cython_module.pyx_initialize(ConfigManager().get('dt', net_id))
@@ -871,11 +871,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Initializing population', pop.name)
+            Messages._print('Initializing C++ counterpart of population', pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Initializing C++ counterpart of projection', proj.name)
         proj._init_attributes()
 
     # Start the monitors
