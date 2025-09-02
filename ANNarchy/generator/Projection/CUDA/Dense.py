@@ -181,7 +181,11 @@ attribute_host_to_device = {
 attribute_device_to_host = {
     'local': """
         // %(name)s: local
-        if ( %(name)s_device_to_host < t ) {
+        if ( attr_name.compare("%(name)s") == 0)
+        {
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -195,19 +199,30 @@ attribute_device_to_host = {
         }
 """,
     'semiglobal': """
-            // %(name)s: semiglobal
+        // %(name)s: semiglobal
+        if ( attr_name.compare("%(name)s") == 0)
+        {
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            //cudaMemcpy( %(name)s.data(), gpu_%(name)s, post_ranks_.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, post_ranks_.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+        }
 """,
     'global': """
-            // %(name)s: global
+        // %(name)s: global
+        if ( attr_name.compare("%(name)s") == 0)
+        {
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -217,6 +232,7 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+        }
 """
 }
 

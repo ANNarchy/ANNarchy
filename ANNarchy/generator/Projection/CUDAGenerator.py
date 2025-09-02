@@ -215,7 +215,6 @@ class CUDAGenerator(ProjectionGenerator):
         proj_desc['custom_func'] = device_local_func
 
         proj_desc['host_to_device'] = tabify("proj%(id)s->host_to_device();" % {'id':proj.id}, 1)+"\n"
-        proj_desc['device_to_host'] = tabify("proj%(id)s->device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
 

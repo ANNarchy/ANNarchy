@@ -640,7 +640,7 @@ class ProjectionGenerator(object):
                     read_dirty_flag = ""
                 else:
                     write_dirty_flag = "%(name)s_host_to_device = true;" % {'name': var['name']}
-                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host();" % {'name': var['name']}
+                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host(name);" % {'name': var['name']}
             else:
                 write_dirty_flag = ""
                 read_dirty_flag = ""

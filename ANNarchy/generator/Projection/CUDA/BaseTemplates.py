@@ -121,10 +121,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(host_to_device)s
     }
 
-    void device_to_host() {
-    #if defined(_TRACE_INIT) || defined(_DEBUG)
-        std::cout << "  ProjStruct%(id_proj)s::device_to_host() called at t = " << t << " simulation steps." << std::endl;
-    #endif    
+    void device_to_host(std::string attr_name) {
 %(device_to_host)s
     }
 };
@@ -133,9 +130,6 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 attribute_template = {
     "local": """
     std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
-        // Get recent GPU state
-        device_to_host();
-
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
     #endif
@@ -147,9 +141,6 @@ attribute_template = {
     }
 
     std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
-        // Get recent GPU state
-        device_to_host();
-
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
     #endif
@@ -161,9 +152,6 @@ attribute_template = {
     }
 
     %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
-        // Get recent GPU state
-        device_to_host();
-
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
     #endif
@@ -188,9 +176,6 @@ attribute_template = {
 """,
     "semiglobal": """
     std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
-        // Get recent GPU state
-        device_to_host();
-
 %(semiglobal_get1)s
 
         // should not happen
@@ -199,9 +184,6 @@ attribute_template = {
     }
 
     %(ctype)s get_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post) {
-        // Get recent GPU state
-        device_to_host();
-
 %(semiglobal_get2)s
 
         // should not happen
@@ -219,9 +201,6 @@ attribute_template = {
 """,
     "global": """
     %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-        // Get recent GPU state
-        device_to_host();
-
 %(global_get)s
 
         // should not happen
