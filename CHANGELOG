@@ -11,6 +11,11 @@
     * Experimental feature: Bitmasks for Dense (commit 89e8f0e) and BSR (commit 4ead060)
     * Dense/BSR is limited to projections without PopulationViews (72dd33d)
 * Restructured unittests and changed the execution of them (see ANNarchy/tests/README.txt)
+* Reduced the number of memory transfers between GPU and Host to improve overall simulation time (e.g., c80d403,116264b)
+
+Bugfixes:
+
+* Projection.save_connectivity() / Projection.from_file() ignored the dt when storing delays (commit a877043)
 
 **4.8.2**
 
