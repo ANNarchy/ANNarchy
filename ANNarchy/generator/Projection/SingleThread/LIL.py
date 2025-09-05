@@ -132,7 +132,7 @@ delay = {
         this->delay = delay;
     }
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
@@ -166,7 +166,7 @@ delay = {
     }
     
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
