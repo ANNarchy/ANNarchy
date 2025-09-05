@@ -396,11 +396,16 @@ class ProjectionGenerator(object):
 
         # For debug: printout the configured SpMV implementation
         if ConfigManager().get('verbose', self._net_id) and not suppress_printouts:
-            print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
+            _debug(f"Code configuration for projection {proj.name}:")
+            _debug(f"  - SpM format   : {sparse_matrix_format}({sparse_matrix_args})")
+            _debug(f"  - single matrix: {single_matrix}")
+            _debug(f"  - delay config : max_delay={proj.max_delay}, uniform_delay={proj.uniform_delay}")
+
+            #print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", , " single_matrix =", single_matrix )
             if proj._storage_format == "bsr":
-                _debug("  we will use a {} x {} tile".format(proj._bsr_tile_size, proj._bsr_tile_size))
+                _debug(f"  - dense tiles are {proj._bsr_tile_size} x {proj._bsr_tile_size}")
             elif proj._storage_format == "sell":
-                _debug("  we will use a block size of {} rows.".format(proj._sell_block_size))
+                _debug(f"  - block size of {proj._sell_block_size} rows")
 
         return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix
 
