@@ -35,12 +35,12 @@ except Exception as e:
     print(e)
     print("""
 -------------------------------------------------------------------------------------------------
-Warning: Cython modules can not be imported. 
-If you are installing ANNarchy, this is normal, ignore this message. 
+Warning: Cython modules can not be imported.
+If you are installing ANNarchy, this is normal, ignore this message.
 If ANNarchy is already installed, something went wrong with the compilation, try reinstalling.
 -------------------------------------------------------------------------------------------------
 """)
-    
+
 # Compilation (like in ANNarchy 4)
 from .generator import compile
 
@@ -57,7 +57,7 @@ atexit.register(clear)
 
 # Version
 __version__ = '5.0'
-__release__ = '5.0.0rc6'
+__release__ = '5.0.0rc7'
 
 # Deprecated imports from this module:
 _deprecated = {
