@@ -12,6 +12,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
 from ANNarchy.intern import Messages
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 try:
     from ANNarchy.cython_ext import *
@@ -564,10 +565,9 @@ def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_form
         # Delays
         lil.max_delay = data['max_delay']
         lil.uniform_delay = data['uniform_delay']
-
         if data['delay'] is not None:
             if lil.uniform_delay == -1:
-                lil.delay = list(data['delay'])
+                lil.delay = [list(np.array(tmp) / ConfigManager().get("dt", self.net_id)) for tmp in data['delay']]
             else:
                 lil.delay = [[lil.max_delay]]
 

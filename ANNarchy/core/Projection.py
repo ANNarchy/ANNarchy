@@ -1050,7 +1050,7 @@ class Projection :
             if self.max_delay <= 1 :
                 return ConfigManager().get('dt', self.net_id)
         elif self.uniform_delay != -1:
-                return self.uniform_delay * ConfigManager().get('dt', self.net_id)
+            return self.uniform_delay * ConfigManager().get('dt', self.net_id)
         else:
             return [[pre * ConfigManager().get('dt', self.net_id) for pre in post] for post in self.cyInstance.get_delay()]
 
@@ -1263,7 +1263,7 @@ class Projection :
             'post_ranks': self.post_ranks,
             'pre_ranks': np.array(self.cyInstance.pre_ranks(), dtype=object),
             'w': np.array(self.w, dtype=object),
-            'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
+            'delay': np.array(self._get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
             'max_delay': self.max_delay,
             'uniform_delay': self.uniform_delay,
             'size': self.size,
@@ -1275,7 +1275,7 @@ class Projection :
             Messages._print("Saving connectivity in gunzipped binary format...")
             try:
                 import gzip
-            except:
+            except ImportError:
                 Messages._error('gzip is not installed.')
                 return
             with gzip.open(filename, mode = 'wb') as w_file:
