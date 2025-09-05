@@ -162,9 +162,19 @@ delay = {
     std::vector<std::vector<int>> get_delay() {
         return get_matrix_variable_all<int, std::vector<std::vector<int>>>(delay);
     }
+    std::vector<int> get_dendrite_delay(int idx) {
+        if (idx < delay.size()) {
+            return get_matrix_variable_row<int, std::vector<std::vector<int>>>(delay, idx);
+        } else {
+            std::cerr << "ProjStruct%(id)s::get_dendrite_delay(): invalid idx used." << std::endl;
+            return std::vector<int>();
+        }
+    }
     void set_delay(std::vector<std::vector<int>> value) {
         update_matrix_variable_all<int, std::vector<std::vector<int>>>(delay, value);
     }
+    int get_max_delay() { return max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
         delay = init_matrix_variable<int, std::vector<std::vector<int>>>(1);
@@ -174,7 +184,7 @@ delay = {
         max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
+            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ) );
         }
     #ifdef _DEBUG
         std::cout << "Inited _delayed_spikes[" << global_num_threads << "][" << max_delay << "] and " << std::endl;
@@ -194,7 +204,7 @@ delay = {
         max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
+            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ) );
         }
 """
     }
@@ -472,19 +482,26 @@ if (_transmission && %(post_prefix)s_active) {
 # Uses a ring buffer to process non-uniform delays in spiking networks
 spiking_summation_variable_delay = """
 // Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
+    const auto& part_post_rank = sub_matrices_[tid]->get_post_rank();
+    const auto& part_inv_pre_rank = sub_matrices_[tid]->get_inv_pre_rank();
 
     // Iterate over the spikes emitted during the last step in the pre population
     for(int idx_spike=0; idx_spike<%(pre_prefix)sspiked.size(); idx_spike++){
 
         // Get the rank of the pre-synaptic neuron which spiked
         int rk_pre = %(pre_prefix)sspiked[idx_spike];
-        // List of post neurons receiving connections
-        auto rks_post_beg = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).begin();
-        auto rks_post_end = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).end();
 
-        // Iterate over the post neurons
-        for (auto rks_post_it = rks_post_beg; rks_post_it != rks_post_end; rks_post_it++){
+        // Find the pre-synaptic neuron in the inverse connectivity matrix
+        std::map<int, std::vector<std::pair<int, int>>>::const_iterator inv_post_ptr = part_inv_pre_rank.find(rk_pre);
+        if (inv_post_ptr == part_inv_pre_rank.end())
+            continue;   // no out-going connections from this neuron
+
+        // List of post-synaptic neurons receiving spikes from this neuron
+        const auto& inv_post = inv_post_ptr->second;
+
+        // Iterate over connected post neurons and update the corresponding queues.
+        for (auto rks_post_it = inv_post.cbegin(); rks_post_it != inv_post.cend(); rks_post_it++){
             // Index of the post neuron in the connectivity matrix
             int i = rks_post_it->first ;
             // Index of the pre neuron in the connecivity matrix

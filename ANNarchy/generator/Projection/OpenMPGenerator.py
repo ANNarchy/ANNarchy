@@ -1554,7 +1554,7 @@ _last_event%(local_index)s = t;
 
         // Insert as many empty vectors as need at the current pointer position
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid].insert(_delayed_spikes[tid].begin() + idx_delay, add_steps, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ));
+            _delayed_spikes[tid].insert(_delayed_spikes[tid].begin() + idx_delay, add_steps, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ));
         }
 
         // The delay index has to be updated
