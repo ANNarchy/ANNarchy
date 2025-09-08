@@ -246,7 +246,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         .def("get_period", &PopStruct{self.id}::get_period)
 
         // Other methods
-		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
 
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
@@ -375,7 +375,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         .def("get_period", &PopStruct{self.id}::get_period)
 
         // Other methods
-		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
 
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
@@ -591,7 +591,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         .def("get_period", &PopStruct{self.id}::get_period)
 
         // Other methods
-		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
 
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
