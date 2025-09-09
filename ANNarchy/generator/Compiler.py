@@ -689,9 +689,11 @@ class Compiler(object):
         """
         # First, we remove previously created files
         target_folder = self.annarchy_dir+'/generate/net'+ str(self.net_id)
+        if ConfigManager().get("verbose", self.net_id):
+            print('\n\nCheck target folder:', target_folder)
         for file in os.listdir(target_folder):
             if ConfigManager().get("verbose", self.net_id):
-                print("Remove previously generated file:", target_folder+'/'+file)
+                print("  - remove file:", file)
             os.remove(target_folder+'/'+file)
 
         # Then, we generate the code for the current network
