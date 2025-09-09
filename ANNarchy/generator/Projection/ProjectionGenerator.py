@@ -830,7 +830,7 @@ class ProjectionGenerator(object):
                     
                 elif var['locality'] == "local":
                     if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):   # Init weights in CPP
-                        if proj.connector_weight_dist == None:
+                        if proj.connector_weight_dist is None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
                                 'type': var['ctype'],
@@ -856,14 +856,14 @@ class ProjectionGenerator(object):
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
 
                         elif isinstance(proj.connector_weight_dist, ANNRandom.LogNormal):
-                            if proj.connector_weight_dist.min==None and proj.connector_weight_dist.max==None:
+                            if proj.connector_weight_dist.min is None and proj.connector_weight_dist.max is None:
                                 if single_spmv_matrix:
                                     init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                                 else:
                                     init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
                             else:
-                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min==None else str(proj.connector_weight_dist.min)
-                                max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max==None else str(proj.connector_weight_dist.max)
+                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min is None else str(proj.connector_weight_dist.min)
+                                max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max is None else str(proj.connector_weight_dist.max)
                                 if single_spmv_matrix:
                                     init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0], "+min_code+", "+max_code+");"
                                 else:
@@ -919,7 +919,7 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             # Special case: we have non-uniform delays, but not determined by a RandomDistribution
             #               This will caused most likely by custom connectivity pattern
-            if proj.connector_delay_dist == None and proj.uniform_delay==-1:
+            if proj.connector_delay_dist is None and proj.uniform_delay==-1:
                 id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                 if proj.synapse_type.type == "rate":
                     delay_code = self._templates['delay']['nonuniform_rate_coded']['init']  % self._template_ids
@@ -928,7 +928,7 @@ class ProjectionGenerator(object):
 
             #
             # uniform delay
-            elif proj.connector_delay_dist == None:
+            elif proj.connector_delay_dist is None:
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:

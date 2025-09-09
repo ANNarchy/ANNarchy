@@ -131,13 +131,13 @@ def compile(
         _update_global_config('profile_out', options.profile_out)
 
     # check if profiling enabled due compile()
-    if profile_enabled != False and options.profile == None:
+    if profile_enabled != False and options.profile is None:
         _update_global_config('profiling', True)
     # if profiling is enabled
     if profile_enabled:
         # this will automatically create a globally available Profiler instance
         Profiler().enable_profiling()
-        if ConfigManager().get('profile_out', net_id) == None:
+        if ConfigManager().get('profile_out', net_id) is None:
             _update_global_config('profile_out', '.')
 
     # Debug the simulation kernel

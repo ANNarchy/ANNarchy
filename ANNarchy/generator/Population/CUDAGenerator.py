@@ -541,7 +541,7 @@ class CUDAGenerator(PopulationGenerator):
         # Generate the header and call lines
         for dep in deps:
             attr_type, attr_dict = self._get_attr_and_type(pop, dep)
-            if attr_type == None:
+            if attr_type is None:
                 continue
 
             ids = {

@@ -528,9 +528,9 @@ class Projection :
         self._storage_order = storage_order
 
         # The user selected nothing therefore we use the standard since ANNarchy 4.4.0
-        if storage_format == None:
+        if storage_format is None:
             self._storage_format = "lil"
-        if storage_order == None:
+        if storage_order is None:
             if storage_format == "auto":
                 storage_order = "auto"
             else:
@@ -722,7 +722,7 @@ class Projection :
     @property
     def size(self):
         "Number of post-synaptic neurons receiving synapses."
-        if self.cyInstance == None:
+        if self.cyInstance is None:
             Messages._warning("Access 'size or len()' attribute of a Projection is only valid after compile()")
             return 0
 
@@ -1521,7 +1521,7 @@ class Projection :
         Updates the projection with the stored data set.
         """
         # Sanity check
-        if desc == None:
+        if desc is None:
             # _load_proj should have printed an error message
             return
 

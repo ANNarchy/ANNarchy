@@ -1052,7 +1052,7 @@ if (%(condition)s) {
                 template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
 
         # sanity check
-        if template == None:
+        if template is None:
             raise Messages.CodeGeneratorException("\tproj{}: no template available (Configuration: format={}, order={}, single_matrix={}, pattern={})".format(proj.id, proj._storage_format, proj._storage_order, single_matrix, proj._parallel_pattern))
 
         # Axonal spike events
