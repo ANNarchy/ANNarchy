@@ -927,8 +927,14 @@ if (_transmission && %(post_prefix)s_active){
 
         // Get the rank of the pre-synaptic neuron which spiked
         int rk_pre = %(pre_prefix)sspiked[idx_spike];
-        // List of post neurons receiving connections
-        std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
+
+        // Find the presynaptic neuron in the inverse connectivity matrix
+        auto inv_post_ptr = inv_pre_rank.find(rk_pre);
+        if (inv_post_ptr == inv_pre_rank.end())
+            continue;
+
+        // List of post neurons receiving connections from rk_pre
+        std::vector< std::pair<int, int> >& rks_post = inv_post_ptr->second;
 
         // Iterate over the post neurons
         for(int x=0; x<rks_post.size(); x++){
