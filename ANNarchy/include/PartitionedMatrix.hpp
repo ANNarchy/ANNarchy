@@ -50,6 +50,20 @@ class PartitionedMatrix {
 /*  Accessors to member variables                                                                            */
 /************************************************************************************************************/
 
+    /**
+     * @brief   Get the maximum number of rows in the matrix.
+     */
+    inline IT num_rows() {
+        return num_rows_;
+    }
+
+    /**
+     * @brief   Get the maximum number of column in the matrix.
+     */
+    inline IT num_columns() {
+        return num_columns_;
+    }
+
     int chunk_size() {
         return this->chunk_size_;
     }
@@ -142,7 +156,7 @@ class PartitionedMatrix {
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
     #ifdef _DEBUG
-        std::cout << "PartitionedMatrix::init_matrix_from_lil():" << std::endl;
+        std::cout << "PartitionedMatrix::init_matrix_from_lil()" << std::endl;
     #endif
 
         // Sanity check
@@ -593,7 +607,9 @@ class PartitionedMatrix {
      *  @details    Sets the chunk_size_ as well as the slices_ attribute.
      */
     void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
-
+    #ifdef _DEBUG
+        std::cout << "PartitionedMatrix::divide_post_ranks(row_indices.size()="<<row_indices.size()<<", num_partitions="<<num_partitions<<")"<< std::endl;
+    #endif
         num_partitions_ = num_partitions;
         chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));
 
@@ -601,7 +617,7 @@ class PartitionedMatrix {
             int beg = i * chunk_size_;
             int end = std::min(static_cast<int>((i+1) * chunk_size_), static_cast<int>(num_rows_));
 
-            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(num_rows_, num_columns_));
+            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(end-beg, num_columns_));
         }
 
         // ATTENTION: this assumes that row_indices are sorted ascending

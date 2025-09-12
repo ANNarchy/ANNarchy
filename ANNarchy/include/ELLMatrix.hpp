@@ -474,7 +474,7 @@ class ELLMatrix {
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros_ << std::endl;
+        std::cout << "ELLMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << nb_synapses() << std::endl;
     #endif
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
 
