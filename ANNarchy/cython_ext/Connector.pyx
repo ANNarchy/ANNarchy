@@ -9,12 +9,23 @@ cimport numpy as np
 from libc.math cimport exp, fabs, ceil
 
 import ANNarchy
-from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 cimport ANNarchy.cython_ext.Coordinates as Coordinates
+
+def get_dt(obj):
+    """
+    Retrieve the *dt* configuration.
+
+    Note:   the net_id is not directly available within the cython module.
+            Therefore, we need to use the population object as interim step.
+    """
+
+    net_id = obj.net_id if isinstance(obj, Population) else obj.population.net_id
+
+    return ConfigManager().get('dt', net_id=net_id)
 
 ##################################################
 ### Connector methods, these functions are    ####
@@ -23,7 +34,7 @@ cimport ANNarchy.cython_ext.Coordinates as Coordinates
 def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the all-to-all pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.all_to_all(pre, post, weights, delays, allow_self_connections)
 
     return projection
@@ -31,7 +42,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections, storage_forma
 def one_to_one(pre, post, weights, delays, storage_format, storage_order):
     """ Cython implementation of the one-to-one pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.one_to_one(pre, post, weights, delays)
 
     return projection
@@ -39,7 +50,7 @@ def one_to_one(pre, post, weights, delays, storage_format, storage_order):
 def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_probability pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
 
     return projection
@@ -47,7 +58,7 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_pre pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
@@ -55,7 +66,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
@@ -63,7 +74,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the gaussian pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
 
     return projection
@@ -71,7 +82,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
 def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the difference-of-gaussian (dog) pattern."""
     # instantiate pattern
-    projection = LILConnectivity()
+    projection = LILConnectivity(dt=get_dt(pre))
     projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
 
     return projection
@@ -81,12 +92,12 @@ def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float 
 ###################################################
 cdef class LILConnectivity:
 
-    def __cinit__(self):
+    def __cinit__(self, dt):
         self.max_delay = 0
         self.size = 0
         self.nb_synapses = 0
         self.uniform_delay = -1
-        self.dt = get_global_config('dt')
+        self.dt = dt
         self.requires_sorting = False
         self.last_added_idx = -1
 

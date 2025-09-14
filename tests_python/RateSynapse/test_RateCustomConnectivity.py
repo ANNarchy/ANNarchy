@@ -7,7 +7,7 @@ This file is part of ANNarchy.
 import unittest
 
 from conftest import TARGET_FOLDER
-from ANNarchy import CSR, DiscreteUniform, Network, Neuron
+from ANNarchy import LILConnectivity, DiscreteUniform, Network, Neuron
 
 class test_CustomConnectivityNoDelay(unittest.TestCase):
     """
@@ -19,8 +19,8 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
         """
         Compile the network for this test
         """
-        def my_diagonal(pre, post, weight):
-            synapses = CSR()
+        def my_diagonal(pre, post, dt, weight):
+            synapses = LILConnectivity(dt=dt)
             for post_rk in post.ranks:
                 pre_ranks = []
                 if post_rk-1 in pre.ranks:
@@ -88,8 +88,8 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
         """
         Compile the network for this test
         """
-        def my_diagonal_with_uniform_delay(pre, post, weight, delay):
-            synapses = CSR()
+        def my_diagonal_with_uniform_delay(pre, post, dt, weight, delay):
+            synapses = LILConnectivity(dt=dt)
             for post_rk in post.ranks:
                 pre_ranks = []
                 if post_rk-1 in pre.ranks:
@@ -163,8 +163,8 @@ class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
         """
         Compile the network for this test
         """
-        def my_diagonal_with_non_uniform_delay(pre, post, weight, delay):
-            synapses = CSR()
+        def my_diagonal_with_non_uniform_delay(pre, post, dt, weight, delay):
+            synapses = LILConnectivity(dt=dt)
             for post_rk in post.ranks:
                 pre_ranks = []
                 if post_rk-1 in pre.ranks:

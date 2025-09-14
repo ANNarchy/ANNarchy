@@ -344,7 +344,7 @@ class Convolution(SpecificProjection):
             Messages._print(e)
             Messages._error('ANNarchy was not successfully installed.')
 
-        lil = LILConnectivity()
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
         self.connector_name = "Convolution"

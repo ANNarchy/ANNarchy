@@ -109,7 +109,7 @@ class Copy(SpecificProjection):
             Messages._print(e)
             Messages._error('ANNarchy was not successfully installed.')
 
-        lil = LILConnectivity()
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
 
         self.connector_name = "Copy"
         self.connector_description = "Copy projection"

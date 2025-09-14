@@ -242,16 +242,17 @@ def connect_with_func(self: "Projection", method, storage_format:str=None, stora
     """
     Connection pattern based on a user-defined function.
 
-    The two first arguments of the function must be the pre and post populations. Additional arguments can be passed at creation time.
+    The two first arguments of the function must be the pre and post populations. The third argument is the step size *dt*.
+    Additional arguments can be passed at creation time.
 
     The function must return a `ann.LILConnectivity` object.
 
     Example:
 
     ```python
-    def probabilistic_pattern(pre, post, weight, probability):
+    def probabilistic_pattern(pre, post, dt, weight, probability):
         # Create a LIL structure for the connectivity matrix
-        synapses = ann.LILConnectivity()
+        synapses = ann.LILConnectivity(dt=dt)
         # For all neurons in the post-synaptic population
         for post_rank in range(post.size):
             # Decide which pre-synaptic neurons should form synapses
@@ -279,7 +280,7 @@ def connect_with_func(self: "Projection", method, storage_format:str=None, stora
     :param args: List of additional arguments needed by the function.
     """
     # Construct the pattern
-    synapses = method(self.pre, self.post, **args)
+    synapses = method(self.pre, self.post, ConfigManager().get('dt', net_id=self.pre.net_id), **args)
 
     # Sanity check: doublons, ascending order of ranks
     synapses.validate()
@@ -317,7 +318,7 @@ def connect_from_matrix_market(self: "Projection", filename:str, storage_format:
         tmp = tmp.tolil(copy=True)
 
         # build up ANNarchy LIL
-        synapses = LILConnectivity()
+        synapses = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
         row_idx = 0
         for col_idx, val in zip(tmp.rows, tmp.data):
             synapses.push_back(row_idx, col_idx, val, [0])
@@ -325,7 +326,7 @@ def connect_from_matrix_market(self: "Projection", filename:str, storage_format:
 
     elif isinstance(tmp, np.ndarray):
         # build up ANNarchy LIL
-        synapses = LILConnectivity()
+        synapses = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
 
         col_idx = np.arange(tmp.shape[1])
         for row_idx in range(tmp.shape[0]):
@@ -392,7 +393,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     :param delays: matrix / list-in-list which contains synaptic delays
     :param pre_post: needs to be set to True if the weights are not a post times pre matrix.
     """
-    lil = LILConnectivity()
+    lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
@@ -479,7 +480,7 @@ def connect_from_sparse(self, weights:"scipy.sparse.lil_matrix", delays: int | f
 
 def _load_from_sparse(self, pre, post, weights, delays):
     # Create an empty LIL object
-    lil = LILConnectivity()
+    lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
 
     # Find offsets
     if isinstance(self.pre, PopulationView):
@@ -521,7 +522,7 @@ def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_form
     :param filename: file where the connections were saved.
     """
     # Create an empty LIL object
-    lil = LILConnectivity()
+    lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
 
     # Load the data
     from ANNarchy.core.IO import _load_connectivity_data

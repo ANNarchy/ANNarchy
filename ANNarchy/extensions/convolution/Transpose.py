@@ -94,7 +94,7 @@ class Transpose(SpecificProjection):
             Messages._print(e)
             Messages._error('ANNarchy was not successfully installed.')
 
-        lil = LILConnectivity()
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
         lil.max_delay = self.max_delay
         lil.uniform_delay = self.uniform_delay
         self.connector_name = "Transpose"
