@@ -3,7 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *

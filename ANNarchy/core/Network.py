@@ -19,7 +19,7 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Constant import Constant
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 import ANNarchy.extensions.bold as bold
@@ -132,11 +132,15 @@ class Network (metaclass=NetworkMeta):
         if dt is not None:
             self.dt = dt
 
-        # Seed
-        if seed is not None: 
-            self.seed = seed
-        else:
-            self.seed = secrets.randbits(32)  # Generates a random 32-bit integer
+        # Draw a value for seed if not provided by user
+        if seed is None:
+            seed = secrets.randbits(32)  # Generates a random 32-bit integer
+
+        # Store the seed value
+        self._set_config('seed', seed)
+
+        # initialize one RNG instance
+        self._default_rng = np.random.default_rng(self.seed)
 
         # Callbacks
         self._callbacks = []
@@ -885,25 +889,27 @@ class Network (metaclass=NetworkMeta):
 
     @property
     def seed(self) -> int:
-        "Seed for the random number generator (Python and C++)."
+        "Seed for the random number generator being used for both Python and C++."
         return self._get_config('seed')
 
     @seed.setter
-    def seed(self, seed:int) -> None:
-        """
-        Sets the seed of the random number generator.
-        """
-        # Seed numpy
-        np.random.seed(seed)
+    def seed(self, seed: int) -> None:
+        "Prevent the setting of a seed by hand."
+        Messages._error("The seed argument should not be overwritten.")
 
-        # Store the value
-        self._set_config('seed', seed)
+    @property
+    def default_rng(self) -> np.random.Generator:
+        """
+        Get a pre-seeded RNG instance. During construction of the network object, a numpy.random.Generator
+        object has been instantiated. This can be used to initialize random distributions. e.g., instances of
+        ANNarchy.core.RandomDistribution.
+        """
+        return self._default_rng
 
-        if self.compiled: # Send the seed to the cython instance. Too late?
-            if self._get_config('disable_parallel_rng'):
-                self.cy_instance.set_seed(seed, 1, self._get_config('use_seed_seq'))
-            else:
-                self.cy_instance.set_seed(seed, self._get_config('num_threads'), self._get_config('use_seed_seq'))
+    @default_rng.setter
+    def default_rng(self, new_rng: np.random.Generator) -> None:
+        "Prevent the setting of RNG instance by hand."
+        Messages._error("The default_rng argument should not be overwritten.")
 
     @property
     def dt(self) -> float:
