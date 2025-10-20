@@ -329,8 +329,8 @@ curand = {
     curandState* gpu_%(rd_name)s;
 """,
         'init': """
-        cudaMalloc((void**)&gpu_%(rd_name)s, this->nb_synapses() * sizeof(curandState));
-        init_curand_states( this->nb_synapses(), gpu_%(rd_name)s, global_seed );
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )

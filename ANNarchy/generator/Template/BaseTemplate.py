@@ -1030,19 +1030,18 @@ cuda_device_kernel = """#include "ANNarchyKernel.cuh"
  * init random states                   *
  ****************************************/
 /*
- *  Each thread gets an unique sequence number (i) and all use the same seed. As highlightet
+ *  Each thread gets an unique sequence number (tid) and all use the same seed. As highlighted
  *  in section 3.1.1. of the curand documentation this should be enough to get good random numbers
  *
- *  HD(19.7.2019): we need to be careful, that multiple calls to this method need to generate different state sequences.
+ *  HD (19.7.2019):     we need to be careful, that multiple calls to this method need to generate different state sequences.
+ *  HD (17.10.2025):    Note, ANN5.0 switches from per-element RNG state to per-thread RNG state!
  */
-__global__ void rng_setup_kernel( int N, long long int sequence_offset, curandState* states, unsigned long long seed )
+__global__ void rng_setup_kernel( int num_total, long long int sequence_offset, curandState* states, unsigned long long seed )
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    while( i < N )
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < num_total)
     {
-        curand_init( seed, i+sequence_offset, 0, &states[ i ] );
-        i += blockDim.x * gridDim.x;
+        curand_init( seed, tid+sequence_offset, 0, &states[ tid ] );
     }
 }
 
@@ -1115,12 +1114,10 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
 // We need to generate different state sequences per kernel call
 static long long int sequence_offset=0;
 
-void init_curand_states( int N, curandState* states, unsigned long long seed ) {
-    int numThreads = 64;
-    int numBlocks = ceil (float(N) / float(numThreads));
+void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed ) {
 
-    rng_setup_kernel<<< numBlocks, numThreads >>>( N, sequence_offset, states, seed);
-    sequence_offset += N;
+    rng_setup_kernel<<< numBlocks, numThreads >>>( numBlocks * numThreads, sequence_offset, states, seed);
+    sequence_offset += numBlocks * numThreads;
 
 #ifdef _DEBUG
     cudaError_t err = cudaGetLastError();
@@ -1195,7 +1192,7 @@ struct RunConfig{
 };
 
 // Pre-defined kernel definitions
-void init_curand_states( int N, curandState* states, unsigned long long seed );
+void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
 
 void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum);
 void call_clear_num_events(RunConfig cfg, unsigned int* num_events);

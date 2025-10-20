@@ -638,15 +638,17 @@ class CUDAGenerator(PopulationGenerator):
 
         loc_pre = ""
         glob_pre = ""
+        pre_loop = ""
+        post_loop = ""
         for rd in random_distributions:
             if rd['locality'] == "local":
                 term = ""
                 if rd['dist'] == "Uniform":
-                    term = """( curand_uniform%(postfix)s( &state_%(rd)s%(idx)s ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1], 'idx': "%(local_index)s"}
+                    term = """( curand_uniform%(postfix)s( &loc_state_%(rd)s ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 elif rd['dist'] == "Normal":
-                    term = """( curand_normal%(postfix)s( &state_%(rd)s%(idx)s ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1], 'idx': "%(local_index)s"}
+                    term = """( curand_normal%(postfix)s( &loc_state_%(rd)s ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 elif rd['dist'] == "LogNormal":
-                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s%(idx)s, %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1], 'idx': "%(local_index)s"}
+                    term = """( curand_log_normal%(postfix)s( &loc_state_%(rd)s, %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 else:
                     Messages._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
@@ -656,14 +658,19 @@ class CUDAGenerator(PopulationGenerator):
                 # add the init
                 loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': rd['name'], 'term': term}
 
+                # read-out/write-back of the RNG state
+                pre_loop += f"curandState loc_state_{rd['name']} = state_{rd['name']}[tid];"
+                post_loop += f"state_{rd['name']}[tid] = loc_state_{rd['name']};"
+
             else:
+                # For global variables we directly access the RNG state.
                 term = ""
                 if rd['dist'] == "Uniform":
-                    term = """( curand_uniform%(postfix)s( &state_%(rd)s%(idx)s ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1], 'idx': "%(global_index)s"}
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 elif rd['dist'] == "Normal":
-                    term = """( curand_normal%(postfix)s( &state_%(rd)s%(idx)s ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1], 'idx': "%(global_index)s"}
+                    term = """( curand_normal%(postfix)s( &state_%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 elif rd['dist'] == "LogNormal":
-                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s%(idx)s, %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1], 'idx': "%(global_index)s"}
+                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 else:
                     Messages._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
@@ -679,7 +686,7 @@ class CUDAGenerator(PopulationGenerator):
         if len(glob_pre) > 0:
             glob_eqs = tabify(glob_pre, 1) + "\n" + glob_eqs
 
-        return loc_eqs, glob_eqs
+        return loc_eqs, glob_eqs, pre_loop, post_loop
 
     def _stop_condition(self, pop):
         """
@@ -894,7 +901,8 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = check_and_apply_pow_fix(glob_eqs, self._cuda_version)
 
         # replace the random distributions
-        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
+        loc_eqs, glob_eqs, rng_pre_loop, rng_post_loop = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
+        pre_loop += rng_pre_loop
 
         # Replace %(global_idx)s for global parameters
         for var in pop.neuron_type.description["global"]:
@@ -911,6 +919,7 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = glob_eqs % ids
         loc_eqs = loc_eqs % ids
         pre_loop = pre_loop % ids
+        rng_post_loop = rng_post_loop % ids
 
         # replace local function calls
         if len(pop.neuron_type.description['functions']) > 0:
@@ -977,7 +986,8 @@ class CUDAGenerator(PopulationGenerator):
                 'add_args': add_args_header,
                 'pop_size': pop.size,
                 'local_eqs': loc_eqs,
-                'pre_loop': tabify(pre_loop, 1)
+                'pre_loop': tabify(pre_loop, 1),
+                'post_loop': tabify(rng_post_loop, 1)
             }
             kernel_invoke += CUDATemplates.population_update_kernel['local']['invoke_kernel'] % {
                 'id': pop.id,
@@ -1069,7 +1079,8 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = check_and_apply_pow_fix(glob_eqs, self._cuda_version)
 
         # replace the random distributions
-        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
+        loc_eqs, glob_eqs, rng_pre_loop, rng_post_loop = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
+        pre_code += rng_pre_loop
 
         # within refractory perid, only conductance variables
         if pop.neuron_type.refractory or pop.refractory:
@@ -1095,6 +1106,7 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = glob_eqs % ids
         loc_eqs = loc_eqs % ids
         pre_code = pre_code % ids
+        rng_post_loop = rng_post_loop % ids
         refr_eqs = refr_eqs % ids
 
         # replace local function calls
@@ -1122,6 +1134,7 @@ class CUDAGenerator(PopulationGenerator):
                 'id': pop.id,
                 'add_args': add_args_header,
                 'pre_loop': pre_code,
+                'post_loop': rng_post_loop,
                 'global_eqs':glob_eqs
             }
             header += CUDATemplates.population_update_kernel['global']['header'] % {
@@ -1167,7 +1180,7 @@ class CUDAGenerator(PopulationGenerator):
 
             # finalize code templates
             device_kernel += CUDATemplates.population_update_kernel['local']['device_kernel'] % {
-                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'pre_loop': pre_code, 'local_eqs': loc_eqs
+                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'pre_loop': tabify(pre_code, 1), 'post_loop': tabify(rng_post_loop, 1), 'local_eqs': loc_eqs
             }
             device_invoke += CUDATemplates.population_update_kernel['local']['invoke_kernel'] % {
                 'id': pop.id, 'add_args': add_args_header, 'add_args_call': add_args_invoke

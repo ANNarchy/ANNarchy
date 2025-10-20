@@ -15,7 +15,7 @@ extern long int t;
 
 // RNG - defined in ANNarchy.cu
 extern unsigned long long global_seed;
-extern void init_curand_states( int N, curandState* states, unsigned long long seed );
+extern void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
 
 %(include_additional)s
 %(include_profile)s
@@ -436,8 +436,8 @@ curand = {
     curandState* gpu_%(rd_name)s;
 """,
         'init': """
-        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
-        init_curand_states( size, gpu_%(rd_name)s, global_seed );
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
 """,
 	'clear': """
 cudaFree(gpu_%(rd_name)s);
@@ -449,7 +449,7 @@ cudaFree(gpu_%(rd_name)s);
 """,
         'init': """
         cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(curandState));
-        init_curand_states( 1, gpu_%(rd_name)s, global_seed );
+        init_curand_states(1, 1, gpu_%(rd_name)s, global_seed );
 #ifdef _DEBUG
         cudaError_t err_%(rd_name)s = cudaGetLastError();
         if ( err_%(rd_name)s != cudaSuccess )
@@ -574,7 +574,8 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
         'device_kernel': """// Updating local variables of population %(id)s
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = tid;
 %(pre_loop)s
 
     while ( i < %(pop_size)s )
@@ -583,6 +584,8 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 
         i += blockDim.x * gridDim.x;
     }
+
+%(post_loop)s
 }
 """,
         'invoke_kernel': """
