@@ -111,16 +111,18 @@ class test_ModifiedProjection(unittest.TestCase):
         """
         Compile the network for this test
         """
-        simple = Neuron(
+        simple_neuron = Neuron(
             parameters = "r=0",
         )
 
-        Oja = Synapse(
+        simple_synapse = Synapse(
             parameters="""
-                tau = 5000.0
-                alpha = 8.0 : postsynaptic
+                loc_var        = 5000.0
+                semi_glob_var  = 8.0    : postsynaptic
+                glob_var       = 8.0    : projection
                 """,
             equations = """
+                dx/dt = -x              : init = loc_var
                 dw/dt = -w
                 """
         )
@@ -138,14 +140,14 @@ class test_ModifiedProjection(unittest.TestCase):
         cls.weight_matrix = weight_matrix.T
 
         cls._network = Network()
-        pop1 = cls._network.create(geometry=(8), neuron=simple)
-        pop2 = cls._network.create(geometry=(4), neuron=simple)
+        pop1 = cls._network.create(geometry=(8), neuron=simple_neuron)
+        pop2 = cls._network.create(geometry=(4), neuron=simple_neuron)
 
         cls._proj = cls._network.connect(
             pre = pop1,
             post = pop2,
             target = "exc",
-            synapse = Oja
+            synapse = simple_synapse
         )
         cls._proj.from_sparse(
             cls.weight_matrix,
@@ -180,34 +182,54 @@ class test_ModifiedProjection(unittest.TestCase):
         # test row 3 with 4 elements should be 0.5
         numpy.testing.assert_allclose(self._proj.dendrite(3).w, 0.5)
 
-    def test_get_tau(self):
+    def test_get_loc_var(self):
         """
-        Tests the direct access to the parameter *tau* of our *Projection*.
+        Tests the direct access to the parameter *loc_var* of our *Projection*.
         """
         # test row 1 (idx 0) with 8 elements
-        numpy.testing.assert_allclose(self._proj.tau[0], 5000.0)
+        numpy.testing.assert_allclose(self._proj.loc_var[0], 5000.0)
         # test row 3 (idx 1) with 4 elements
-        numpy.testing.assert_allclose(self._proj.tau[1], 5000.0)
+        numpy.testing.assert_allclose(self._proj.loc_var[1], 5000.0)
 
-    def test_get_tau_2(self):
+    def test_get_loc_var_2(self):
         """
-        Tests the access to the parameter *tau* of our *Projection* with the *get()* method.
+        Tests the access to the parameter *loc_var* of our *Projection* with the *get()* method.
         """
-        numpy.testing.assert_allclose(self._proj.get('tau')[0], 5000.0)
-        numpy.testing.assert_allclose(self._proj.get('tau')[1], 5000.0)
+        numpy.testing.assert_allclose(self._proj.get('loc_var')[0], 5000.0)
+        numpy.testing.assert_allclose(self._proj.get('loc_var')[1], 5000.0)
 
-    def test_get_alpha(self):
+    def test_get_loc_var_from_other(self):
         """
-        Tests the direct access to the parameter *alpha* of our *Projection*.
+        Tests the access to a variable inited from parameter.
         """
-        numpy.testing.assert_allclose(self._proj.alpha, 8.0)
+        numpy.testing.assert_allclose(self._proj.x[0], 5000.0)
+        numpy.testing.assert_allclose(self._proj.get('x')[0], 5000.0)
 
-    def test_get_alpha_2(self):
+    def test_get_semi_glob_var(self):
         """
-        Tests the access to the parameter *alpha* of our *Projection* with the
+        Tests the direct access to the parameter *semi_glob_var* of our *Projection*.
+        """
+        numpy.testing.assert_allclose(self._proj.semi_glob_var, 8.0)
+
+    def test_get_semi_glob_var_2(self):
+        """
+        Tests the access to the parameter *semi_glob_var* of our *Projection* with the
         *get()* method.
         """
-        numpy.testing.assert_allclose(self._proj.get('alpha'), 8.0)
+        numpy.testing.assert_allclose(self._proj.get('semi_glob_var'), 8.0)
+
+    def test_get_glob_var(self):
+        """
+        Tests the direct access to the parameter *glob_var* of our *Projection*.
+        """
+        numpy.testing.assert_allclose(self._proj.glob_var, 8.0)
+
+    def test_get_glob_var_2(self):
+        """
+        Tests the access to the parameter *glob_var* of our *Projection* with the
+        *get()* method.
+        """
+        numpy.testing.assert_allclose(self._proj.get('glob_var'), 8.0)
 
     def test_get_size(self):
         """
@@ -222,6 +244,7 @@ class test_ModifiedProjection(unittest.TestCase):
         neurons recieving synapses.
         """
         self.assertEqual(self._proj.post_ranks, [1, 3])
+
 
 class test_SliceProjections(unittest.TestCase):
     """

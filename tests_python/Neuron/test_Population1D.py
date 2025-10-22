@@ -8,17 +8,29 @@ import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
-from ANNarchy import Network, Neuron, Uniform
+from ANNarchy import Network, Neuron, Uniform, Parameter
 
 # neuron defintions common used for test cases
 neuron = Neuron(
-    parameters = """tau = 10""",
-    equations = """r += t/tau"""
+    parameters = dict(
+        tau = Parameter(10, locality='local')
+    ),
+    equations = """r += t/tau"""    # default init = 0.0
 )
 
 neuron2 = Neuron(
-    parameters = "tau = 10: population",
+    parameters = dict(
+        tau = 10
+    ),
     equations = "r += t/tau : init = 1.0"
+)
+
+neuron3 = Neuron(
+    parameters = dict(
+        tau = 10,
+        r_init = 1.0
+    ),
+    equations = "r += t/tau : init = r_init"
 )
 
 class test_Population1D(unittest.TestCase):
@@ -37,6 +49,7 @@ class test_Population1D(unittest.TestCase):
         cls._network = Network()
         cls._population_1 = cls._network.create(3, neuron)
         cls._population_2 = cls._network.create(3, neuron2)
+        cls._population_3 = cls._network.create(3, neuron3)
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
@@ -170,6 +183,14 @@ class test_Population1D(unittest.TestCase):
         this with init = 1.0 and test it.
         """
         numpy.testing.assert_allclose(self._population_2.r, [1.0, 1.0, 1.0])
+
+    def test_get_r_with_init2(self):
+        """
+        By default all variables are initialized with zero, we now modified
+        this with init = r_init, i.e., initialized from another variable,
+        and test it.
+        """
+        numpy.testing.assert_allclose(self._population_3.r, [1.0, 1.0, 1.0])
 
     def test_set_r(self):
         """
