@@ -420,7 +420,13 @@ class Population :
         """
 
         try:
-            ctype = self._get_attribute_cpp_type(attribute)
+            if isinstance(value, str):
+                # Initialized from other variable
+                ctype = self._get_attribute_cpp_type(value)
+                value = self.get(value)
+            else:
+                ctype = self._get_attribute_cpp_type(attribute)
+
             if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
                     if _check_paradigm("cuda", self.net_id):
@@ -432,11 +438,10 @@ class Population :
                         setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
 
                 elif isinstance(value, list):
-                    
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = [ str(0) if x == False else str(1) for x in value ]
+                            value = [ str(0) if x is False else str(1) for x in value ]
                         setattr(self.cyInstance, attribute, value)
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:
@@ -446,8 +451,8 @@ class Population :
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = str(0) if value == False else str(1)
-                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])                        
+                            value = str(0) if value is False else str(1)
+                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:
                         setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
