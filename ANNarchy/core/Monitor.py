@@ -61,11 +61,11 @@ class Monitor :
     ```
     """
 
-    def __init__(self, 
-                 obj: Any, 
-                 variables:list=[], 
-                 period:float=None, 
-                 period_offset:float=None, 
+    def __init__(self,
+                 obj: Any,
+                 variables:list=[],
+                 period:float=None,
+                 period_offset:float=None,
                  start:bool=True,
                  name:str=None,
                  net_id:int=0):
@@ -107,7 +107,7 @@ class Monitor :
             if var in self.object.parameters:
                 Messages._error('Parameters are not recordable')
 
-            if not var in self.object.variables and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
+            if not var in self.object.variables and var not in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Messages._error('Monitor: the object does not have an attribute named', var)
 
         # Period
@@ -940,13 +940,15 @@ class MemoryStats :
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
-def raster_plot(spikes:dict) -> tuple:
+def raster_plot(spikes:dict, dt:float=1.0) -> tuple:
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param dt: the time step size in ms (default: 1.0ms).
     """
-    times = []; ranks=[]
+    times = []
+    ranks=[]
 
     # Compute raster
     for n in spikes.keys():
@@ -954,10 +956,10 @@ def raster_plot(spikes:dict) -> tuple:
             times.append(t)
             ranks.append(n)
 
-    return self.dt* np.array(times), np.array(ranks)
+    return dt * np.array(times), np.array(ranks)
 
 
-def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt=1.0):
+def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt:float=1.0):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -973,7 +975,8 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     t_maxes = []
     t_mines = []
     for neuron in spikes.keys():
-        if len(spikes[neuron]) == 0 : continue
+        if len(spikes[neuron]) == 0:
+            continue
         t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
