@@ -577,9 +577,9 @@ class Network (metaclass=NetworkMeta):
 
             # CPP:      re-initialize the RNG with the stored configuration
             if self._get_config('disable_parallel_rng'):
-                self.instance.set_seed(self._get_config('seed'), self._get_config('num_threads'), self._get_config('use_seed_seq'))
-            else:
                 self.instance.set_seed(self._get_config('seed'), 1, self._get_config('use_seed_seq'))
+            else:
+                self.instance.set_seed(self._get_config('seed'), self._get_config('num_threads'), self._get_config('use_seed_seq'))
 
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """
