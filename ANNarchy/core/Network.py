@@ -141,6 +141,8 @@ class Network (metaclass=NetworkMeta):
 
         # initialize one RNG instance
         self._default_rng = np.random.default_rng(self.seed)
+        # Store RNG state for Network.reset(reseed=True)
+        self._default_rng_state = self._default_rng.bit_generator.state
 
         # Callbacks
         self._callbacks = []
@@ -535,16 +537,49 @@ class Network (metaclass=NetworkMeta):
         """
         Simulate.step(self.id)
 
-    def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
+    def reset(self, populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True) -> None:
         """
-        Reinitialises the network to its state before the call to `compile()`.
+        Reinitialises the network to its state before the call to `compile()`.  The network time will be set to 0ms.
 
         :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
         :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
+        :param monitors: if True, the monitors will be emptied and reset (default=True).
+        ;param reseed_rng: if True, RNG generators will be reset using the stored seed (default=True).
         """
-        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
+        self.instance.set_time(0)
+
+        if populations:
+            for pop in self.get_populations():
+                pop.reset()
+
+            # pop.reset only clears spike container with no or uniform delay
+            for proj in self.get_projections():
+                if hasattr(proj.cyInstance, 'reset_ring_buffer'):
+                    proj.cyInstance.reset_ring_buffer()
+
+        if synapses and not projections:
+            Messages._warning("reset(): if synapses is set to true this automatically enables projections==true")
+            projections = True
+
+        if projections:
+            for proj in self.get_projections():
+                proj.reset(attributes=-1, synapses=synapses)
+
+        if monitors:
+            for monitor in self.get_monitors():
+                monitor.reset()
+
+        if reseed_rng:
+            # Python:   re-initialize the RNG with initially stored state
+            self._default_rng.bit_generator.state = self._default_rng_state
+
+            # CPP:      re-initialize the RNG with the stored configuration
+            if self._get_config('disable_parallel_rng'):
+                self.instance.set_seed(self._get_config('seed'), self._get_config('num_threads'), self._get_config('use_seed_seq'))
+            else:
+                self.instance.set_seed(self._get_config('seed'), 1, self._get_config('use_seed_seq'))
 
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """

@@ -79,9 +79,9 @@ def check_profile_results():
 
         Profiler().store_cpp_time_as_csv()
 
-def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, net_id:int=0):
+def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True, net_id:int=0):
     """
-    Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
+    Reinitialises the network to its state before the call to `compile()`. The network time will be set to 0ms.
 
     All monitors are emptied.
 
@@ -89,30 +89,9 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
     :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
     :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
     :param monitors: if True, the monitors will be emptied and reset (default=True).
+    ;param reseed_rng: if True, RNG generators will be reset using the stored seed (default=True).
     """
-
-    NetworkManager().get_network(net_id=net_id).instance.set_time(0)
-    
-    if populations:
-        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
-            pop.reset()
-
-        # pop.reset only clears spike container with no or uniform delay
-        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
-            if hasattr(proj.cyInstance, 'reset_ring_buffer'):
-                proj.cyInstance.reset_ring_buffer()
-
-    if synapses and not projections:
-        Messages._warning("reset(): if synapses is set to true this automatically enables projections==true")
-        projections = True
-
-    if projections:
-        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
-            proj.reset(attributes=-1, synapses=synapses)
-
-    if monitors:
-        for monitor in NetworkManager().get_network(net_id=net_id).get_monitors():
-            monitor.reset()
+    NetworkManager().get_network(net_id=net_id).reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, reseed_rng=reseed_rng)
 
 ################################
 ## Accessing shadow network
