@@ -172,7 +172,7 @@ class Network (metaclass=NetworkMeta):
 
     def create(
             self,
-            geometry: tuple | int, 
+            geometry: tuple | int | Population = None, 
             neuron: Neuron = None, 
             stop_condition:str = None, 
             name:str = None,
@@ -189,25 +189,42 @@ class Network (metaclass=NetworkMeta):
         pop = net.create(geometry=100, neuron=ann.Izhikevich, name="Excitatory population")
         ```
 
-        Specific populations (e.g. `PoissonPopulation()`) can also be passed to the `population` argument, or simply as the first argument:
+        Specific populations (e.g. `PoissonPopulation()`) can also be passed to the `population` argument, or simply as the first argument, in both cases do not provide other arguments.:
 
         ```python
         pop = net.create(population=ann.PoissonPopulation(100, rates=20.))
         # or
         pop = net.create(ann.PoissonPopulation(100, rates=20.))
         ```
-        
-        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
+
+        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population. If an instance of `Population` is given, do not provide other arguments.
         :param neuron: `Neuron` instance. It can be user-defined or a built-in model.
         :param name: unique name of the population (optional).
         :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
-        :param population: instance of a `SpecificPopulation`.
+        :param population: instance of a `Population`. If given, do not provide other arguments.
         """
-        if isinstance(geometry, Population): # trick if one does use population=
+        # if both population and geometry are None, error
+        if geometry is None and population is None:
+            Messages._error("Network.create(): either 'geometry' or 'population' argument must be provided.")
+        # if both are given as population instances, error
+        if isinstance(geometry, Population) and population is not None:
+            Messages._error("Network.create(): cannot provide both 'geometry' and 'population' as Population instances.")
+        # if population is given, check its type
+        if population is not None:
+            if not isinstance(population, Population):
+                Messages._error("Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses.")
+        # if a population instance is given, check that the other arguments are None
+        if isinstance(geometry, Population) or population is not None:
+            if neuron is not None or name is not None or stop_condition is not None:
+                Messages._error("Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance.")
+        if population is not None:
+            if geometry is not None:
+                Messages._error("Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance.")
+
+        if isinstance(geometry, Population):  # trick if one does provide `Population` as first argument
+            # Population is already created
             pop = geometry._copy(self.id)
         elif population is not None:
-            if not isinstance(population, Population):
-                Messages._error("Network.create(population=pop) only accepts instances of ann.Population and its subclasses.")
             # Population is already created
             pop = population._copy(self.id)
         else:
