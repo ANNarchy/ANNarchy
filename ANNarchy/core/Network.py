@@ -172,7 +172,7 @@ class Network (metaclass=NetworkMeta):
 
     def create(
             self,
-            geometry: tuple | int | Population = None, 
+            geometry: tuple | int = None, 
             neuron: Neuron = None, 
             stop_condition:str = None, 
             name:str = None,
@@ -206,13 +206,15 @@ class Network (metaclass=NetworkMeta):
         # if both population and geometry are None, error
         if geometry is None and population is None:
             Messages._error("Network.create(): either 'geometry' or 'population' argument must be provided.")
+        
         # if both are given as population instances, error
         if isinstance(geometry, Population) and population is not None:
             Messages._error("Network.create(): cannot provide both 'geometry' and 'population' as Population instances.")
+        
         # if population is given, check its type
-        if population is not None:
-            if not isinstance(population, Population):
-                Messages._error("Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses.")
+        if population is not None and not isinstance(population, Population):
+            Messages._error("Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses.")
+        
         # if a population instance is given, check that the other arguments are None
         if isinstance(geometry, Population) or population is not None:
             if neuron is not None or name is not None or stop_condition is not None:
@@ -243,7 +245,7 @@ class Network (metaclass=NetworkMeta):
     
     def connect(
             self,
-            pre: str | Population, 
+            pre: str | Population = None, 
             post: str | Population = None, 
             target: str = "", 
             synapse: Synapse = None, 
@@ -261,32 +263,47 @@ class Network (metaclass=NetworkMeta):
 
         If the `synapse` argument is omitted, defaults synapses without plastivity will be used (`psp = "w * pre.r"` for rate-coded projections, `pre_spike="g_target += w"` for spiking ones.).
 
-        Specific projections can be passed to the `projection` argument, or as the first unnamed argument.
+        Specific projections can be passed to the `projection` argument, or as the first unnamed argument. In both cases, do not provide other arguments.
 
         ```python
-        net.connect(projection=ann.DecodingProjection(pre, post, 'exc))
+        net.connect(projection=ann.DecodingProjection(pre, post, 'exc'))
         ```
 
-        :param pre: pre-synaptic population.
+        :param pre: pre-synaptic population. If an instance of `Projection` is given, do not provide other arguments.
         :param post: post-synaptic population.
         :param target: type of the connection.
         :param synapse: `Synapse` class or instance.
         :param name: (optional) name of the Projection.
-        :param projection: specific projection.   
+        :param projection: specific projection. If given, do not provide other arguments.
         """
+        # if both projection and pre are None, error
+        if pre is None and projection is None:
+            Messages._error("Network.connect(): either 'pre' or 'projection' argument must be provided.")
 
-        # Check the pre- or post- populations, they must be in the same network
-        # TODO
-        
-        # Create the projection
-        if isinstance(pre, Projection): # trick if one does not use projection=
+        # if both are given as projection instances, error
+        if isinstance(pre, Projection) and projection is not None:
+            Messages._error("Network.connect(): cannot provide both 'pre' and 'projection' arguments.")
+
+        # if projection is given, check its type
+        if projection is not None and not isinstance(projection, Projection):
+            Messages._error("Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses.")
+
+        # if a projection instance is given, check that the other arguments are not provided
+        if isinstance(pre, Projection) or projection is not None:
+            if post is not None or target != "" or synapse is not None or name is not None:
+                Messages._error("Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance.")
+        if projection is not None:
+            if pre is not None:
+                Messages._error("Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance.")
+
+        if isinstance(pre, Projection):  # trick if one does provide `Projection` as first argument
+            # Projection is already created
             proj = pre._copy(pre.pre, pre.post, self.id)
         elif projection is not None:
-            if not isinstance(projection, Projection):
-                Messages._error("Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses.")
-            # Population is already created
+            # Projection is already created
             proj = projection ._copy(projection.pre, projection.post, self.id)
         else:
+            # Create the projection
             if post is None:
                 Messages._error("Network.connect(): the post population must be provided.")
             if target == "":
