@@ -46,10 +46,10 @@ class test_TimedArray(unittest.TestCase):
 
         cls._network = Network()
 
-        inp = cls._network.create(geometry=10, population=TimedArray(rates=inputs))
-        inp2 = cls._network.create(geometry=10, population=TimedArray(rates=inputs, schedule=10.))
-        inp3 = cls._network.create(geometry=10, population=TimedArray(rates=inputs, period=10.))
-        inp4 = cls._network.create(geometry=10, population=TimedArray(rates=inputs, schedule=2., period=20.))
+        inp = cls._network.create(population=TimedArray(rates=inputs))
+        inp2 = cls._network.create(population=TimedArray(rates=inputs, schedule=10.))
+        inp3 = cls._network.create(population=TimedArray(rates=inputs, period=10.))
+        inp4 = cls._network.create(population=TimedArray(rates=inputs, schedule=2., period=20.))
 
         cls.output = cls._network.create(10, neuron=SimpleNeuron)
 
@@ -162,10 +162,10 @@ class test_TimedArrayLateInit(unittest.TestCase):
         cls._network = Network()
 
         # Create TimedArrays without a pre-defined *rates* array
-        inp = cls._network.create(geometry=10, population=TimedArray(geometry=(10)))
-        inp2 = cls._network.create(geometry=10, population=TimedArray(geometry=(10)))
-        inp3 = cls._network.create(geometry=10, population=TimedArray(geometry=(10)))
-        inp4 = cls._network.create(geometry=10, population=TimedArray(geometry=(10)))
+        inp = cls._network.create(population=TimedArray(geometry=(10)))
+        inp2 = cls._network.create(population=TimedArray(geometry=(10)))
+        inp3 = cls._network.create(population=TimedArray(geometry=(10)))
+        inp4 = cls._network.create(population=TimedArray(geometry=(10)))
 
         # Test later initialization
         inp.update(rates=inputs)
@@ -293,8 +293,8 @@ class test_TimedArrayUpdate(unittest.TestCase):
 
         cls._network = Network()
 
-        cls.input = cls._network.create(geometry=10, population=TimedArray(rates=cls.initial_inputs))
-        cls.input2 = cls._network.create(geometry=10, population=TimedArray(rates=cls.initial_inputs, schedule=2.))
+        cls.input = cls._network.create(population=TimedArray(rates=cls.initial_inputs))
+        cls.input2 = cls._network.create(population=TimedArray(rates=cls.initial_inputs, schedule=2.))
 
         cls.output = cls._network.create(geometry=10, neuron=SimpleNeuron)
 
