@@ -74,7 +74,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the gaussian pattern."""
     # instantiate pattern
-    projection = LILConnectivity(dt=get_dt(pre))
+    projection = LILConnectivity(dt=get_dt(pre_pop))
     projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
 
     return projection
@@ -82,7 +82,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
 def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the difference-of-gaussian (dog) pattern."""
     # instantiate pattern
-    projection = LILConnectivity(dt=get_dt(pre))
+    projection = LILConnectivity(dt=get_dt(pre_pop))
     projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
 
     return projection
