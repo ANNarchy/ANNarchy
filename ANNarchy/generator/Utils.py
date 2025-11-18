@@ -71,8 +71,8 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, w
                 continue
 
         # Add refractoriness
-        if with_refractory:
-            cpp_code = "if (in_ref%(local_index)s) { "+param['cpp']+" }"
+        if not param['name'].startswith('g_'):
+            cpp_code = param['cpp'] if not with_refractory else "if (in_ref%(local_index)s) { "+param['cpp']+" }"
         else:
             cpp_code = param['cpp']
 
