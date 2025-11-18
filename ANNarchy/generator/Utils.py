@@ -74,8 +74,9 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, m
             if not param['name'].startswith('g_'):
                 continue
 
-        if mask_variable:
-            cpp_code = "if ("+mask_variable+"%(local_index)s) { "+param['cpp']+" }"
+        # Add refractoriness
+        if not param['name'].startswith('g_'):
+            cpp_code = param['cpp'] if mask_variable is None else "if ("+mask_variable+"%(local_index)s) { "+param['cpp']+" }"
         else:
             cpp_code = param['cpp']
 
