@@ -49,17 +49,13 @@ class CmdLineArgParser(object):
 
         group = self.parser.add_argument_group('Internal')
         group.add_argument("--profile", help="Enables profiling.", action="store_true", default=None, dest="profile")
-        group.add_argument("--profile-out", help="Target file for profiling data.", action="store", type=str, default=None, dest="profile_out")
+        group.add_argument("--profile-out", help="Target folder for profiling data.", action="store", type=str, default=None, dest="profile_out")
 
     def parse_arguments_for_setup(self):
         """
         We already parse some arguments which should be known before **any** other ANNarchy call has happened.
         """
         options, _ = self.parser.parse_known_args()
-
-        # Enables time measurement within the C++ simulation core
-        if options.profile:
-            ConfigManagement._update_global_config('profiling', options.profile)
 
         # if the parameters set on command-line they overwrite Global.config
         if options.num_threads is not None:

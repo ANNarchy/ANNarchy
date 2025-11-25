@@ -124,24 +124,12 @@ def compile(
     if (options.num_threads != None) and (options.gpu_device >= 0):
         Messages._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
-    # check if profiling was enabled by --profile
-    if options.profile != None:
-        profile_enabled = options.profile
-        _update_global_config('profiling', options.profile)
-        _update_global_config('profile_out', options.profile_out)
+    # check if profiling enabled due compile() or --profile
+    if not profile_enabled or options.profile is not None:
+        NetworkManager().get_network(net_id)._profiler = Profiler(profile_out='.' if options.profile_out is None else options.profile_out, net_id=net_id)
 
-    # check if profiling enabled due compile()
-    if profile_enabled != False and options.profile is None:
-        _update_global_config('profiling', True)
-    # if profiling is enabled
-    if profile_enabled:
-        # this will automatically create a globally available Profiler instance
-        Profiler().enable_profiling()
-        if ConfigManager().get('profile_out', net_id) is None:
-            _update_global_config('profile_out', '.')
-
-    # Debug the simulation kernel
-    if debug_build is False:
+    # Debug the simulation kernel, maybe enabled on command-line?
+    if not debug_build:
         debug_build = options.debug  # debug build
     _update_global_config('debug', debug_build)
 
@@ -352,10 +340,10 @@ class Compiler(object):
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
 
-        if Profiler().enabled or ConfigManager().get('show_time', self.net_id):
+        if NetworkManager().get_network(self.net_id)._profiler is not None or ConfigManager().get('show_time', self.net_id):
             t0 = time.time()
-            if Profiler().enabled:
-                Profiler().add_entry(t0, t0, "overall", "compile")
+            if NetworkManager().get_network(self.net_id)._profiler is not None:
+                NetworkManager().get_network(self.net_id)._profiler.add_entry(t0, t0, "overall", "compile")
 
         if ConfigManager().get('verbose', self.net_id):
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
@@ -412,9 +400,9 @@ class Compiler(object):
 
         # Tell the networks they have been compiled
         self.network.compiled = True
-        if Profiler().enabled:
+        if NetworkManager().get_network(self.net_id)._profiler is not None:
             t1 = time.time()
-            Profiler().update_entry(t0, t1, "overall", "compile")
+            NetworkManager().get_network(self.net_id)._profiler.update_entry(t0, t1, "overall", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -484,7 +472,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Messages._print(msg, end=" ", flush=True)
-            if ConfigManager().get('show_time', self.net_id) or Profiler().enabled:
+            if ConfigManager().get('show_time', self.net_id) or NetworkManager().get_network(self.net_id)._profiler is not None:
                 t0 = time.time()
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
@@ -543,8 +531,8 @@ class Compiler(object):
             else:
                 Messages._print('OK (took '+str(t1 - t0)+'seconds.', flush=True)
 
-            if Profiler().enabled:
-                Profiler().add_entry(t0, t1, "compilation", "compile")
+            if NetworkManager().get_network(self.net_id)._profiler is not None:
+                NetworkManager().get_network(self.net_id)._profiler.add_entry(t0, t1, "compilation", "compile")
 
     def generate_makefile(self):
         """
@@ -732,9 +720,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     """
     After every is compiled, actually create the Cython objects and bind them to the Python ones.
     """
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t0 = time.time()
-        Profiler().add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -832,10 +820,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     else:
         cython_module.set_seed(seed, 1, ConfigManager().get('use_seed_seq', net_id))
 
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         # register the CPP profiling instance
         # Attention: since ANNarchy 5.0 this need to be instantiated before any other cpp object.
-        Profiler()._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()
+        NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()
 
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
@@ -848,7 +836,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         pop._instantiate(cython_module)
 
         if ConfigManager().get('show_time', net_id):
-            Messages._print('  instantiate of the popukatuib took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('  instantiate of the population took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
@@ -884,6 +872,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     for monitor in NetworkManager().get_network(net_id).get_monitors():
         monitor._init_monitoring()
 
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t1 = time.time()
-        Profiler().update_entry(t0, t1, "overall", "instantiate")
+        NetworkManager().get_network(net_id=net_id)._profiler.update_entry(t0, t1, "overall", "instantiate")

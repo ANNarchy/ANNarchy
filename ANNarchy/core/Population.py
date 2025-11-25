@@ -5,7 +5,6 @@
 
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
@@ -223,7 +222,7 @@ class Population :
 
         :param module: cython module (ANNarchyCore instance)
         """
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time
             t1 = time.time()
 
@@ -232,9 +231,9 @@ class Population :
         except:
             Messages._error('unable to instantiate the population', self.name)
 
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
-            Profiler().add_entry(t1, t2, "pop"+str(self.id), "instantiate")
+            NetworkManager().get_network(net_id=self.net_id)._profiler.add_entry(t1, t2, "pop"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -441,7 +440,7 @@ class Population :
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = [ str(0) if x is False else str(1) for x in value ]
+                            value = [ str(1) if x else str(0) for x in value ]
                         setattr(self.cyInstance, attribute, value)
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:
@@ -451,7 +450,7 @@ class Population :
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = str(0) if value is False else str(1)
+                            value = str(1) if value else str(0)
                         setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:

@@ -20,7 +20,6 @@ from ANNarchy.core import ConnectorMethods
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.core.Constant import Constant
 
@@ -350,15 +349,15 @@ class Projection :
 
         :param module:  cython module (ANNarchyCore instance)
         """
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time
             t1 = time.time()
 
         self.initialized = self._connect(module)
 
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
-            Profiler().add_entry(t1, t2, "proj"+str(self.id), "instantiate")
+            NetworkManager().get_network(net_id=self.net_id)._profiler.add_entry(t1, t2, "proj"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """

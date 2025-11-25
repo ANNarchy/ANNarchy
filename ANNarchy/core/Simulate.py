@@ -7,13 +7,11 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.Population import Population
 from ANNarchy.core import Global
 
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from math import ceil
 import time
-import tqdm
 import operator
 
 __all__ = [
@@ -45,7 +43,7 @@ def simulate(
     :param measure_time: defines whether the simulation time should be printed. 
     :param callbacks: defines if the callback methods (decorator ``every``) should be called.
     """
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t0 = time.time()
     
     # Access the network
@@ -87,28 +85,28 @@ def simulate(
 
     # Store the Python and C++ timings. Please note, that the C++ core
     # measures in ms and Python measures in s
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t1 = time.time()
-        Profiler().add_entry( t0, t1, "simulate", "simulate")
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry( t0, t1, "simulate", "simulate")
 
         # network single step
-        overall_avg = Profiler()._cpp_profiler.get_avg_time("network", "step")
-        Profiler().add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
+        overall_avg = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time("network", "step")
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
 
         # single operations for populations
         for pop in network.get_populations():
             for func in ["step", "rng", "delay", "spike"]:
-                avg_time = Profiler()._cpp_profiler.get_avg_time(pop.name, func)
-                Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
+                avg_time = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time(pop.name, func)
+                NetworkManager().get_network(net_id=net_id)._profiler.add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
 
         # single operations for projections
         for proj in network.get_projections():
             for func in ["psp", "step", "post_event"]:
-                avg_time = Profiler()._cpp_profiler.get_avg_time(proj.name, func)
-                Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
+                avg_time = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time(proj.name, func)
+                NetworkManager().get_network(net_id=net_id)._profiler.add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
 
-        monitor_avg = Profiler()._cpp_profiler.get_avg_time("network", "record")
-        Profiler().add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
+        monitor_avg = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time("network", "record")
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
 def simulate_until(max_duration:float, population: Population | list[Population], operator='and', measure_time:bool = False, net_id:int=0):
     """

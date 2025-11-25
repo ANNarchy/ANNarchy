@@ -12,7 +12,6 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.Extraction import extract_functions
-from ANNarchy.intern.Profiler import Profiler
 
 class NanoBindGenerator:
     """
@@ -74,7 +73,7 @@ class NanoBindGenerator:
                 proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
         # Profiling of simulation kernel is optional
-        profiling_code = profiler_template if Profiler().enabled else ""
+        profiling_code = profiler_template if self.network._profiler is not None else ""
 
         return basetemplate % {
             'net_id': self.net_id,

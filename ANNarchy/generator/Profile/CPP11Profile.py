@@ -340,7 +340,7 @@ class CPP11Profile(ProfileGenerator):
             'timer_start_decl': timer_start,
             'timer_init': timer_init,
             'config': config,
-            'result_file': "results_%(config)s.xml" % {'config':config} if ConfigManager().get('profile_out', self._net_id) is None else ConfigManager().get('profile_out', self._net_id),
+            'result_file': "results_profile_out.xml",
             'config_xml': config_xml,
             'measurement_class': cpp11_profile_header
         }

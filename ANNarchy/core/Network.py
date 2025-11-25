@@ -151,6 +151,8 @@ class Network (metaclass=NetworkMeta):
         # Import constants from the global level
         self._import_constants()
 
+        # Profiling is optional
+        self._profiler = None
 
     def __del__(self):
         

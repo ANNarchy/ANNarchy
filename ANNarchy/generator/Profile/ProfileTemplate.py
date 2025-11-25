@@ -52,12 +52,10 @@ public:
 
 %(timer_init)s
 
-        if (false) {
-            _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
-            _out_file << "<root>" << std::endl;
+        _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
+        _out_file << "<root>" << std::endl;
 
         %(config_xml)s
-        }
     }
 
     /**
@@ -380,11 +378,11 @@ extern class Profiling* prof_ptr;
     """,
     'run_post': """
     prof_ptr->evaluate();
-    if (false) {
         prof_ptr->store();
+    #ifdef _DEBUG
         std::cout << "profiling results: " << std::endl;
         std::cout << *prof_ptr << std::endl;
-    }
+    #endif
     """,
 
     #

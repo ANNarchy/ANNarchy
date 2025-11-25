@@ -2,24 +2,22 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
-
+import weakref
 import time
 import csv
 import matplotlib.pylab as plt
 
-from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 class Profiler :
     """
-    The Profiler module should help to understand the performance of a simulation
+    The *Profiler* module should help to understand the performance of a simulation
     using the ANNarchy neural simulator.
 
     Therefore are functions to investigate memory consumption and timeline
     information provided.
     """
-    _instance = None
-
     _color_code = {
         "default": "blue",
         "compile": "green",
@@ -28,41 +26,40 @@ class Profiler :
         # will be ignored in image
         "cpp core": "black"
     }
-    def __init__(self):
-        """
-        Constructor
-        """
-        pass 
 
-    def __new__(cls):
+    def __init__(self, profile_out: str, net_id: int):
         """
-        First call construction of the NetworkManager. No additional arguments are required.
+        Constructor, manages profiling for network *net_id*.
         """
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        
-        return cls._instance
+        # container for all collected operations
+        self._entries = []
 
-    def enable_profiling(self):
-        """
-        Initialize profiler instance and register it in Global.
-        """
-        # enable c++ profiling
-        _update_global_config('profiling', True)
+        # Storage folder and filename
+        self._net_id = net_id
+        self._profile_folder = profile_out
+        if ConfigManager().get('paradigm', net_id=net_id) == "cuda":
+            self._profile_fname = f"profile_net{self._net_id}_cuda.csv"
+        elif ConfigManager().get('paradigm', net_id=net_id) == "openmp":
+            self._profile_fname = f"profile_net{self._net_id}_openmp_{ConfigManager().get('num_threads', net_id=net_id)}threads.csv"
+        else:
+            raise AttributeError("Invalid paradigm for Profiler(): "+ ConfigManager().get('paradigm', net_id=net_id))
+
+        # set during Compiler._instantiate()
+        self._cpp_profiler = None
 
         # initialize measurement
         self._basetime = time.time()
-        self._entries = []
-        self._cpp_profiler = None       # set during Compiler._instantiate()
         self.add_entry( self._basetime, self._basetime, "initialized" )
 
-    def disable_profiling(self):
-        _update_global_config('profiling', False)
-        self.clear()
+        # write the results to console after finishing skript
+        weakref.finalize(self, self.cleanup)
 
-    @property
-    def enabled(self):
-        return get_global_config('profiling')
+    def cleanup(self):
+        # Console
+        self.print_profile()
+
+        # Write as overview-times as *.csv
+        self.store_cpp_time_as_csv()
 
     def add_entry( self, t_entry, t_escape, label, group="default" ):
         """
@@ -112,42 +109,42 @@ class Profiler :
         """
         divided = ["cpp core", "instantiate", "compile"]
 
+        print(f"-------- Profiling of Network {self._net_id} ---------------", flush=True)
         for t_start, t_end, label, group in self._entries:
             if group not in divided: # Python functions
-                print(label, ":", t_end-t_start, "seconds")
+                print(label, ":", t_end-t_start, "seconds", flush=True)
 
             if group == "compile":
                 if label == "overall":
-                    print("compile:", t_end-t_start, "seconds")
+                    print("compile:", t_end-t_start, "seconds", flush=True)
                 else:
-                    print("-", label, t_end-t_start, "seconds")
+                    print("-", label, t_end-t_start, "seconds", flush=True)
 
             if group == "instantiate":
                 if label == "overall":
-                    print("instantiate:", t_end-t_start, "seconds")
+                    print("instantiate:", t_end-t_start, "seconds", flush=True)
                 else:
-                    print("-", label, t_end-t_start, "seconds")
+                    print("-", label, t_end-t_start, "seconds", flush=True)
 
             if group == "cpp core": # CPP functions
                 if t_start == 0.0:
                     continue
 
                 if label == "overall":
-                    print("-", label,":", t_start, "seconds (", t_end, "% )")
+                    print("-", label,":", t_start, "seconds (", t_end, "% )", flush=True)
                 else:
-                    print("  -", label,":", t_start, "seconds (", t_end, "% )")
+                    print("  -", label,":", t_start, "seconds (", t_end, "% )", flush=True)
 
     def store_cpp_time_as_csv(self):
         """
         Store the measured timings on the C++ core as .csv to
         be further processed e. g. using pandas.
-        """
-        if _check_paradigm("cuda", 0): # TODO get net_id
-            fname = "profile_cuda.csv"
-        else:
-            fname = "profile_omp_"+str(get_global_config('num_threads'))+"threads.csv"
 
-        with open(get_global_config('profile_out')+'/'+fname, mode='w') as Datafile:
+        ATTENTION: this file contains only an excerpt of measured data. The complete
+                   recorded measurements are stored in the .xml file.
+        """
+
+        with open(self._profile_folder+'/'+self._profile_fname, mode='w') as Datafile:
             csv_writer = csv.writer(Datafile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
 
             for t_start, t_end, label, group in self._entries:

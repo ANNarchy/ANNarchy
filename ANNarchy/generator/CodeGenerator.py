@@ -54,7 +54,7 @@ class CodeGenerator(object):
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
-        if ConfigManager().get('profiling', self.net_id):
+        if self._network._profiler is not None:
             if ConfigManager().get('paradigm', self.net_id) == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
@@ -107,7 +107,7 @@ class CodeGenerator(object):
               logic of a projection respectively synapse object (filename:
               proj<id>)
         """
-        if Profiler().enabled:
+        if self._network._profiler is not None:
             t0 = time.time()
 
         if ConfigManager().get('verbose', self.net_id):
@@ -182,9 +182,9 @@ class CodeGenerator(object):
 
         self._generate_file_overview(source_dest)
 
-        if Profiler().enabled:
+        if self._network._profiler is not None:
             t1 = time.time()
-            Profiler().add_entry(t0, t1, "generate", "compile")
+            self._network._profiler.add_entry(t0, t1, "generate", "compile")
 
     def _generate_file_overview(self, source_dest):
         """
@@ -745,7 +745,7 @@ void set_%(name)s(%(float_prec)s value) {
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        profiling_init = "" if not ConfigManager().get('profiling', self.net_id) else self._profgen.generate_init_network()
+        profiling_init = "" if self._profgen is None else self._profgen.generate_init_network()
 
         # Initialize populations
         population_init = "    // Initialize populations\n"

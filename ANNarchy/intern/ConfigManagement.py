@@ -39,9 +39,6 @@ default_config = dict(
     # SpM formats
     sparse_matrix_format = "default",
     sparse_matrix_storage_order = "post_to_pre",
-    # Profiling
-    profiling = False,
-    profile_out = None,
     # Other
     debug = False,
     disable_shared_library_time_offset = True

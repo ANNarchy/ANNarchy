@@ -5,8 +5,6 @@
 import os
 import shutil
 import time
-import random
-import string
 
 from ANNarchy.intern import ConfigManagement
 from ANNarchy.intern import Messages
@@ -234,5 +232,3 @@ class NetworkManager :
 
         for mon in self._networks[net_id]._data.monitors:
             print(mon.name, _bytes_human_readable(mon._size_in_bytes()))
-
- 

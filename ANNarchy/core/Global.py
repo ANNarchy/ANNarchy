@@ -12,12 +12,10 @@ from typing import Any
 from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
 __all__ = [
     'clear',
-    'check_profile_results',
     'reset',
     'magic_network',
     'get_population',
@@ -62,22 +60,8 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
         synapses=synapses, 
     )
 
-    # Remove the present profiler
-    if Profiler().enabled:
-        check_profile_results()
-        Profiler().disable_profiling()
-
     # Reinitialize initial state
     NetworkManager().clear()
-
-def check_profile_results():
-    """
-    If the user enabled profiling, we here check if we recorded some results.
-    """
-    if Profiler().enabled:
-        Profiler().print_profile()
-
-        Profiler().store_cpp_time_as_csv()
 
 def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True, net_id:int=0):
     """

@@ -49,7 +49,6 @@ _arg_parser.parse_arguments_for_setup()
 # Automatically call ANNarchy.core.Global.clear()
 # if the script terminates
 import atexit
-atexit.register(check_profile_results)
 atexit.register(clear)
 
 # Version
