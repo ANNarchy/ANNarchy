@@ -150,7 +150,13 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     for (int i = 0; i < nb_post; i++) {
         rk_post = post_ranks_[i];
     %(semiglobal)s
-        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+
+        // column slice in CSRC_T
+        int beg = col_ptr_[rk_post];
+        int end = col_ptr_[rk_post+1];
+
+        // local variables
+        for(int j = beg; j < end; j++){
             rk_pre = row_idx_[j];
     %(local)s
         }
@@ -261,9 +267,9 @@ conn_templates = {
 }
 
 conn_ids = {
-    'local_index': '[j]',
-    'semiglobal_index': '[i]',
+    'local_index': '[inv_idx_[j]]',
+    'semiglobal_index': '[rk_post]',
     'global_index': '',
-    'post_index': '[i]',
+    'post_index': '[rk_post]',
     'pre_index': '[row_idx_[j]]',
 }
