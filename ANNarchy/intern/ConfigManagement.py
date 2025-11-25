@@ -109,7 +109,7 @@ class ConfigManager:
         if key in self.keys():
             return self._config[net_id][key]
         else:
-            raise Messages.ANNarchyException(key, "does not belong to global configuration keys.", exit=True)
+            raise Messages.ANNarchyException(f"The requested argument '{key}' does not belong to global configuration keys.")
         
 
     def set(self, key: str, value: str | float | bool, net_id:int=0):
