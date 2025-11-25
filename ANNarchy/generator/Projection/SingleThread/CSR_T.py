@@ -185,8 +185,12 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
         // semiglobal variables
     %(semiglobal)s
 
+        // column slice in CSRC_T
+        int beg = col_ptr_[rk_post];
+        int end = col_ptr_[rk_post+1];
+
         // local variables
-        for (int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++) {
+        for (int j = beg; j < end; j++) {
             rk_pre = row_idx_[j];
     %(local)s
         }
@@ -214,7 +218,7 @@ if (_transmission && %(post_prefix)s_active){
         // Rank of the presynaptic neuron
         int _pre = %(pre_array)s[_idx];
 
-        // slice in CSRC
+        // row slice in CSRC_T
         int beg = row_ptr_[_pre];
         int end = row_ptr_[_pre+1];
 
@@ -237,7 +241,7 @@ if(_transmission && %(post_prefix)s_active){
 
     for (int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
         // Rank of the postsynaptic neuron which fired
-        rk_post = post_ranks_[%(post_prefix)sspiked[_idx_i]];
+        rk_post = %(post_prefix)sspiked[_idx_i];
 
         // slice in CSRC
         beg = col_ptr_[rk_post];

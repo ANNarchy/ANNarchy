@@ -225,10 +225,14 @@ if(_transmission && %(post_prefix)s_active){
     #pragma omp for
     for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
-        rk_post = post_ranks_[%(post_prefix)sspiked[_idx_i]];
+        rk_post = %(post_prefix)sspiked[_idx_i];
+
+        // row slice in CSRC_T
+        int beg = col_ptr_[rk_post];
+        int end = col_ptr_[rk_post+1];
 
         // Iterate over all synapse to this neuron
-        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+        for(int j = beg; j < end; j++){
 %(event_driven)s
 %(post_event)s
         }

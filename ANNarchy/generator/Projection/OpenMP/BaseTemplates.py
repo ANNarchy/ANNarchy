@@ -134,7 +134,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Memory management
     size_t size_in_bytes() override final {
-        long int size_in_bytes = 0;
+        size_t size_in_bytes = 0;
 %(size_in_bytes)s
         return size_in_bytes;
     }
