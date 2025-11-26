@@ -125,7 +125,7 @@ def compile(
         Messages._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
     # check if profiling enabled due compile() or --profile
-    if not profile_enabled or options.profile is not None:
+    if profile_enabled or options.profile is not None:
         NetworkManager().get_network(net_id)._profiler = Profiler(profile_out='.' if options.profile_out is None else options.profile_out, net_id=net_id)
 
     # Debug the simulation kernel, maybe enabled on command-line?
@@ -272,19 +272,19 @@ def detect_cuda_arch():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, 
-                 annarchy_dir, 
-                 clean, 
-                 compiler, 
-                 compiler_flags, 
-                 add_sources, 
-                 extra_libs, 
-                 path_to_json, 
-                 silent, 
-                 cuda_config, 
+    def __init__(self,
+                 annarchy_dir,
+                 clean,
+                 compiler,
+                 compiler_flags,
+                 add_sources,
+                 extra_libs,
+                 path_to_json,
+                 silent,
+                 cuda_config,
                  debug_build,
                  trace_calls,
-                 profile_enabled, 
+                 profile_enabled,
                  net_id):
 
         # Store arguments
@@ -483,7 +483,7 @@ class Compiler(object):
         # Switch to the build directory
         cwd = os.getcwd()
         os.chdir(target_dir)
-        
+
         # CMake is quite talky by default (printing out compiler versions etc.)
         # We reduce the number of printed messages except the user enabled verbose mode.
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not ConfigManager().get('verbose', self.net_id) else ""
@@ -515,7 +515,7 @@ class Compiler(object):
             except:
                 pass
             Messages._error('Compilation failed.')
-            
+
         else: # Note that the last compilation was successful
             with open(self.annarchy_dir + '/compilation', 'w') as wfile:
                 wfile.write("1")
