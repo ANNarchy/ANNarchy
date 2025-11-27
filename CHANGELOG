@@ -1,8 +1,14 @@
 **5.0.0**
 
-* Important: the construction of networks using a magic network is deprecated. All ANNarchy objects, such as populations or projections, should now use the *Network* class. A warning is printed when the old-style interface is called (e.g., 29a3154, 64ddc5d).
-* uniform distributions are now initialized with a rng instance (i.e., numpy.random.default_rng or comparable) instead of a seed (commit 90bad44).
+* **Important**: this release introduces changes/features which are not compatible with ANNarchy 4.x
+* the construction of networks using a magic network is deprecated. All ANNarchy objects, such as populations or projections, should now use the *Network* class. A warning is printed when the old-style interface is called (e.g., 29a3154, 64ddc5d).
+
+Next to the above breaking changes, we further updated/added:
+
+* Introduced *default_rng* property to Network, which is a numpy random default_rng instance seeded by seed provided to constructor (commit 591bc8d)
+* uniform distributions are now initialized with a rng instance (i.e., numpy.random.default_rng, default_rng attribute (see above), or comparable) instead of a seed (commit 90bad44).
 * uniform distributions (int/float) expect now that min<max is fulfilled (see commit f1ba487)
+* added *reseed_rng* attribute to Network.reset() to reset RNGs (commit 144a6e2, aeca104)
 * Attributes recorded by monitors can be accessed now directly: m['r'] instead of m.get('r')
 * ANNarchy uses now nanobind instead of Cython as interface between Python and C++
 * We extended the implementation for various formats, e.g.:
@@ -11,11 +17,16 @@
     * Experimental feature: Bitmasks for Dense (commit 89e8f0e) and BSR (commit 4ead060)
     * Dense/BSR is limited to projections without PopulationViews (72dd33d)
 * Restructured unittests and changed the execution of them (see ANNarchy/tests/README.txt)
+* Added standalone C++ unittests for the sparse matrix implementations placed in ANNarchy/include
 * Reduced the number of memory transfers between GPU and Host to improve overall simulation time (e.g., c80d403,116264b)
+* Reduced the number of stored RNG states on GPUs (commit 02c1919)
 
 Bugfixes:
 
 * Projection.save_connectivity() / Projection.from_file() ignored the dt when storing delays (commit a877043)
+* Fixed a bug for models using non-uniform delays and OpenMP parallelization (commit a9a0530, 5430e94)
+* Fixed wrong ordering of indices in PopulationViews, when they are constructed from IndividualNeurons (commit 6777787).
+* Non-ODEs related to synaptic inputs (i.e., g_[target]) has not been executed during refractory period. (commit 01dc47f)
 
 **4.8.2**
 
