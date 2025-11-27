@@ -50,7 +50,7 @@ class Monitor :
 
     ```python
     spikes = m.get('spike')
-    
+
     t, n = m.raster_plot(spikes)
     histo = m.histogram()
     isi = m.inter_spike_interval(spikes)
@@ -197,15 +197,15 @@ class Monitor :
 
 
 
-    def get(self, 
-            variables:str | list[str]=None, 
-            keep:bool=False, 
-            reshape:bool=False, 
+    def get(self,
+            variables:str | list[str]=None,
+            keep:bool=False,
+            reshape:bool=True,
             force_dict:bool=False
         ) -> dict:
         """
         Returns the recorded variables and empties the buffer.
-         
+
         The recorded data is returned as a Numpy array (first dimension is time, second is neuron index).
 
         If a single variable name is provided, the recorded values for this variable are directly returned as an array.
@@ -215,7 +215,8 @@ class Monitor :
 
         :param variables: (list of) variables. By default, a dictionary with all variables is returned.
         :param keep: defines if the content in memory for each variable should be kept (default: False).
-        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
+        :param reshape: transforms the second axis of the array to match the population's geometry (default: True). Note that this does not apply for PopulationViews. **Important**: If you have used ANNarchy 4.x before, please note that this default has been changed in ANNarchy 5.0!
+
         """
         if variables:
             if not isinstance(variables, list):
@@ -472,32 +473,34 @@ class Monitor :
 
     def _return_variable(self, name, keep, reshape):
         """ Returns the value of a variable with the given name. """
-        
-        if isinstance(self.object, (Population, PopulationView)):
-            if not reshape:
+
+        if isinstance(self.object, PopulationView):
+            return self._get_population(self.object, name, keep)
+
+        elif isinstance(self.object, Population):
+            if not reshape or name == 'spike':
                 return self._get_population(self.object, name, keep)
             return np.reshape(self._get_population(self.object, name, keep), (-1,) + self.object.geometry)
-        
-        if isinstance(self.object, Projection):
+
+        elif isinstance(self.object, Projection):
             return self._get_dendrite(self.object, name, keep)
-        
-        if isinstance(self.object, Dendrite):
+
+        elif isinstance(self.object, Dendrite):
             # Dendrites have one empty dimension
             return self._get_dendrite(self.object, name, keep).squeeze()
-        
+
         return None
 
     def _update_stopping_time(self, var, keep):
-        
+
         self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
         self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
         self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
-        
+
         if not keep:
             self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
             self._recorded_variables[var]['stop'] = [None]
 
-    
     def __getitem__(self, key):
         # Implement the logic to retrieve the item by key
         return self.get(key)
@@ -577,7 +580,7 @@ class Monitor :
                 getattr(self.cyInstance, 'clear_' + name)()
         except:
             data = []
-        
+
         return np.array(data, dtype=object)
 
     def times(self, variables:list[str]=None) -> dict:

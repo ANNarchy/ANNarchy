@@ -12,4 +12,4 @@ from .test_NeuronUpdate import test_NeuronUpdate
 from .test_SpikingNeuron import test_SpikingCondition
 
 # Recording
-from .test_Monitor import test_PopulationMonitor
+from .test_Monitor import test_PopulationMonitor1D, test_PopulationMonitorND

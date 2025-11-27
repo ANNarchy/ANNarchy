@@ -41,7 +41,7 @@ Oja = Synapse(
     """
 )
 
-class test_PopulationMonitor(unittest.TestCase):
+class test_PopulationMonitor1D(unittest.TestCase):
     """
     This class tests the selective recording of the evolution of neural or
     synaptic variables during a simulation.  To do so, the *Monitor* object is
@@ -56,7 +56,7 @@ class test_PopulationMonitor(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        
+
         pop1 = cls._network.create(geometry=3, neuron=neuron)
         pop2 = cls._network.create(geometry=5, neuron=neuron)
         pop3 = cls._network.create(geometry=3, neuron=neuron2)
@@ -70,7 +70,7 @@ class test_PopulationMonitor(unittest.TestCase):
         cls._r = cls._network.monitor(pop2[:2] + pop2.neuron(4), 'r')
         cls._s = cls._network.monitor(pop3, ['v', 'spike'])
         cls._t = cls._network.monitor(pop4, ['v', 'spike'])
-        
+
         proj = cls._network.connect(
             pre = pop1,
             post = pop2,
@@ -114,7 +114,7 @@ class test_PopulationMonitor(unittest.TestCase):
         for 10 time steps.
         """
         self._network.simulate(10)
-        data_m = self._m.get()
+        data_m = self._m.get(reshape=False)
         numpy.testing.assert_allclose(data_m['r'], [[0.0, 0.0, 0.0],
                                                     [1.0, 1.0, 1.0],
                                                     [2.0, 2.0, 2.0],
@@ -132,7 +132,7 @@ class test_PopulationMonitor(unittest.TestCase):
         *Population* for 10 time steps.
         """
         self._network.simulate(10)
-        datan = self._n.get()
+        datan = self._n.get(reshape=False)
         numpy.testing.assert_allclose(datan['r'], [[0.0, 0.0], [1.0, 1.0],
                                                    [2.0, 2.0], [3.0, 3.0],
                                                    [4.0, 4.0], [5.0, 5.0],
@@ -145,7 +145,7 @@ class test_PopulationMonitor(unittest.TestCase):
         for 100 time steps and a set *period* of 10.0.
         """
         self._network.simulate(100)
-        datao = self._o.get()
+        datao = self._o.get(reshape=False)
         numpy.testing.assert_allclose(datao['r'], [[0.0, 0.0, 0.0],
                                                    [10.0, 10.0, 10.0],
                                                    [20.0, 20.0, 20.0],
@@ -166,7 +166,7 @@ class test_PopulationMonitor(unittest.TestCase):
         self._network.simulate(10)
         self._p.start()
         self._network.simulate(10)
-        datap = self._p.get()
+        datap = self._p.get(reshape=False)
         numpy.testing.assert_allclose(datap['r'], [[10.0, 10.0, 10.0],
                                                    [11.0, 11.0, 11.0],
                                                    [12.0, 12.0, 12.0],
@@ -214,7 +214,7 @@ class test_PopulationMonitor(unittest.TestCase):
         neuron, which is specified by rank.
         """
         self._network.simulate(10)
-        datam = self._m.get()
+        datam = self._m.get(reshape=False)
         numpy.testing.assert_allclose(datam['r'][:, 1], [0.0, 1.0, 2.0, 3.0,
                                                          4.0, 5.0, 6.0, 7.0,
                                                          8.0, 9.0])
@@ -225,7 +225,7 @@ class test_PopulationMonitor(unittest.TestCase):
         tested here.
         """
         self._network.simulate(10)
-        dataq = self._q.get()
+        dataq = self._q.get(reshape=False)
         numpy.testing.assert_allclose(dataq['r'], [[0.0, 0.0], [1.0, 1.0],
                                                    [2.0, 2.0], [3.0, 3.0],
                                                    [4.0, 4.0], [5.0, 5.0],
@@ -238,7 +238,7 @@ class test_PopulationMonitor(unittest.TestCase):
         tested here. The PopulationView comprise of pop2[:2] and pop2[4]
         """
         self._network.simulate(10)
-        datar = self._r.get()
+        datar = self._r.get(reshape=False)
         numpy.testing.assert_allclose(datar['r'], [[0.0, 0.0, 0.0],
                                                    [1.0, 1.0, 1.0],
                                                    [2.0, 2.0, 2.0],
@@ -265,7 +265,7 @@ class test_PopulationMonitor(unittest.TestCase):
         a defined *refractory* period is correctly recorded.
         """
         self._network.simulate(10)
-        data_s = self._t.get()
+        data_s = self._t.get(reshape=False)
         numpy.testing.assert_allclose(data_s['v'], [[1., 1., 1.], [2., 2., 2.],
                                                     [1., 1., 1.], [1., 1., 1.],
                                                     [1., 1., 1.], [1., 1., 1.],
@@ -280,3 +280,75 @@ class test_PopulationMonitor(unittest.TestCase):
         self._network.simulate(10)
         data_t = self._t.get('spike')
         self.assertEqual(data_t[1], [2, 7])
+
+
+class test_PopulationMonitorND(unittest.TestCase):
+    """
+    The basic functionality has been tested in test_PopulationMonitor1D.
+
+    This class just focuses on multi-dimensional populations.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        cls._network = Network()
+
+        pop2D = cls._network.create(geometry=(3,5), neuron=neuron)
+
+        cls._m = cls._network.monitor(pop2D, 'r')
+        cls._n = cls._network.monitor(pop2D[2,:], 'r')
+
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
+
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network.
+        """
+        self._network.reset()
+
+    def tearDown(self):
+        """
+        Since all tests are independent, after every test we use the *get()*
+        method for every monitor to clear all recordings.
+        """
+        self._m.get()
+
+    def test_r_sim_10(self):
+        """
+        Tests the recording of the variable *r* of a *Population* of 3 neurons
+        for 10 time steps.
+        """
+        self._network.simulate(10)
+
+        # [time, pop.geometry]
+        target_res = numpy.ndarray((10,3,5))
+        for i in range(10):
+            target_res[i,:,:] = i
+
+        data_m = self._m.get()
+        numpy.testing.assert_allclose(data_m['r'], target_res)
+
+    def test_r_sim_10_popview(self):
+        """
+        Tests the recording of the variable *r* of a *Population* of 3 neurons
+        for 10 time steps.
+        """
+        self._network.simulate(10)
+
+        # PopulationView leads to flattened return
+        target_res = numpy.ndarray((10,5))
+        for i in range(10):
+            target_res[i,:] = i
+
+        data_m = self._n.get()
+        numpy.testing.assert_allclose(data_m['r'], target_res)
+
