@@ -84,6 +84,7 @@ extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
 Monitor* getRecorder(int id);
 void removeRecorder(Monitor* recorder);
+size_t estimate_record_size(int num_steps);
 
 /*
  * Simulation methods
@@ -191,6 +192,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /*
@@ -314,6 +324,7 @@ void run(const int nbSteps) {
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
 #endif
+
 %(prof_run_pre)s
     // apply changes implied by structural plasticity (spike only)
 %(sp_spike_backward_view_update)s
@@ -498,6 +509,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /*
@@ -955,6 +975,7 @@ extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
 Monitor* getRecorder(int id);
 void removeRecorder(Monitor* recorder);
+size_t estimate_record_size(int num_steps);
 
 /*
  * Simulation methods
@@ -1325,6 +1346,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /**

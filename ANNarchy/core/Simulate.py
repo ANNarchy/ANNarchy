@@ -26,13 +26,14 @@ __all__ = [
 ]
 
 def simulate(
-        duration:float, 
-        measure_time:bool=False, 
-        callbacks:bool=True, 
+        duration:float,
+        measure_time:bool=False,
+        callbacks:bool=True,
+        show_monitor_memory_estimate:bool=False,
         net_id:int=0) -> None:
     """
-    Simulates the network for the given duration in milliseconds. 
-    
+    Simulates the network for the given duration in milliseconds.
+
     The number of simulation steps is computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
 
     ```python
@@ -40,12 +41,13 @@ def simulate(
     ```
 
     :param duration: the duration in milliseconds.
-    :param measure_time: defines whether the simulation time should be printed. 
+    :param measure_time: defines whether the simulation time should be printed.
     :param callbacks: defines if the callback methods (decorator ``every``) should be called.
+    :param show_monitor_memory_estimate: in particular for long-time simulations or large networks it might be of interest how many memory might be accounted (by default disabled).
     """
     if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t0 = time.time()
-    
+
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
 
@@ -61,9 +63,14 @@ def simulate(
     if measure_time:
         tstart = time.time()
 
+    # Sanity check: potential memory consumption of recordings
+    _check_monitor_memory(nb_steps, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+
     if callbacks and network._callbacks_enabled and len(network._callbacks) > 0:
         _simulate_with_callbacks(duration, net_id)
     else:
+        # Perform the simulation
+        # The split in batches is necessary to allow interrupt of simulation with ctrl+c etc.
         batch = 1000 # someday find a better solution...
         if nb_steps < batch:
             network.instance.run(nb_steps)
@@ -108,7 +115,13 @@ def simulate(
         monitor_avg = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time("network", "record")
         NetworkManager().get_network(net_id=net_id)._profiler.add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
-def simulate_until(max_duration:float, population: Population | list[Population], operator='and', measure_time:bool = False, net_id:int=0):
+def simulate_until(
+        max_duration:float,
+        population: Population | list[Population],
+        operator='and',
+        measure_time:bool = False,
+        show_monitor_memory_estimate:bool=False,
+        net_id:int=0):
     """
     Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
@@ -128,6 +141,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     :param population: (list of) population(s) whose ``stop_condition`` should be checked to stop the simulation.
     :param operator: Operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
     :param measure_time: Defines whether the simulation time should be printed (default=False).
+    :param show_monitor_memory_estimate: in particular for long-time simulations or large networks it might be of interest how many memory might be accounted (by default disabled).
     """
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
@@ -144,6 +158,9 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if not isinstance(population, list):
         population = [population]
 
+    # Sanity check: potential memory consumption of recordings
+    _check_monitor_memory(nb_steps, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+
     # Perform the simulation until max_duration is reached or the conditio is fulfilled.
     if measure_time:
         tstart = time.time()
@@ -155,9 +172,11 @@ def simulate_until(max_duration:float, population: Population | list[Population]
         Messages._print('Simulating', nb/ConfigManager().get("dt", net_id)/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
-def step(net_id=0):
+def step(net_id:int=0, show_monitor_memory_estimate:bool=False):
     """
     Performs a single simulation step (duration = `dt`).
+
+    :param show_monitor_memory_estimate: in particular for long-time simulations or large networks it might be of interest how many memory might be accounted (by default disabled).
     """
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
@@ -168,8 +187,33 @@ def step(net_id=0):
     if not network.instance:
         Messages._error('step(): the network is not initialized yet.')
 
+    # Sanity check: potential memory consumption of recordings
+    _check_monitor_memory(1, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+
     # Simulate a single step
     network.instance.step()
+
+def _check_monitor_memory(nb_steps:int, net_id: int, show_monitor_memory_estimate:bool):
+    """
+    Called by either *simulate*, *simulate_until*, or *step()*, this method performs a rough estimate of memory which will be
+    additionally allocated during the simulation.
+
+    If the estimated amount of memory is exceeding a threshold, currently 10% of the free memory, then a warning is shown on the terminal.
+    """
+    warn_threshold = 0.1   # TODO: maybe make adjustable through global config?
+    rec_size_mib = NetworkManager().get_network(net_id=net_id).instance.estimate_record_size(nb_steps)
+    meminfo = {}
+    with open('/proc/meminfo') as f:
+        for line in f:
+            key, value = line.split(':')
+            meminfo[key] = int(value.strip().split()[0])  # currently free memory in kiB
+    curr_avail_mib = meminfo["MemFree"]/1024
+    if rec_size_mib > (curr_avail_mib * warn_threshold):
+        Messages._warning(f"The recording of monitors might consume {rec_size_mib}MiB, i.e. more then {int(warn_threshold*100)}% of your currently available memory.")
+        Messages._warning("Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included.")
+    elif show_monitor_memory_estimate:
+        Messages._info(f"The recording of monitors might consume {rec_size_mib}MiB.")
+        Messages._info("Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included.")
 
 
 ################################

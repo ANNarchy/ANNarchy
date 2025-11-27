@@ -98,7 +98,8 @@ class MonitorGenerator(object):
         recording_code = ""
         recording_target_code = ""
         struct_code = ""
-        size_in_bytes = ""
+        size_in_bytes_code = ""
+        size_in_bytes_estimate_code = ""
         clear_all_code = ""
         clear_individual_code = ""
 
@@ -162,7 +163,8 @@ class MonitorGenerator(object):
             recording_code += template[var['locality']]['recording'] % ids
             clear_all_code += "\t\tthis->clear_{name}();\n".format(name=ids['name'])
             clear_individual_code += template[var['locality']]['clear'] % ids
-            size_in_bytes += template[var['locality']]['size_in_bytes'] % ids
+            size_in_bytes_code += template[var['locality']]['size_in_bytes'] % ids
+            size_in_bytes_estimate_code += template[var['locality']]['size_in_bytes_estimate'] % ids
 
         # Record spike events
         if pop.neuron_type.type == 'spike':
@@ -177,7 +179,7 @@ class MonitorGenerator(object):
             struct_code += base_tpl['struct'] % rec_dict
             init_code += base_tpl['init'] % rec_dict
             recording_code += base_tpl['record'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
-            size_in_bytes += base_tpl['size_in_bytes'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
+            size_in_bytes_code += base_tpl['size_in_bytes'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
             clear_all_code += "\t\tthis->clear_spike();\n"
 
             # Record axon spike events
@@ -199,7 +201,8 @@ class MonitorGenerator(object):
             'struct_code': struct_code,
             'recording_code': recording_code,
             'recording_target_code': recording_target_code,
-            'size_in_bytes': tabify(size_in_bytes, 2),
+            'size_in_bytes_code': tabify(size_in_bytes_code, 2),
+            'size_in_bytes_estimate_code': tabify(size_in_bytes_estimate_code, 2),
             'clear_all_container_code': clear_all_code,
             'clear_individual_container_code': clear_individual_code
         }
@@ -231,6 +234,7 @@ class MonitorGenerator(object):
         init_code = ""
         recording_code = ""
         size_in_bytes_code = ""
+        size_in_bytes_estimate_code = ""
         clear_individual_code = ""
         clear_container_code = ""
         struct_code = ""
@@ -269,6 +273,9 @@ class MonitorGenerator(object):
             # Memory requirement
             size_in_bytes_code += tabify(template[locality]['size_in_bytes'] % ids, 2)
 
+            # Memory requirement estimate for simulate() sanity check
+            size_in_bytes_estimate_code += tabify(template[locality]['size_in_bytes_estimate'] % ids, 2)
+
             # Get the recording code
             recording_code += template[locality]['recording'] % {
                 'id': proj.id,
@@ -282,6 +289,7 @@ class MonitorGenerator(object):
             'init_code': init_code,
             'recording_code': recording_code,
             'size_in_bytes_code': size_in_bytes_code,
+            'size_in_bytes_estimate_code': size_in_bytes_estimate_code,
             'clear_container_code': clear_container_code,
             'clear_individual_code': clear_individual_code,
             'struct_code': struct_code

@@ -43,9 +43,19 @@ public:
 %(recording_target_code)s
     }
 
+    size_t estimate_size_in_bytes(int num_steps) {
+        // What is already stored?
+        size_t estimate = this->size_in_bytes();
+
+        // What could be added?
+        int num_rec = static_cast<int>(num_steps / this->period_);
+%(size_in_bytes_estimate_code)s
+        return estimate;
+    }
+
     long int size_in_bytes() {
         long int size_in_bytes = 0;
-%(size_in_bytes)s
+%(size_in_bytes_code)s
         return size_in_bytes;
     }
 
@@ -90,9 +100,14 @@ public:
     'size_in_bytes': """
 // local variable %(name)s
 size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
-for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += it->capacity() * sizeof(%(type)s);
 }""",
+    'size_in_bytes_estimate': """
+// local variable %(name)s
+if (this->record_%(name)s)
+    estimate += num_rec * sizeof(%(type)s) * ( (this->partial) ? this->ranks.size() : pop%(id)s->size );
+""",
     'clear': """
     void clear_%(name)s() {
         for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
@@ -124,7 +139,12 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
         } """,
         'size_in_bytes': """
 // global variable %(name)s
-size_in_bytes += sizeof(%(type)s);""",
+size_in_bytes += sizeof(%(type)s) * this->%(name)s.capacity();""",
+        'size_in_bytes_estimate': """
+// global variable %(name)s
+if (this->record_%(name)s)
+    estimate += num_rec * sizeof(%(type)s);
+""",
         'clear': """
     void clear_%(name)s() {
         this->%(name)s.clear();
@@ -177,6 +197,18 @@ public:
     };
 
     void record_targets() { /* nothing to do here */ }
+
+    size_t estimate_size_in_bytes(int num_steps) {
+        // What is already stored?
+        size_t estimate = this->size_in_bytes();
+
+        // What could be added?
+	int num_rec_synapses = ranks.size() * static_cast<int>(static_cast<double>(proj%(id)s->nb_synapses()) / static_cast<double>(proj%(id)s->nb_dendrites()));
+        int num_rec_steps = static_cast<int>(num_steps / this->period_);
+%(size_in_bytes_estimate_code)s
+        return estimate;
+    }
+
     long int size_in_bytes() {
         size_t size_in_bytes = 0;
 
@@ -236,6 +268,10 @@ for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
         size_in_bytes += it2->capacity() * sizeof(%(type)s);
     }
 }
+""",
+        'size_in_bytes_estimate': """
+if (this->record_%(name)s)
+    estimate += num_rec_steps * num_rec_synapses * sizeof(%(type)s);
 """
     },
     'semiglobal': {
@@ -275,6 +311,10 @@ size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += sizeof(%(type)s) * it->capacity();
 }
+""",
+        'size_in_bytes_estimate': """
+if (this->record_%(name)s)
+    estimate += num_rec_steps * ranks.size() * sizeof(%(type)s);
 """
     },
     'global': {
@@ -301,6 +341,10 @@ for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
         'size_in_bytes': """
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
+""",
+        'size_in_bytes_estimate': """
+if (this->record_%(name)s)
+    estimate += num_rec_steps * sizeof(%(type)s);
 """
     }
 }
