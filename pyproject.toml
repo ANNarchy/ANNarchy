@@ -27,13 +27,13 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-    'setuptools',
-    'cython',
-    'numpy',
-    'sympy',
-    'scipy',
-    'matplotlib',
-    'tqdm',
+    "setuptools",
+    "cython",
+    "numpy",
+    "sympy",
+    "scipy",
+    "matplotlib",
+    "tqdm",
     "h5py",
     "lxml",
     "nanobind",
@@ -43,3 +43,6 @@ dependencies = [
 Documentation = "https://annarchy.github.io"
 Issues = "https://github.com/ANNarchy/ANNarchy/issues"
 Source = "https://github.com/ANNarchy/ANNarchy"
+
+[tool.setuptools.packages.find]
+exclude = ["tests_*"]	# ignore unittest folders

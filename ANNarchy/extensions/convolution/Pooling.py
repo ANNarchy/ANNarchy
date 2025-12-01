@@ -169,7 +169,7 @@ class Pooling(SpecificProjection):
             Messages._print(e)
             Messages._error('ANNarchy was not successfully installed.')
 
-        lil = LILConnectivity()
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
         self.connector_name = "Pooling"
@@ -187,6 +187,9 @@ class Pooling(SpecificProjection):
         # Create the Cython instance
         self.cyInstance = getattr(module, 'proj' + str(self.id) + '_wrapper')()
         self.cyInstance.pre_coords = self.pre_coordinates
+        if ConfigManager().get('paradigm', self.net_id) == "cuda":
+            # triggers host-to-device transfer at begin of simulate()
+            self.cyInstance.pre_coords_dirty = True
 
         return True
 

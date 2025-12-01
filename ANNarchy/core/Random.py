@@ -6,7 +6,6 @@
 import numpy as np
 
 from ANNarchy.intern import Messages
-from ANNarchy.intern.ConfigManagement import get_global_config
 
 distributions_arguments = {
     'Uniform' : 2,
@@ -55,13 +54,22 @@ class RandomDistribution :
         """
         return self.get_values(1)[0]
 
-    def keywords(self):
+    def keywords(self) -> list[str]:
+        """
+        Returns a list of available distributions
+        """
         return available_distributions
 
-    def latex(self):
+    def latex(self) -> str:
+        """
+        Returns the LaTeX string representation for a given distribution.
+        """
         return '?'
-    
-    def get_cpp_args(self):
+
+    def get_cpp_args(self) -> str:
+        """
+        Returns a string containing the arguments used for C++ code generation.
+        """
         raise NotImplementedError
 
 class Uniform(RandomDistribution):
@@ -72,14 +80,17 @@ class Uniform(RandomDistribution):
 
     :param min: minimum value.
     :param max: maximum value.
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, min: float, max:float, rng:np.random.Generator=None):
+    def __init__(self, min: float, max: float, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
+
+        if min >= max:
+            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
 
         self.min = min
         self.max = max
@@ -106,15 +117,17 @@ class DiscreteUniform(RandomDistribution):
 
     :param min: minimum value.
     :param max: maximum value.
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, min: int, max:int, rng:np.random.Generator=None):
+    def __init__(self, min: int, max: int, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
 
+        if min >= max:
+            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
 
         self.min = min
         self.max = max
@@ -140,9 +153,9 @@ class Normal(RandomDistribution):
     :param sigma: Standard deviation of the distribution.
     :param min: Minimum value (default: unlimited).
     :param max: Maximum value (default: unlimited).
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+    def __init__(self, mu:float, sigma: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
@@ -165,9 +178,9 @@ class Normal(RandomDistribution):
         """
         data = self.rng.normal(self.mu, self.sigma, shape)
 
-        if self.min != None:
+        if self.min is not None:
             data[data<self.min] = self.min
-        if self.max != None:
+        if self.max is not None:
             data[data>self.max] = self.max
         return data
 
@@ -185,9 +198,9 @@ class LogNormal(RandomDistribution):
     :param sigma: Standard deviation of the distribution.
     :param min: Minimum value (default: unlimited).
     :param max: Maximum value (default: unlimited).
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+    def __init__(self, mu: float, sigma: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
@@ -210,9 +223,9 @@ class LogNormal(RandomDistribution):
         """
         data = self.rng.lognormal(self.mu, self.sigma, shape)
 
-        if self.min != None:
+        if self.min is not None:
             data[data<self.min] = self.min
-        if self.max != None:
+        if self.max is not None:
             data[data>self.max] = self.max
         return data
 
@@ -233,9 +246,9 @@ class Exponential(RandomDistribution):
     :param Lambda: rate parameter.
     :param min: minimum value (default: unlimited).
     :param max: maximum value (default: unlimited).
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, Lambda:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+    def __init__(self, Lambda: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
@@ -257,9 +270,9 @@ class Exponential(RandomDistribution):
         """
         data = self.rng.exponential(self.Lambda, shape)
 
-        if self.min != None:
+        if self.min is not None:
             data[data<self.min] = self.min
-        if self.max != None:
+        if self.max is not None:
             data[data>self.max] = self.max
         return data
 
@@ -274,9 +287,9 @@ class Gamma(RandomDistribution):
     :param beta: Scale of the gamma distribution.
     :param min: Minimum value returned (default: unlimited).
     :param max: Maximum value returned (default: unlimited).
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, alpha:float, beta:float=1.0, min:float=None, max:float=None, rng:np.random.Generator=None):
+    def __init__(self, alpha: float, beta: float=1.0, min: float=None, max: float=None, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()
@@ -296,15 +309,15 @@ class Gamma(RandomDistribution):
         """
         data = self.rng.gamma(self.alpha, self.beta, shape)
 
-        if self.min != None:
+        if self.min is not None:
             data[data<self.min] = self.min
-        if self.max != None:
+        if self.max is not None:
             data[data>self.max] = self.max
         return data
 
     def latex(self):
         return "$\\Gamma$(" + str(self.alpha) + ', ' + str(self.beta) + ')'
-        
+
 class Binomial(RandomDistribution):
     """
     Binomial distribution.
@@ -315,10 +328,10 @@ class Binomial(RandomDistribution):
 
     :param n: Number of trials.
     :param p: Probability of success.
-    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
+    :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
 
-    def __init__(self, n:int, p:float, rng:np.random.Generator=None):
+    def __init__(self, n: int, p: float, rng: np.random.Generator=None):
 
         if rng is None:
             self.rng = np.random.default_rng()

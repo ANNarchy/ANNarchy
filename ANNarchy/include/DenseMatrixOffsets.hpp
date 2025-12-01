@@ -154,7 +154,7 @@ public:
         assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
         // Sanity check: enough memory?
-        if (!this->check_free_memory(this->num_columns_ * this->num_rows_ * sizeof(MT)))
+        if (!check_free_memory(this->num_columns_ * this->num_rows_ * sizeof(MT)))
             return false;
 
         // Allocate mask

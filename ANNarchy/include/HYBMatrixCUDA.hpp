@@ -72,7 +72,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
     #endif
     }
 
-    void clear() {
+    void clear() override{
     #ifdef _DEBUG
         std::cout << "HYBMatrixCUDA::clear()" << std::endl;
     #endif
@@ -136,7 +136,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         return tmp;
     }
 
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 0;
 
         size += static_cast<ELLMatrixCUDA<IT, ST>*>(ell_matrix_gpu)->size_in_bytes();

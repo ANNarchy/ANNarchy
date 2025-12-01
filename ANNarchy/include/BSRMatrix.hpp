@@ -20,8 +20,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *	\brief		Implementation of a blocked compressed sparse row (BSR) format.
  *	\details	A blocked variant of the classic compressed sparse row matrix format. It is basically
@@ -55,44 +53,6 @@ class BSRMatrix {
     // not typical for BSR, but helpful for the usage in ANNarchy
     std::vector<IT> post_ranks_;
 
-    /**
-     *  @brief      check if the matrix fits into RAM
-     *  @details    Unlike CUDA it appears that the standard C++ API does not
-     *              provide a function to get the available RAM at a present time.
-     *              Many sources recommended to use the /proc/meminfo file
-     */
-    bool check_free_memory(size_t required) {
-    #ifdef __linux__
-        FILE *meminfo = fopen("/proc/meminfo", "r");
-        
-        // TODO:    I'm not completely sure, what we want to do
-        //          in this case. Currently, we would hope for the best ...
-        if(meminfo == nullptr) {
-            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
-            return true;
-        }
-
-        char line[256];
-        int ram;
-
-        while(fgets(line, sizeof(line), meminfo))
-        {
-            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
-                break;  // hit
-        }
-
-        fclose(meminfo);
-        size_t available = static_cast<size_t>(ram) * 1024;
-    #ifdef _DEBUG
-        std::cout << "BSRMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
-    #endif
-        return required < available;
-
-    #else
-        return true;
-    #endif
-    }
-
     // Attention: this function returns the LIL indices, this easier for the following processing
     std::vector<std::vector<IT>> split_row_indices(std::vector<IT>& row_indices, IT nb_block_rows) {
     #ifdef _DEBUG
@@ -121,7 +81,6 @@ class BSRMatrix {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::BSRMatrix(num_rows=" << num_rows << ", num_columns=" << num_columns << ", tile_size=" << tile_size << ")" << std::endl;
     #endif
-
     }
 
     ~BSRMatrix() {
@@ -130,7 +89,7 @@ class BSRMatrix {
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::clear()" << std::endl;
     #endif
@@ -150,8 +109,12 @@ class BSRMatrix {
         tile_mask_.shrink_to_fit();
     }
 
-    inline IT get_num_rows() {
+    inline IT num_rows() {
         return this->num_rows_;
+    }
+
+    inline IT num_columns() {
+        return this->num_columns_;
     }
 
     //
@@ -187,8 +150,6 @@ class BSRMatrix {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
-        // clear previously instantiated matrix
-        clear();
 
         // Construct the BSR format from LIL
         post_ranks_ = row_indices;
@@ -435,8 +396,9 @@ class BSRMatrix {
     }
 
     //
-    //  Initialization and Update of variables.
+    //  Initialization and Update of matrix variables.
     //
+
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
@@ -453,7 +415,34 @@ class BSRMatrix {
             return std::vector<VT>();
         }
 
-        return std::vector<VT>(tile_mask_.size(), default_value);
+        auto variable = std::vector<VT>(tile_mask_.size());
+        auto v_it = variable.begin();
+        auto m_it = tile_mask_.cbegin();
+
+        for(; v_it != variable.end(); ++v_it, ++m_it)
+            *v_it = (*m_it) ? default_value : static_cast<VT>(0.0);
+        return variable;
+    }
+
+    template <typename VT>
+    std::vector< VT > init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::init_matrix_variable_uniform(" << a << ", " << b << ")" << std::endl;
+    #endif
+        if (!check_free_memory(tile_mask_.size() * sizeof(VT))) {
+            std::cerr << "BSRMatrix::init_matrix_variable_uniform() allocation failed." << std::endl;
+            return std::vector<VT>();
+        }
+
+        std::uniform_real_distribution<VT> dis (a,b);
+
+        auto variable = std::vector<VT>(tile_mask_.size());
+        auto v_it = variable.begin();
+        auto m_it = tile_mask_.cbegin();
+
+        for(; v_it != variable.end(); ++v_it, ++m_it)
+            *v_it = (*m_it) ? dis(rng) : static_cast<VT>(0.0);
+        return variable;
     }
 
     template <typename VT>
@@ -615,10 +604,26 @@ class BSRMatrix {
     }
 
     //
+    //  Initialization and Update of vector variables.
+    //
+
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
+    }
+
+    //
     //  Other helpful functions
     //
 
-    inline size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
 
         size += 3*sizeof(IT);               // constants

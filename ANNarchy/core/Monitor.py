@@ -50,7 +50,7 @@ class Monitor :
 
     ```python
     spikes = m.get('spike')
-    
+
     t, n = m.raster_plot(spikes)
     histo = m.histogram()
     isi = m.inter_spike_interval(spikes)
@@ -61,11 +61,11 @@ class Monitor :
     ```
     """
 
-    def __init__(self, 
-                 obj: Any, 
-                 variables:list=[], 
-                 period:float=None, 
-                 period_offset:float=None, 
+    def __init__(self,
+                 obj: Any,
+                 variables:list=[],
+                 period:float=None,
+                 period_offset:float=None,
                  start:bool=True,
                  name:str=None,
                  net_id:int=0):
@@ -107,7 +107,7 @@ class Monitor :
             if var in self.object.parameters:
                 Messages._error('Parameters are not recordable')
 
-            if not var in self.object.variables and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
+            if not var in self.object.variables and var not in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Messages._error('Monitor: the object does not have an attribute named', var)
 
         # Period
@@ -197,15 +197,15 @@ class Monitor :
 
 
 
-    def get(self, 
-            variables:str | list[str]=None, 
-            keep:bool=False, 
-            reshape:bool=False, 
+    def get(self,
+            variables:str | list[str]=None,
+            keep:bool=False,
+            reshape:bool=True,
             force_dict:bool=False
         ) -> dict:
         """
         Returns the recorded variables and empties the buffer.
-         
+
         The recorded data is returned as a Numpy array (first dimension is time, second is neuron index).
 
         If a single variable name is provided, the recorded values for this variable are directly returned as an array.
@@ -215,7 +215,8 @@ class Monitor :
 
         :param variables: (list of) variables. By default, a dictionary with all variables is returned.
         :param keep: defines if the content in memory for each variable should be kept (default: False).
-        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
+        :param reshape: transforms the second axis of the array to match the population's geometry (default: True). Note that this does not apply for PopulationViews. **Important**: If you have used ANNarchy 4.x before, please note that this default has been changed in ANNarchy 5.0!
+
         """
         if variables:
             if not isinstance(variables, list):
@@ -472,32 +473,34 @@ class Monitor :
 
     def _return_variable(self, name, keep, reshape):
         """ Returns the value of a variable with the given name. """
-        
-        if isinstance(self.object, (Population, PopulationView)):
-            if not reshape:
+
+        if isinstance(self.object, PopulationView):
+            return self._get_population(self.object, name, keep)
+
+        elif isinstance(self.object, Population):
+            if not reshape or name == 'spike':
                 return self._get_population(self.object, name, keep)
             return np.reshape(self._get_population(self.object, name, keep), (-1,) + self.object.geometry)
-        
-        if isinstance(self.object, Projection):
+
+        elif isinstance(self.object, Projection):
             return self._get_dendrite(self.object, name, keep)
-        
-        if isinstance(self.object, Dendrite):
+
+        elif isinstance(self.object, Dendrite):
             # Dendrites have one empty dimension
             return self._get_dendrite(self.object, name, keep).squeeze()
-        
+
         return None
 
     def _update_stopping_time(self, var, keep):
-        
+
         self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
         self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
         self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
-        
+
         if not keep:
             self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
             self._recorded_variables[var]['stop'] = [None]
 
-    
     def __getitem__(self, key):
         # Implement the logic to retrieve the item by key
         return self.get(key)
@@ -577,7 +580,7 @@ class Monitor :
                 getattr(self.cyInstance, 'clear_' + name)()
         except:
             data = []
-        
+
         return np.array(data, dtype=object)
 
     def times(self, variables:list[str]=None) -> dict:
@@ -940,13 +943,15 @@ class MemoryStats :
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
-def raster_plot(spikes:dict) -> tuple:
+def raster_plot(spikes:dict, dt:float=1.0) -> tuple:
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param dt: the time step size in ms (default: 1.0ms).
     """
-    times = []; ranks=[]
+    times = []
+    ranks=[]
 
     # Compute raster
     for n in spikes.keys():
@@ -954,10 +959,10 @@ def raster_plot(spikes:dict) -> tuple:
             times.append(t)
             ranks.append(n)
 
-    return self.dt* np.array(times), np.array(ranks)
+    return dt * np.array(times), np.array(ranks)
 
 
-def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt=1.0):
+def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt:float=1.0):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -973,7 +978,8 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     t_maxes = []
     t_mines = []
     for neuron in spikes.keys():
-        if len(spikes[neuron]) == 0 : continue
+        if len(spikes[neuron]) == 0:
+            continue
         t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 

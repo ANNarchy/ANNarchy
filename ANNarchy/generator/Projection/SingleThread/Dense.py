@@ -118,11 +118,10 @@ dense_summation_operation = {
 %(idx_type)s columns = %(pre_prefix)ssize;
 
 // running indices
-%(idx_type)s i;
 %(size_type)s j;
 %(idx_type)s rk_pre;
 
-for(i = 0; i < rows; i++) {
+for (const %(idx_type)s i : post_ranks_) {
     sum = 0.0;
     rk_pre = 0;
     j=i*columns;
@@ -151,7 +150,7 @@ continuous_transmission_sse = {
         %(idx_type)s columns = pop%(id_pre)s->size;
 
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -159,8 +158,7 @@ continuous_transmission_sse = {
         double* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
+        for (const %(idx_type)s i : post_ranks_) {
             __m128d _tmp_reg_sum = _mm_setzero_pd();
 
             _s=i*columns;
@@ -207,7 +205,7 @@ continuous_transmission_sse = {
         %(idx_type)s columns = pop%(id_pre)s->size;
 
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -215,8 +213,7 @@ continuous_transmission_sse = {
         float* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
+        for (const %(idx_type)s i : post_ranks_) {
             __m128 _tmp_reg_sum = _mm128_setzero_ps();
 
             _s=i*columns;
@@ -267,7 +264,7 @@ continuous_transmission_avx = {
         %(idx_type)s rows = %(post_prefix)ssize;
         %(idx_type)s columns = %(pre_prefix)ssize;
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -275,7 +272,7 @@ continuous_transmission_avx = {
         double* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
+        for (const %(idx_type)s i : post_ranks_) {
             __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
             _s=i*columns;
@@ -315,7 +312,7 @@ continuous_transmission_avx = {
         %(idx_type)s rows = %(post_prefix)ssize;
         %(idx_type)s columns = %(pre_prefix)ssize;
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -323,7 +320,7 @@ continuous_transmission_avx = {
         float* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
+        for (const %(idx_type)s i : post_ranks_) {
             __m256 _tmp_reg_sum = _mm256_setzero_ps();
 
             _s=i*columns;
@@ -369,7 +366,7 @@ continuous_transmission_avx512 = {
         %(idx_type)s columns = pop%(id_pre)s->size;
 
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -377,7 +374,7 @@ continuous_transmission_avx512 = {
         double* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
+        for (const %(idx_type)s i : post_ranks_) {
             %(idx_type)s rk_post = i;
             __m512d _tmp_reg_sum = _mm512_setzero_pd();
 
@@ -415,7 +412,7 @@ continuous_transmission_avx512 = {
         %(idx_type)s columns = pop%(id_pre)s->size;
 
         // running indices
-        %(idx_type)s i, j;
+        %(idx_type)s j;
         %(size_type)s _s;
 
         // required pointer
@@ -423,8 +420,7 @@ continuous_transmission_avx512 = {
         float* __restrict__ _w = w.data();
 
         // Row-wise SpMV
-        for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
+        for (const %(idx_type)s i : post_ranks_) {
             __m512 _tmp_reg_sum = _mm512_setzero_ps();
 
             _s=i*columns;
@@ -499,7 +495,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     %(global)s
 
     // For each post-synaptic neuron
-    for (%(idx_type)s i = 0; i < %(post_prefix)ssize; i++) {
+    for (const %(idx_type)s i : post_ranks_) {
         rk_post = i; // dense: ranks are indices
 
         // Semi-global variables

@@ -973,7 +973,7 @@ if (%(condition)s) {
             else:
                 template = self._templates['spiking_sum_fixed_delay']
 
-        if template == None:
+        if template is None:
             Messages._error("Code generation error: no template available")
 
         complete_code = ""

@@ -22,7 +22,6 @@
 #pragma once
 
 #include "LILMatrix.hpp"
-#include "helper_functions.hpp"
 
 /**
  *  @brief      Implementation of a *compressed sparse row* (CSR) format.
@@ -99,7 +98,7 @@ class CSRMatrix {
         row_begin_.shrink_to_fit();
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::clear()" << std::endl;
     #endif
@@ -116,11 +115,11 @@ class CSRMatrix {
     //
     //  Accessor to member variables
     //
-    inline IT dense_num_rows() {
+    inline IT num_rows() {
         return num_rows_;
     }
 
-    inline IT dense_num_columns() {
+    inline IT num_columns() {
         return num_columns_;
     }
 
@@ -131,6 +130,10 @@ class CSRMatrix {
     inline std::vector<ST> row_ptr() {
         return row_begin_;
     }
+
+    //
+    //  Initialization methods
+    //
 
     /**
      *  @brief      Initialize CSR based on a LIL representation.
@@ -144,8 +147,6 @@ class CSRMatrix {
         assert( (row_indices.size() == column_indices.size()) );
         assert( (row_indices.size() < std::numeric_limits<IT>::max()) );
         assert( (row_indices.size() <= num_rows_) );
-
-        clear();
 
         // construct the CSR from LIL
         post_ranks_ = row_indices;
@@ -528,7 +529,7 @@ class CSRMatrix {
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
         
         size += 2 * sizeof(IT);

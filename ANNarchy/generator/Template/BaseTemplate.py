@@ -30,6 +30,9 @@ omp_header_template = """#pragma once
     #include <immintrin.h>
 #endif
 
+// Useful functions
+#include "helper_functions.hpp"
+
 /*
  * Built-in functions
  *
@@ -81,6 +84,7 @@ extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
 Monitor* getRecorder(int id);
 void removeRecorder(Monitor* recorder);
+size_t estimate_record_size(int num_steps);
 
 /*
  * Simulation methods
@@ -188,6 +192,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /*
@@ -311,6 +324,7 @@ void run(const int nbSteps) {
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
 #endif
+
 %(prof_run_pre)s
     // apply changes implied by structural plasticity (spike only)
 %(sp_spike_backward_view_update)s
@@ -495,6 +509,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /*
@@ -899,6 +922,9 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 
+// Useful functions
+#include "helper_functions.cuh"
+
 /*
  * Built-in functions (host side)
  */
@@ -949,6 +975,7 @@ extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
 Monitor* getRecorder(int id);
 void removeRecorder(Monitor* recorder);
+size_t estimate_record_size(int num_steps);
 
 /*
  * Simulation methods
@@ -1024,19 +1051,18 @@ cuda_device_kernel = """#include "ANNarchyKernel.cuh"
  * init random states                   *
  ****************************************/
 /*
- *  Each thread gets an unique sequence number (i) and all use the same seed. As highlightet
+ *  Each thread gets an unique sequence number (tid) and all use the same seed. As highlighted
  *  in section 3.1.1. of the curand documentation this should be enough to get good random numbers
  *
- *  HD(19.7.2019): we need to be careful, that multiple calls to this method need to generate different state sequences.
+ *  HD (19.7.2019):     we need to be careful, that multiple calls to this method need to generate different state sequences.
+ *  HD (17.10.2025):    Note, ANN5.0 switches from per-element RNG state to per-thread RNG state!
  */
-__global__ void rng_setup_kernel( int N, long long int sequence_offset, curandState* states, unsigned long long seed )
+__global__ void rng_setup_kernel( int num_total, long long int sequence_offset, curandState* states, unsigned long long seed )
 {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    while( i < N )
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < num_total)
     {
-        curand_init( seed, i+sequence_offset, 0, &states[ i ] );
-        i += blockDim.x * gridDim.x;
+        curand_init( seed, tid+sequence_offset, 0, &states[ tid ] );
     }
 }
 
@@ -1109,12 +1135,10 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
 // We need to generate different state sequences per kernel call
 static long long int sequence_offset=0;
 
-void init_curand_states( int N, curandState* states, unsigned long long seed ) {
-    int numThreads = 64;
-    int numBlocks = ceil (float(N) / float(numThreads));
+void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed ) {
 
-    rng_setup_kernel<<< numBlocks, numThreads >>>( N, sequence_offset, states, seed);
-    sequence_offset += N;
+    rng_setup_kernel<<< numBlocks, numThreads >>>( numBlocks * numThreads, sequence_offset, states, seed);
+    sequence_offset += numBlocks * numThreads;
 
 #ifdef _DEBUG
     cudaError_t err = cudaGetLastError();
@@ -1189,7 +1213,7 @@ struct RunConfig{
 };
 
 // Pre-defined kernel definitions
-void init_curand_states( int N, curandState* states, unsigned long long seed );
+void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
 
 void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum);
 void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
@@ -1322,6 +1346,15 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
+}
+
+size_t estimate_record_size(int num_steps) {
+    size_t estimate = 0;
+    for (unsigned int i=0; i < recorders.size(); i++){
+        if (recorders[i])
+            estimate += recorders[i]->estimate_size_in_bytes(num_steps);
+    }
+    return (estimate / 1024 / 1024);    // return in MiB for easier handling
 }
 
 /**
@@ -1503,6 +1536,9 @@ void stream_setup()
     {
         cudaStreamCreate( &streams[i] );
     }
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cerr << "Error occured during stream_setup(): " << cudaGetErrorString(err) << std::endl;
 }
 
 void stream_assign()
@@ -1522,6 +1558,10 @@ void stream_destroy()
         // destroy
         cudaStreamDestroy( streams[i] );
     }
+
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cerr << "Error occured during stream_destroy(): " << cudaGetErrorString(err) << std::endl;
 }
 """
 

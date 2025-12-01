@@ -344,7 +344,7 @@ class Convolution(SpecificProjection):
             Messages._print(e)
             Messages._error('ANNarchy was not successfully installed.')
 
-        lil = LILConnectivity()
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
         self.connector_name = "Convolution"
@@ -364,8 +364,17 @@ class Convolution(SpecificProjection):
         # Create the Cython instance
         self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
         
+        # Set the filter coordinates
         self.cyInstance.pre_coords = self.pre_coordinates
+        if ConfigManager().get('paradigm', self.net_id) == "cuda":
+            # triggers host-to-device transfer at begin of simulate()
+            self.cyInstance.pre_coords_dirty = True
+
+        # Set the filters
         self.cyInstance.w = self.weights
+        if ConfigManager().get('paradigm', self.net_id) == "cuda":
+            # triggers host-to-device transfer at begin of simulate()
+            self.cyInstance.w_dirty = True
 
         # Set delays after instantiation
         if self.delays > 0.0:
@@ -523,7 +532,7 @@ class Convolution(SpecificProjection):
         Overrides default code generation. This function is called during the code generation procedure.
         """
         # Filter definition
-        filter_definition, filter_pyx_definition = self._filter_definition()
+        filter_definition = self._filter_definition()
 
         # On CPUs we have a pre-load on the inner-most sub-vector
         use_inner_line = _check_paradigm("openmp", self.net_id)
@@ -535,15 +544,15 @@ class Convolution(SpecificProjection):
             convolve_code, sum_code = self._generate_bank_code(pre_load_inner_line=use_inner_line)
 
         if _check_paradigm("openmp", self.net_id):
-            self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+            self._generate_omp(filter_definition, convolve_code, sum_code)
 
         elif _check_paradigm("cuda", self.net_id):
-            self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+            self._generate_cuda(filter_definition, convolve_code, sum_code)
 
         else:
             raise NotImplementedError
 
-    def _generate_omp(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+    def _generate_omp(self, filter_definition, convolve_code, sum_code, kernel=True):
         """
         OpenMP code generation.
         """
@@ -574,13 +583,11 @@ class Convolution(SpecificProjection):
         if kernel:
             # The number of dimension influences the type
             cpp_type_w = filter_definition.replace(' w;', '')
-            pyx_type_w = filter_pyx_definition.replace(' w', '')
 
             # Fill the code templates
             self._specific_template['declare_parameters_variables'] = tabify(filter_definition.strip(), 1)
             self._specific_template['export_parameters_variables'] = ""
             self._specific_template['access_parameters_variables'] = conv_filter_template["openmp"]["access"] % {'type_w': cpp_type_w}
-            
 
         # Override the monitor to avoid recording the weights
         self._specific_template['monitor_class'] = ""
@@ -641,7 +648,7 @@ class Convolution(SpecificProjection):
             'convolve_code': convolve_code
         }
 
-    def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+    def _generate_cuda(self, filter_definition, convolve_code, sum_code, kernel=True):
         """
         CUDA code generation.
         """
@@ -649,8 +656,17 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': ConfigManager().get('precision', self.net_id)
+            'float_prec': ConfigManager().get('precision', self.net_id),
+            'delays': ''
         }
+
+        # Delays are optional
+        if self.delays > ConfigManager().get('dt', self.net_id):
+            base_ids.update({'delays': f"""// Synaptic delays
+        .def("get_delay", &ProjStruct{self.id}::get_delay)
+        .def("get_dendrite_delay", &ProjStruct{self.id}::get_dendrite_delay)
+        .def("set_delay", &ProjStruct{self.id}::set_delay)
+"""})
 
         # Fill the basic definitions
         conv_dict = deepcopy(convolve_template_cuda)
@@ -663,16 +679,11 @@ class Convolution(SpecificProjection):
         if kernel:
             # The number of dimension influences the type
             cpp_type_w = filter_definition.replace(' w;', '')
-            pyx_type_w = filter_pyx_definition.replace(' w', '')
 
             # Fill the code templates
             self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': ConfigManager().get('precision', self.net_id)}
             self._specific_template['export_parameters_variables'] = ""
             self._specific_template['access_parameters_variables'] = conv_filter_template["cuda"]["access"] % {'type_w': cpp_type_w, 'id_proj': self.id}
-            self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
-            self._specific_template['wrapper_args'] += conv_filter_template["pyx_wrapper"]["args"]
-            self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
-            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
             # Memory transfer of variables
             dim_pre = self.dim_pre
@@ -705,7 +716,7 @@ class Convolution(SpecificProjection):
             }
             pre_variables_header += ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
             pre_variables_invoke += ", pre_%(name)s" % pre_id_dict
-            pre_variables_call += ", pop%(id_pre)s.gpu_%(name)s" % pre_id_dict
+            pre_variables_call += ", pop%(id_pre)s->gpu_%(name)s" % pre_id_dict
 
         # Finalize code templates
         code_ids = {
@@ -798,13 +809,10 @@ class Convolution(SpecificProjection):
     def _filter_definition(self):
         dim = self.dim_kernel
         cpp = ConfigManager().get('precision', self.net_id)
-        pyx = ConfigManager().get('precision', self.net_id)
         for d in range(dim):
             cpp = 'std::vector< ' + cpp + ' >'
-            pyx = 'vector[' + pyx + ']'
         cpp += ' w;'
-        pyx += ' w'
-        return cpp, pyx
+        return cpp
 
     def _coordinates_to_rank(self, name, geometry):
 

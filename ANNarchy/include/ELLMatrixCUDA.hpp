@@ -31,14 +31,6 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class ELLMatrixCUDA: public ELLMatrix<IT, ST, false> {
 protected:
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
 
     void free_device_memory() {
         if (gpu_post_ranks_) {
@@ -57,7 +49,7 @@ protected:
 
     bool host_to_device_transfer() {
         // Sanity check: can we allocate the data?
-        if (!check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size()))
+        if (!check_free_memory_cuda(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size()))
             return false;
 
         // Allocate the data arrays
@@ -115,12 +107,12 @@ public:
      *  @brief      clear the matrix
      *  @details    should be called before destructor.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "ELLMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<ELLMatrix<IT, ST, false>*>(this)->clear();
+        ELLMatrix<IT, ST, false>::clear();
 
         // clear device
         free_device_memory();
@@ -175,7 +167,7 @@ public:
     #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        check_free_memory(size_in_bytes);
+        check_free_memory_cuda(size_in_bytes);
 
         // Allocate
         VT* new_variable;
@@ -200,7 +192,7 @@ public:
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        check_free_memory(size_in_bytes);
+        check_free_memory_cuda(size_in_bytes);
 
         // Allocate
         VT* new_variable;
@@ -230,9 +222,9 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         // standard ELLPACK size
-        size_t size = static_cast<ELLMatrix<IT, ST, false>*>(this)->size_in_bytes();
+        size_t size = ELLMatrix<IT, ST, false>::size_in_bytes();
 
         // GPU pointer
         size += 2 * sizeof(IT*);

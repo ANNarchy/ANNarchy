@@ -198,8 +198,11 @@ attribute_host_to_device = {
 attribute_device_to_host = {
     'local': """
         // %(name)s: local
-        if ( %(name)s_device_to_host < t )
+        if ( attr_name.compare("%(name)s") == 0)
         {
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -214,8 +217,11 @@ attribute_device_to_host = {
 """,
     'semiglobal': """
         // %(name)s: semiglobal
-        if ( %(name)s_device_to_host < t )
+        if ( attr_name.compare("%(name)s") == 0)
         {
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -228,9 +234,12 @@ attribute_device_to_host = {
         }
 """,
     'global': """
-        if ( %(name)s_device_to_host < t )
+        // %(name)s: global
+        if ( attr_name.compare("%(name)s") == 0)
         {
-            // %(name)s: global
+            if ( %(name)s_device_to_host >= t )
+                return;
+
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif

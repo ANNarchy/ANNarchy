@@ -134,7 +134,7 @@ delay = {
         this->delay = delay;
     }
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
@@ -157,7 +157,7 @@ delay = {
     void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
@@ -927,6 +927,7 @@ if (_transmission && %(post_prefix)s_active) {
 
         // List of postsynaptic neurons receiving spikes from that neuron
         std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
+
         // Number of post neurons
         int nb_post = inv_post.size();
 
@@ -961,8 +962,14 @@ if (_transmission && %(post_prefix)s_active){
 
         // Get the rank of the pre-synaptic neuron which spiked
         int rk_pre = %(pre_prefix)sspiked[idx_spike];
-        // List of post neurons receiving connections
-        std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
+
+        // Find the presynaptic neuron in the inverse connectivity matrix
+        auto inv_post_ptr = inv_pre_rank.find(rk_pre);
+        if (inv_post_ptr == inv_pre_rank.end())
+            continue;
+
+        // List of post neurons receiving connections from rk_pre
+        std::vector< std::pair<int, int> >& rks_post = inv_post_ptr->second;
 
         // Iterate over the post neurons
         for(int x=0; x<rks_post.size(); x++){

@@ -5,7 +5,6 @@
 
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
@@ -223,7 +222,7 @@ class Population :
 
         :param module: cython module (ANNarchyCore instance)
         """
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time
             t1 = time.time()
 
@@ -232,9 +231,9 @@ class Population :
         except:
             Messages._error('unable to instantiate the population', self.name)
 
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
-            Profiler().add_entry(t1, t2, "pop"+str(self.id), "instantiate")
+            NetworkManager().get_network(net_id=self.net_id)._profiler.add_entry(t1, t2, "pop"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -398,6 +397,9 @@ class Population :
         :param attribute: should be a string representing the variables's name.
         """
         try:
+            if _check_paradigm("cuda", self.net_id):
+                self.cyInstance.device_to_host(attribute)
+
             if attribute in self.neuron_type.description['local']:
                 data = np.array(getattr(self.cyInstance, attribute))
                 return data.reshape(self.geometry)
@@ -417,7 +419,13 @@ class Population :
         """
 
         try:
-            ctype = self._get_attribute_cpp_type(attribute)
+            if isinstance(value, str):
+                # Initialized from other variable
+                ctype = self._get_attribute_cpp_type(value)
+                value = self.get(value)
+            else:
+                ctype = self._get_attribute_cpp_type(attribute)
+
             if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
                     if _check_paradigm("cuda", self.net_id):
@@ -429,11 +437,10 @@ class Population :
                         setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
 
                 elif isinstance(value, list):
-                    
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = [ str(0) if x == False else str(1) for x in value ]
+                            value = [ str(1) if x else str(0) for x in value ]
                         setattr(self.cyInstance, attribute, value)
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:
@@ -443,8 +450,8 @@ class Population :
                     if _check_paradigm("cuda", self.net_id):
                         # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
                         if ctype == "char":
-                            value = str(0) if value == False else str(1)
-                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])                        
+                            value = str(1) if value else str(0)
+                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
                         setattr(self.cyInstance, attribute+"_host_to_device", True)
                     else:
                         setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
@@ -547,18 +554,21 @@ class Population :
         if not self.initialized:
             Messages._warning('sum(): the population', self.name, 'is not initialized yet.')
             return np.zeros(self.geometry)
-        
+
         # Check if a projection has this type
         if not target in self.targets:
             Messages._warning('sum(): the population', self.name, 'receives no projection with the target', target)
             return np.zeros(self.geometry)
-        
-        # Spiking neurons already have conductances available
-        if self.neuron_type.type == 'spike':
-            return np.array(getattr(self, 'g_'+target))
-        
-        # Otherwise, call the Cython method
-        return np.array(getattr(self.cyInstance, "_sum_"+target))
+
+        # Variable prefix depends on model type
+        prefix = 'g_' if self.neuron_type.type == 'spike' else "_sum_"
+
+        # GPUs need to trigger memory transfer first
+        if _check_paradigm("cuda", self.net_id):
+            self.cyInstance.device_to_host(prefix+target)
+
+        # Return the value
+        return np.array(getattr(self.cyInstance, prefix+target))
 
     ################################
     ## Refractory period

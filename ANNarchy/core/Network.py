@@ -19,7 +19,7 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Constant import Constant
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 import ANNarchy.extensions.bold as bold
@@ -89,7 +89,7 @@ class Network (metaclass=NetworkMeta):
     To monitor a population or projection:
 
     ```python
-    pop = net.monitor(pop, ['spike', 'v'])
+    m = net.monitor(pop, ['spike', 'v'])
     ```
 
     To compile the network:
@@ -111,11 +111,13 @@ class Network (metaclass=NetworkMeta):
     """
 
     def __init__(self, dt:float=None, seed:int=None):
-
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
             return
         self._initialized = True
+
+        # Object tracking
+        Messages._debug("Instantiate Network object", self)
 
         # Register the network in the NetworkManager()
         self.id = NetworkManager().add_network(self)
@@ -130,11 +132,17 @@ class Network (metaclass=NetworkMeta):
         if dt is not None:
             self.dt = dt
 
-        # Seed
-        if seed is not None: 
-            self.seed = seed
-        else:
-            self.seed = secrets.randbits(32)  # Generates a random 32-bit integer
+        # Draw a value for seed if not provided by user
+        if seed is None:
+            seed = secrets.randbits(32)  # Generates a random 32-bit integer
+
+        # Store the seed value
+        self._set_config('seed', seed)
+
+        # initialize one RNG instance
+        self._default_rng = np.random.default_rng(self.seed)
+        # Store RNG state for Network.reset(reseed=True)
+        self._default_rng_state = self._default_rng.bit_generator.state
 
         # Callbacks
         self._callbacks = []
@@ -143,6 +151,8 @@ class Network (metaclass=NetworkMeta):
         # Import constants from the global level
         self._import_constants()
 
+        # Profiling is optional
+        self._profiler = None
 
     def __del__(self):
         
@@ -156,31 +166,15 @@ class Network (metaclass=NetworkMeta):
         #       that the function will be called twice. The better approach is to trigger this function
         #       by del on the network object
 
-        for pop in self._data.populations:
-            pop._clear()
-            del pop
+        # clear attached objects
+        self.clear()
 
-        for proj in self._data.projections:
-            proj._clear()
-            del proj
-
-        for mon in self._data.monitors:
-            mon._clear()
-            del mon
-
-        for ext in self._data.extensions:
-            ext._clear()
-            del ext
-
-        for const in self._data.constants:
-            del const
-
+        # de-register the network instance
         NetworkManager().remove_network(self)
-
 
     def create(
             self,
-            geometry: tuple | int, 
+            geometry: tuple | int = None, 
             neuron: Neuron = None, 
             stop_condition:str = None, 
             name:str = None,
@@ -197,25 +191,44 @@ class Network (metaclass=NetworkMeta):
         pop = net.create(geometry=100, neuron=ann.Izhikevich, name="Excitatory population")
         ```
 
-        Specific populations (e.g. `PoissonPopulation()`) can also be passed to the `population` argument, or simply as the first argument:
+        Specific populations (e.g. `PoissonPopulation()`) can also be passed to the `population` argument, or simply as the first argument, in both cases do not provide other arguments.:
 
         ```python
         pop = net.create(population=ann.PoissonPopulation(100, rates=20.))
         # or
         pop = net.create(ann.PoissonPopulation(100, rates=20.))
         ```
-        
-        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
+
+        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population. If an instance of `Population` is given, do not provide other arguments.
         :param neuron: `Neuron` instance. It can be user-defined or a built-in model.
         :param name: unique name of the population (optional).
         :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
-        :param population: instance of a `SpecificPopulation`.
+        :param population: instance of a `Population`. If given, do not provide other arguments.
         """
-        if isinstance(geometry, Population): # trick if one does use population=
+        # if both population and geometry are None, error
+        if geometry is None and population is None:
+            Messages._error("Network.create(): either 'geometry' or 'population' argument must be provided.")
+        
+        # if both are given as population instances, error
+        if isinstance(geometry, Population) and population is not None:
+            Messages._error("Network.create(): cannot provide both 'geometry' and 'population' as Population instances.")
+        
+        # if population is given, check its type
+        if population is not None and not isinstance(population, Population):
+            Messages._error("Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses.")
+        
+        # if a population instance is given, check that the other arguments are None
+        if isinstance(geometry, Population) or population is not None:
+            if neuron is not None or name is not None or stop_condition is not None:
+                Messages._error("Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance.")
+        if population is not None:
+            if geometry is not None:
+                Messages._error("Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance.")
+
+        if isinstance(geometry, Population):  # trick if one does provide `Population` as first argument
+            # Population is already created
             pop = geometry._copy(self.id)
         elif population is not None:
-            if not isinstance(population, Population):
-                Messages._error("Network.create(population=pop) only accepts instances of ann.Population and its subclasses.")
             # Population is already created
             pop = population._copy(self.id)
         else:
@@ -234,7 +247,7 @@ class Network (metaclass=NetworkMeta):
     
     def connect(
             self,
-            pre: str | Population, 
+            pre: str | Population = None, 
             post: str | Population = None, 
             target: str = "", 
             synapse: Synapse = None, 
@@ -252,32 +265,47 @@ class Network (metaclass=NetworkMeta):
 
         If the `synapse` argument is omitted, defaults synapses without plastivity will be used (`psp = "w * pre.r"` for rate-coded projections, `pre_spike="g_target += w"` for spiking ones.).
 
-        Specific projections can be passed to the `projection` argument, or as the first unnamed argument.
+        Specific projections can be passed to the `projection` argument, or as the first unnamed argument. In both cases, do not provide other arguments.
 
         ```python
-        net.connect(projection=ann.DecodingProjection(pre, post, 'exc))
+        net.connect(projection=ann.DecodingProjection(pre, post, 'exc'))
         ```
 
-        :param pre: pre-synaptic population.
+        :param pre: pre-synaptic population. If an instance of `Projection` is given, do not provide other arguments.
         :param post: post-synaptic population.
         :param target: type of the connection.
         :param synapse: `Synapse` class or instance.
         :param name: (optional) name of the Projection.
-        :param projection: specific projection.   
+        :param projection: specific projection. If given, do not provide other arguments.
         """
+        # if both projection and pre are None, error
+        if pre is None and projection is None:
+            Messages._error("Network.connect(): either 'pre' or 'projection' argument must be provided.")
 
-        # Check the pre- or post- populations, they must be in the same network
-        # TODO
-        
-        # Create the projection
-        if isinstance(pre, Projection): # trick if one does not use projection=
+        # if both are given as projection instances, error
+        if isinstance(pre, Projection) and projection is not None:
+            Messages._error("Network.connect(): cannot provide both 'pre' and 'projection' arguments.")
+
+        # if projection is given, check its type
+        if projection is not None and not isinstance(projection, Projection):
+            Messages._error("Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses.")
+
+        # if a projection instance is given, check that the other arguments are not provided
+        if isinstance(pre, Projection) or projection is not None:
+            if post is not None or target != "" or synapse is not None or name is not None:
+                Messages._error("Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance.")
+        if projection is not None:
+            if pre is not None:
+                Messages._error("Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance.")
+
+        if isinstance(pre, Projection):  # trick if one does provide `Projection` as first argument
+            # Projection is already created
             proj = pre._copy(pre.pre, pre.post, self.id)
         elif projection is not None:
-            if not isinstance(projection, Projection):
-                Messages._error("Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses.")
-            # Population is already created
+            # Projection is already created
             proj = projection ._copy(projection.pre, projection.post, self.id)
         else:
+            # Create the projection
             if post is None:
                 Messages._error("Network.connect(): the post population must be provided.")
             if target == "":
@@ -478,7 +506,7 @@ class Network (metaclass=NetworkMeta):
         :param silent: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler._compile(
+        Compiler.compile(
             directory=directory, 
             clean=clean, 
             silent=silent, 
@@ -545,16 +573,49 @@ class Network (metaclass=NetworkMeta):
         """
         Simulate.step(self.id)
 
-    def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
+    def reset(self, populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True) -> None:
         """
-        Reinitialises the network to its state before the call to `compile()`.
+        Reinitialises the network to its state before the call to `compile()`.  The network time will be set to 0ms.
 
         :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
         :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
+        :param monitors: if True, the monitors will be emptied and reset (default=True).
+        ;param reseed_rng: if True, RNG generators will be reset using the stored seed (default=True).
         """
-        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
+        self.instance.set_time(0)
+
+        if populations:
+            for pop in self.get_populations():
+                pop.reset()
+
+            # pop.reset only clears spike container with no or uniform delay
+            for proj in self.get_projections():
+                if hasattr(proj.cyInstance, 'reset_ring_buffer'):
+                    proj.cyInstance.reset_ring_buffer()
+
+        if synapses and not projections:
+            Messages._warning("reset(): if synapses is set to true this automatically enables projections==true")
+            projections = True
+
+        if projections:
+            for proj in self.get_projections():
+                proj.reset(attributes=-1, synapses=synapses)
+
+        if monitors:
+            for monitor in self.get_monitors():
+                monitor.reset()
+
+        if reseed_rng:
+            # Python:   re-initialize the RNG with initially stored state
+            self._default_rng.bit_generator.state = self._default_rng_state
+
+            # CPP:      re-initialize the RNG with the stored configuration
+            if self._get_config('disable_parallel_rng'):
+                self.instance.set_seed(self._get_config('seed'), 1, self._get_config('use_seed_seq'))
+            else:
+                self.instance.set_seed(self._get_config('seed'), self._get_config('num_threads'), self._get_config('use_seed_seq'))
 
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """
@@ -585,17 +646,22 @@ class Network (metaclass=NetworkMeta):
         """
         for pop in self._data.populations:
             pop._clear()
+            del pop
 
         for proj in self._data.projections:
             proj._clear()
+            del proj
 
         for mon in self._data.monitors:
             mon._clear()
+            del mon
 
         for ext in self._data.extensions:
             ext._clear()
+            del ext
 
-        NetworkManager().get_network(self.id).instance = None
+        for const in self._data.constants:
+            del const
 
     ###################################
     # Parallel run
@@ -736,13 +802,16 @@ class Network (metaclass=NetworkMeta):
 
         # Get the parameters
         id, classname, config, method, dt, seed, init_args, method_args = params
-        
+
         # Create an instance with the same parameters as the original instance
         net = classname(dt=dt, seed=seed, **init_args)
 
         # Set the config
         ConfigManager().set_config(net.id, config)
-        
+
+        # Transfer compilation state of "parent" network
+        net.compiled = NetworkManager().get_network(id).compiled
+
         # Instantiate the network but not compile
         net._instantiate(import_id=id)
         
@@ -790,9 +859,16 @@ class Network (metaclass=NetworkMeta):
         """
         if not 'dt' in kwargs.keys():
             kwargs.update(dict(dt=self.dt))
-            
+
+        # Sanity check
+        if not self.compiled:
+            Messages._error("The copied network should be compiled before calling Network.copy().")
+
         # Create an instance of the child class
         net = self.__class__(*args, **kwargs)
+
+        # Transfer the compiled state from "parent" network
+        net.compiled = self.compiled
 
         # Instantiate the network with the current id.
         net._instantiate(self.id)
@@ -884,25 +960,27 @@ class Network (metaclass=NetworkMeta):
 
     @property
     def seed(self) -> int:
-        "Seed for the random number generator (Python and C++)."
+        "Seed for the random number generator being used for both Python and C++."
         return self._get_config('seed')
 
     @seed.setter
-    def seed(self, seed:int) -> None:
-        """
-        Sets the seed of the random number generator.
-        """
-        # Seed numpy
-        np.random.seed(seed)
+    def seed(self, seed: int) -> None:
+        "Prevent the setting of a seed by hand."
+        Messages._error("The seed argument should not be overwritten.")
 
-        # Store the value
-        self._set_config('seed', seed)
+    @property
+    def default_rng(self) -> np.random.Generator:
+        """
+        Get a pre-seeded RNG instance. During construction of the network object, a numpy.random.Generator
+        object has been instantiated. This can be used to initialize random distributions. e.g., instances of
+        ANNarchy.core.RandomDistribution.
+        """
+        return self._default_rng
 
-        if self.compiled: # Send the seed to the cython instance. Too late?
-            if self._get_config('disable_parallel_rng'):
-                self.cy_instance.set_seed(seed, 1, self._get_config('use_seed_seq'))
-            else:
-                self.cy_instance.set_seed(seed, self._get_config('num_threads'), self._get_config('use_seed_seq'))
+    @default_rng.setter
+    def default_rng(self, new_rng: np.random.Generator) -> None:
+        "Prevent the setting of RNG instance by hand."
+        Messages._error("The default_rng argument should not be overwritten.")
 
     @property
     def dt(self) -> float:
@@ -1122,9 +1200,9 @@ class Network (metaclass=NetworkMeta):
         return self._data.compiled
     
     @compiled.setter
-    def compiled(self, value) -> None:
-        self._data.compiled = True
-    
+    def compiled(self, compilation_state: bool) -> None:
+        self._data.compiled = compilation_state
+
     @property
     def directory(self) -> str:
         """
@@ -1133,7 +1211,7 @@ class Network (metaclass=NetworkMeta):
         return self._data.directory
     
     @directory.setter
-    def directory(self, directory) -> None :
+    def directory(self, directory: str) -> None:
         self._data.directory = directory
 
     @property

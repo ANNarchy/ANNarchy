@@ -35,12 +35,10 @@ default_config = dict(
     disable_split_matrix = True,
     disable_SIMD_SpMV = True,
     disable_SIMD_Eq = False,
+    disable_bitmask = True,
     # SpM formats
     sparse_matrix_format = "default",
     sparse_matrix_storage_order = "post_to_pre",
-    # Profiling
-    profiling = False,
-    profile_out = None,
     # Other
     debug = False,
     disable_shared_library_time_offset = True
@@ -108,7 +106,7 @@ class ConfigManager:
         if key in self.keys():
             return self._config[net_id][key]
         else:
-            raise Messages.ANNarchyException(key, "does not belong to global configuration keys.", exit=True)
+            raise Messages.ANNarchyException(f"The requested argument '{key}' does not belong to global configuration keys.")
         
 
     def set(self, key: str, value: str | float | bool, net_id:int=0):

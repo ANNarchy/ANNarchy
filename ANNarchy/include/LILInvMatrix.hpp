@@ -59,48 +59,12 @@
  *                  inv_post_rank = [0, 1, 2]
  *
  *  @tparam     IT      data type to represent the ranks within the matrix. Please refer to LILMatrix for more details.
- *              ST      the second type should be used if the index type IT could overflow. Please refer to LILMatrix for more details.
+ *  @tparam     ST      the second type should be used if the index type IT could overflow. Please refer to LILMatrix for more details.
  *
  */
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class LILInvMatrix: public LILMatrix<IT, ST> {
-public:
-    // Backward view
-    std::map< IT, std::vector< std::pair<IT, IT> > > inv_pre_rank ;
-    std::vector< IT > inv_post_rank ;
-
-    /*
-     *  @brief      Create backward view
-     *  @details    based on the forward connectivity stored in LILMatrix::post_rank and LILMatrix::pre_rank we
-     *              compute backward view.
-     */ 
-    void inverse_connectivity_matrix() {
-    #ifdef _DEBUG
-        std::cout << "LILInvMatrix::inverse_connectivity_matrix():" << std::endl;
-    #endif
-        // std::map < dense column_index, < sparse row_idx, sparse col_idx > >
-        inv_pre_rank =  std::map< IT, std::vector< std::pair<IT, IT> > > ();
-        for (int i=0; i<this->pre_rank.size(); i++) {
-            for (int j=0; j<this->pre_rank[i].size(); j++) {
-                inv_pre_rank[this->pre_rank[i][j]].push_back(std::pair<IT, IT>(i,j));
-            }
-        }
-
-        // store the dense column indices, please note that std::map has sorted indices
-        inv_post_rank = std::vector< IT >();
-        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
-            inv_post_rank.push_back(it->first);
-        }
-
-        // remove unneccessary allocated bytes (caused by push_back)
-        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
-            // idx pairs are stored in avector
-            it->second.shrink_to_fit();
-        }
-        inv_post_rank.shrink_to_fit();
-    }
-
-public:
+  public:
     /**
      *  @brief      Constructor
      */
@@ -115,26 +79,36 @@ public:
      */
     ~LILInvMatrix() {
     #ifdef _DEBUG
-        std::cout << "LILInvMatrix::~LILInvMatrix()" << std::endl;
+        std::cout << "LILInvMatrix::~LILInvMatrix(this=" << this << ")" << std::endl;
     #endif
     }
 
     /**
      *  @brief      Clear the containers.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
-        std::cout << "LILInvMatrix::clear()" << std::endl;
+        std::cout << "LILInvMatrix::clear(this=" << this << ")" << std::endl;
     #endif
+        // clear forward view
+        LILMatrix<IT, ST>::clear();
+
+        // clear backward view
+        inv_post_rank.clear();
+        inv_post_rank.shrink_to_fit();
+
         for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
             it->second.clear();
             it->second.shrink_to_fit();
         }
         inv_pre_rank.clear();
-
-        inv_post_rank.clear();
-        inv_post_rank.shrink_to_fit();
     }
+
+    /// don't copy the container instead returns a reference
+    std::vector< IT >& get_inv_post_rank() { return inv_post_rank; }
+
+    /// don't copy the container instead returns a reference
+    const std::map< IT, std::vector< std::pair<IT, IT> > >& get_inv_pre_rank() const { return inv_pre_rank; }
 
     /**
      *  @see    LILMatrix::init_matrix_from_lil()
@@ -206,22 +180,6 @@ public:
         inverse_connectivity_matrix();
     }
 
-    void print_data_representation() {
-        // Forward view
-        static_cast<LILMatrix<IT, ST>*>(this)->print_data_representation();
-
-        // Backward view
-        std::cout << "LILInvMatrix instance at " << this <<  std::endl;
-        std::cout << "inv_pre_rank <pre_index, vector<pair<post_index, pre_index>>:" << std::endl;
-        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
-            std::cout << it->first << ": ";
-            for (auto it2 = it->second.begin(); it2 != it->second.end(); it2++ ) {
-                std::cout << "(" << it2->first << "," << it2->second << ")" << std::endl;
-            }
-            std::cout << std::endl;
-        }
-    }
-
     /**
      *  @brief      get a list of pre-synaptic neuron ranks and their efferent connections.
      *  @details    while the LILMatrix::nb_synapses and LILMatrix::nb_synapses_per_dendrite are row-centered this
@@ -238,12 +196,15 @@ public:
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::size_in_bytes(this=" << this << ")" << std::endl;
+    #endif
         // constants
         size_t size = 2 * sizeof(unsigned int);
 
         // forward view
-        size += static_cast<LILMatrix<IT, ST>*>(this)->size_in_bytes();
+        size += LILMatrix<IT, ST>::size_in_bytes();
 
         // backward - column indices
         size += sizeof(std::vector<IT>);
@@ -258,4 +219,57 @@ public:
 
         return size;
     }
+
+  protected:
+    /**
+     *  @brief      Create backward view
+     *  @details    based on the forward connectivity stored in LILMatrix::post_rank and LILMatrix::pre_rank we
+     *              compute backward view.
+     */ 
+    void inverse_connectivity_matrix() {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::inverse_connectivity_matrix():" << std::endl;
+    #endif
+        // std::map < dense column_index, < sparse row_idx, sparse col_idx > >
+        inv_pre_rank =  std::map< IT, std::vector< std::pair<IT, IT> > > ();
+        for (int i=0; i<this->pre_rank.size(); i++) {
+            for (int j=0; j<this->pre_rank[i].size(); j++) {
+                inv_pre_rank[this->pre_rank[i][j]].push_back(std::pair<IT, IT>(i,j));
+            }
+        }
+
+        // store the dense column indices, please note that std::map has sorted indices
+        inv_post_rank = std::vector< IT >();
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            inv_post_rank.push_back(it->first);
+        }
+
+        // remove unneccessary allocated bytes (caused by push_back)
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            // idx pairs are stored in avector
+            it->second.shrink_to_fit();
+        }
+        inv_post_rank.shrink_to_fit();
+    }
+
+    void print_data_representation() {
+        // Forward view
+        LILMatrix<IT, ST>::print_data_representation();
+
+        // Backward view
+        std::cout << "LILInvMatrix instance at " << this <<  std::endl;
+        std::cout << "inv_pre_rank <pre_index, vector<pair<post_index, pre_index>>:" << std::endl;
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            std::cout << it->first << ": ";
+            for (auto it2 = it->second.begin(); it2 != it->second.end(); it2++ ) {
+                std::cout << "(" << it2->first << "," << it2->second << ")" << std::endl;
+            }
+            std::cout << std::endl;
+        }
+    }
+
+  protected:
+    // Backward view
+    std::vector< IT > inv_post_rank ;
+    std::map< IT, std::vector< std::pair<IT, IT> > > inv_pre_rank ;
 };

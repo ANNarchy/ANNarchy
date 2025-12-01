@@ -154,6 +154,7 @@ package_data = [
                 'cython_ext/*.pyx',
                 'cython_ext/CSRMatrix.hpp',
                 'include/*.hpp',
+                'include/*.cuh',
                 'thirdparty/*.hpp'
                 ]
 

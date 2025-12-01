@@ -25,7 +25,6 @@
 #include <algorithm>
 
 #include "BSRMatrixBitmask.hpp"
-#include "helper_functions.hpp"
 
 /**
  *	\brief		Implementation of a blocked compressed sparse row (BSR) format.
@@ -106,22 +105,36 @@ public:
      */
     explicit BSRInvMatrixBitmask(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
         BSRMatrixBitmask<IT, ST, MT, row_major>(num_rows, num_columns, tile_size) {
-
+    #ifdef _DEBUG
+        std::cout << "BSRInvMatrixBitmask::BSRInvMatrixBitmask(this=" << this << ")" << std::endl;
+    #endif
     }
 
     ~BSRInvMatrixBitmask() {
     #ifdef _DEBUG
-        std::cout << "BSRInvMatrixBitmask::~BSRInvMatrixBitmask()" << std::endl;
+        std::cout << "BSRInvMatrixBitmask::~BSRInvMatrixBitmask(this=" << this << ")" << std::endl;
     #endif
     }
 
     /**
      * \details     Clear the STL container
      */
-    void clear() {
+    void clear() override {
+    #ifdef _DEBUG
+        std::cout << "BSRInvMatrixBitmask::clear()" << std::endl;
+    #endif
         // clear forward view
-        static_cast<BSRMatrixBitmask<IT, ST, MT, row_major>*>(this)->clear();
+        BSRMatrixBitmask<IT, ST, MT, row_major>::clear();
 
+        // clear backward view
+        block_column_pointer_.clear();
+        block_column_pointer_.shrink_to_fit();
+
+        block_row_index_.clear();
+        block_row_index_.shrink_to_fit();
+
+        block_inv_index_.clear();
+        block_inv_index_.shrink_to_fit();        
     }
 
     //
@@ -136,7 +149,6 @@ public:
     #ifdef _DEBUG
         std::cout << "BSRInvMatrixBitmask::init_matrix_from_lil()" << std::endl;
     #endif
-        clear();
 
         // Construct forward view
         bool success = static_cast<BSRMatrixBitmask<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
@@ -177,11 +189,11 @@ public:
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 0;
 
         // forward view of BSR
-        size += static_cast<BSRMatrixBitmask<IT, ST, MT, row_major>*>(this)->size_in_bytes();
+        size += BSRMatrixBitmask<IT, ST, MT, row_major>::size_in_bytes();
 
         // inverse view
         size += block_column_pointer_.capacity() * sizeof(IT);

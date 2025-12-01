@@ -45,7 +45,6 @@ public:
     #ifdef _DEBUG
         std::cout << "DiaMatrix::~DiaMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**
@@ -53,7 +52,7 @@ public:
      *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "DiaMatrix::clear()" << std::endl;
     #endif
@@ -368,7 +367,7 @@ public:
      *  @returns    size in bytes for stored connectivity
      *  @see        LILMatrix::size_in_bytes()
      */
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
 
         // post_ranks

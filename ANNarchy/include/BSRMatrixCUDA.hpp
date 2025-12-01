@@ -22,30 +22,26 @@
 
 #include "BSRMatrix.hpp"
 
-/*
- *  @brief      Implementation of the blocked sparse row (BSR) format for GPUs
- *  @details    The format has been described in detail, e.g. in:
+/**
+ *  \brief      Implementation of the blocked sparse row (BSR) format for GPUs
+ *  \details    The format has been described in detail, e.g. in:
  * 
  *              * Vershoor and Jalba (2012): Analysis and performance estimation of the Conjugate Gradient method on multiple GPUs
  *              * Eberhardt & Hoemmen (2016): Optimization of block sparse matrix-vector multiplication on shared-memory parallel architectures
  *              * Benetia et al. 2018 (2018): BestSF: A Sparse Meta-Format for Optimizing SpMV on GPU
  *              * NVIDIA Corporation: https://docs.nvidia.com/cuda/cusparse/index.html
+ * 
+ *	\tparam 	IT		    index data type
+ *	\tparam 	VT		    value data type
+
+ *  \note       The current implementation forces *char* as mask type for CUDA devices. Also the storage scheme is forced to be column major.
  */
-template<typename IT=unsigned int, typename ST=unsigned long int, typename MT=char>
-class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false> 
+template<typename IT=unsigned int, typename ST=unsigned long int>
+class BSRMatrixCUDA: public BSRMatrix<IT, ST, char, false> 
 {
     IT* gpu_block_row_pointer_;
     IT* gpu_block_column_index_;
-    char* gpu_tile_data_;
-
-    bool check_free_memory(size_t required) {
-        size_t free, total;
-        cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
-        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return required < free;
-    }
+    char* gpu_tile_mask_;
 
     void free_device_memory() {
         if (gpu_block_row_pointer_) {
@@ -56,9 +52,9 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false>
             cudaFree(gpu_block_column_index_);
             gpu_block_column_index_ = nullptr;
         }
-        if (gpu_tile_data_) {
-            cudaFree(gpu_tile_data_);
-            gpu_tile_data_ = nullptr;
+        if (gpu_tile_mask_) {
+            cudaFree(gpu_tile_mask_);
+            gpu_tile_mask_ = nullptr;
         }
     }
 
@@ -66,7 +62,7 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false>
         // Allocate 
         cudaMalloc((void**)&gpu_block_row_pointer_, this->block_row_pointer_.size() * sizeof(IT));
         cudaMalloc((void**)&gpu_block_column_index_, this->block_column_index_.size() * sizeof(IT));
-        cudaMalloc((void**)&gpu_tile_data_, this->tile_data_.size()*sizeof(char));
+        cudaMalloc((void**)&gpu_tile_mask_, this->tile_mask_.size()*sizeof(char));
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
             std::cout << "BCSRMatrixCUDA::transfer_to_device():" << cudaGetErrorString(err) << std::endl;
@@ -87,13 +83,13 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false>
 
 public:
     BSRMatrixCUDA(const unsigned int num_rows, const unsigned int num_columns, const unsigned int block_size) :
-        BSRMatrix<IT, ST, MT, false>(num_rows, num_columns, block_size) {
+        BSRMatrix<IT, ST, char, false>(num_rows, num_columns, block_size) {
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::BSRMatrixCUDA()" << std::endl;
     #endif
             gpu_block_row_pointer_ = nullptr;
             gpu_block_column_index_ = nullptr;
-            gpu_tile_data_ = nullptr;
+            gpu_tile_mask_ = nullptr;
         }
 
     /**
@@ -110,19 +106,19 @@ public:
      *  @brief      clear the BSR matrix
      *  @details    responsible to delete the allocated GPU memory.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->clear();
+        BSRMatrix<IT, ST, char, false>::clear();
 
         // clear device
         free_device_memory();
     }
 
     void load_from_file(std::string filename=std::string("mat.txt"), bool measure_time = true) {
-        static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->load_from_file(filename, measure_time);
+        static_cast<BSRMatrix<IT, ST, char, false>*>(this)->load_from_file(filename, measure_time);
 
         transfer_to_device();
     }
@@ -140,12 +136,12 @@ public:
         std::cout << "BSRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        bool success = static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<BSRMatrix<IT, ST, char, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
         if (!success)
             return false;
 
-        size_t required = this->block_row_pointer_.size() * sizeof(IT) + this->block_column_index_.size() * sizeof(IT) + this->tile_data_.size()*sizeof(char);
-        if( !check_free_memory(required) )
+        size_t required = this->block_row_pointer_.size() * sizeof(IT) + this->block_column_index_.size() * sizeof(IT) + this->tile_mask_.size()*sizeof(char);
+        if( !check_free_memory_cuda(required) )
             return false;
 
         return transfer_to_device();
@@ -156,10 +152,10 @@ public:
     #ifdef _DEBUG
         std::cout << "BCSRMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
-        assert( this->tile_data_.size() == host_variable.size() );
+        assert( this->tile_mask_.size() == host_variable.size() );
 
         size_t required = host_variable.size() * sizeof(VT);
-        if (!check_free_memory(required))
+        if (!check_free_memory_cuda(required))
             return nullptr;
 
         // Allocate and copy

@@ -88,30 +88,6 @@ def compile(
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
 
-    Note since ANNarchy 5.0 the compilation of shadow networks is not allowed anymore. You need to construct a Network object, see the documentation.
-    """
-    Messages._warning("Since ANNarchy 5.0 the compilation of shadow networks is not supported anymore\n\t and using them possibly could generate errorneous simulation results or crash.\n\t You need to construct a Network object, please refer to the documentation.")
-    _compile(directory=directory, clean=clean, compiler=compiler, compiler_flags=compiler_flags, add_sources=add_sources, extra_libs=extra_libs, cuda_config=cuda_config,
-             annarchy_json=annarchy_json, silent=silent, debug_build=debug_build, trace_calls=trace_calls, profile_enabled=profile_enabled, net_id=net_id)
-
-def _compile(
-        directory='annarchy',
-        clean=False,
-        compiler="default",
-        compiler_flags="default",
-        add_sources="",
-        extra_libs="",
-        cuda_config={'device': 0},
-        annarchy_json="",
-        silent=False,
-        debug_build=False,
-        trace_calls=None,
-        profile_enabled=False,
-        net_id=0
-    ):
-    """
-    This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
-
     The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
 
     The following arguments are for internal development use only:
@@ -148,24 +124,12 @@ def _compile(
     if (options.num_threads != None) and (options.gpu_device >= 0):
         Messages._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
-    # check if profiling was enabled by --profile
-    if options.profile != None:
-        profile_enabled = options.profile
-        _update_global_config('profiling', options.profile)
-        _update_global_config('profile_out', options.profile_out)
+    # check if profiling enabled due compile() or --profile
+    if profile_enabled or options.profile is not None:
+        NetworkManager().get_network(net_id)._profiler = Profiler(profile_out='.' if options.profile_out is None else options.profile_out, net_id=net_id)
 
-    # check if profiling enabled due compile()
-    if profile_enabled != False and options.profile == None:
-        _update_global_config('profiling', True)
-    # if profiling is enabled
-    if profile_enabled:
-        # this will automatically create a globally available Profiler instance
-        Profiler().enable_profiling()
-        if ConfigManager().get('profile_out', net_id) == None:
-            _update_global_config('profile_out', '.')
-
-    # Debug the simulation kernel
-    if debug_build is False:
+    # Debug the simulation kernel, maybe enabled on command-line?
+    if not debug_build:
         debug_build = options.debug  # debug build
     _update_global_config('debug', debug_build)
 
@@ -308,19 +272,19 @@ def detect_cuda_arch():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, 
-                 annarchy_dir, 
-                 clean, 
-                 compiler, 
-                 compiler_flags, 
-                 add_sources, 
-                 extra_libs, 
-                 path_to_json, 
-                 silent, 
-                 cuda_config, 
+    def __init__(self,
+                 annarchy_dir,
+                 clean,
+                 compiler,
+                 compiler_flags,
+                 add_sources,
+                 extra_libs,
+                 path_to_json,
+                 silent,
+                 cuda_config,
                  debug_build,
                  trace_calls,
-                 profile_enabled, 
+                 profile_enabled,
                  net_id):
 
         # Store arguments
@@ -340,24 +304,27 @@ class Compiler(object):
         # Network to compile
         self.network = NetworkManager().get_network(net_id)
 
-        # Get user-defined config
-        self.user_config = {
-            'openmp': {
-                'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
-                'flags' : "-march=native -O2",
-            },
-            'cuda': {
-                'compiler': "nvcc",
-                'device': 0
-            }
-        }
-
+        # Aside from arguments provided to compile, some configuration is stored in annarchy.json
         if len(path_to_json) == 0:
-            # check homedirectory
+            # check home-directory
             if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
                 with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
                     self.user_config = json.load(rfile)
+            else:
+                # Set default user-defined config
+                self.user_config = {
+                    'openmp': {
+                        'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
+                        'flags' : "-march=native -O3",
+                    },
+                    'cuda': {
+                        'compiler': "nvcc",
+                        'device': 0
+                    }
+                }
+
         else:
+            # Load user-defined annarchy.json
             with open(path_to_json, 'r') as rfile:
                 self.user_config = json.load(rfile)
 
@@ -373,10 +340,10 @@ class Compiler(object):
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
 
-        if Profiler().enabled or ConfigManager().get('show_time', self.net_id):
+        if NetworkManager().get_network(self.net_id)._profiler is not None or ConfigManager().get('show_time', self.net_id):
             t0 = time.time()
-            if Profiler().enabled:
-                Profiler().add_entry(t0, t0, "overall", "compile")
+            if NetworkManager().get_network(self.net_id)._profiler is not None:
+                NetworkManager().get_network(self.net_id)._profiler.add_entry(t0, t0, "overall", "compile")
 
         if ConfigManager().get('verbose', self.net_id):
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
@@ -433,9 +400,9 @@ class Compiler(object):
 
         # Tell the networks they have been compiled
         self.network.compiled = True
-        if Profiler().enabled:
+        if NetworkManager().get_network(self.net_id)._profiler is not None:
             t1 = time.time()
-            Profiler().update_entry(t0, t1, "overall", "compile")
+            NetworkManager().get_network(self.net_id)._profiler.update_entry(t0, t1, "overall", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -505,7 +472,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Messages._print(msg, end=" ", flush=True)
-            if ConfigManager().get('show_time', self.net_id) or Profiler().enabled:
+            if ConfigManager().get('show_time', self.net_id) or NetworkManager().get_network(self.net_id)._profiler is not None:
                 t0 = time.time()
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
@@ -516,7 +483,7 @@ class Compiler(object):
         # Switch to the build directory
         cwd = os.getcwd()
         os.chdir(target_dir)
-        
+
         # CMake is quite talky by default (printing out compiler versions etc.)
         # We reduce the number of printed messages except the user enabled verbose mode.
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not ConfigManager().get('verbose', self.net_id) else ""
@@ -548,7 +515,7 @@ class Compiler(object):
             except:
                 pass
             Messages._error('Compilation failed.')
-            
+
         else: # Note that the last compilation was successful
             with open(self.annarchy_dir + '/compilation', 'w') as wfile:
                 wfile.write("1")
@@ -564,8 +531,8 @@ class Compiler(object):
             else:
                 Messages._print('OK (took '+str(t1 - t0)+'seconds.', flush=True)
 
-            if Profiler().enabled:
-                Profiler().add_entry(t0, t1, "compilation", "compile")
+            if NetworkManager().get_network(self.net_id)._profiler is not None:
+                NetworkManager().get_network(self.net_id)._profiler.add_entry(t0, t1, "compilation", "compile")
 
     def generate_makefile(self):
         """
@@ -597,12 +564,6 @@ class Compiler(object):
 
         if self.profile_enabled:
             cpu_flags += " -g"
-
-        # HD (13th Feb. 2025): nanobind passes all the compiler flags to the nvcc.
-        #                      However, the march=native flag is not supported at least for lower
-        #                      cmake versions.
-        if _check_paradigm("cuda"):
-            cpu_flags = cpu_flags.replace("-march=native", "")
 
         # OpenMP flag
         omp_flag = ""
@@ -641,7 +602,6 @@ class Compiler(object):
             # -Xcompiler expects the arguments seperated by ','
             if len(cpu_flags.strip()) > 0:
                 xcompiler_flags = cpu_flags.replace(" ",",")
-                xcompiler_flags += ","
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
@@ -717,9 +677,11 @@ class Compiler(object):
         """
         # First, we remove previously created files
         target_folder = self.annarchy_dir+'/generate/net'+ str(self.net_id)
+        if ConfigManager().get("verbose", self.net_id):
+            print('\n\nCheck target folder:', target_folder)
         for file in os.listdir(target_folder):
             if ConfigManager().get("verbose", self.net_id):
-                print("Remove previously generated file:", target_folder+'/'+file)
+                print("  - remove file:", file)
             os.remove(target_folder+'/'+file)
 
         # Then, we generate the code for the current network
@@ -758,9 +720,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     """
     After every is compiled, actually create the Cython objects and bind them to the Python ones.
     """
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t0 = time.time()
-        Profiler().add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -779,18 +741,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Load the library
     cython_module = load_cython_lib(libname, libpath)
     NetworkManager().get_network(net_id=net_id).instance = cython_module
-
-    # Set the CUDA device
-    if _check_paradigm("cuda", net_id):
-        device = 0
-        if cuda_config is not None:
-            device = int(cuda_config['device'])
-        elif user_config is not None and 'cuda' in user_config.keys():
-            device = int(user_config['cuda']['device'])
-
-        if ConfigManager().get('verbose', net_id):
-            Messages._print('Setting GPU device', device)
-        cython_module.set_device(device)
 
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
@@ -838,16 +788,23 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if ConfigManager().get('verbose', net_id):
                 Messages._print('Running simulation single-threaded.')
 
-    # Sets the desired computation device for CUDA
-    if _check_paradigm("cuda", net_id) and (user_config!=None):
+    elif _check_paradigm("cuda", net_id):
         # check if there is a configuration,
         # otherwise fall back to default device
-        try:
-            dev_id = int(user_config['cuda']['device'])
-        except KeyError:
-            dev_id = 0
+        device = 0
+        if user_config is not None and 'cuda' in user_config.keys():
+            device = int(cuda_config['device'])
+        elif cuda_config is not None:
+            device = int(user_config['cuda']['device'])
 
-        cython_module.set_device(dev_id)
+        if ConfigManager().get('verbose', net_id):
+            Messages._print('Setting GPU device', device)
+
+        # Set the CUDA device
+        cython_module.set_device(device)
+
+    else:
+        raise NotImplementedError
 
     # Instantiate CPP objects
     cython_module.pyx_create()
@@ -863,15 +820,15 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     else:
         cython_module.set_seed(seed, 1, ConfigManager().get('use_seed_seq', net_id))
 
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         # register the CPP profiling instance
         # Attention: since ANNarchy 5.0 this need to be instantiated before any other cpp object.
-        Profiler()._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()
+        NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()
 
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Creating population', pop.name)
+            Messages._print('Instantiate population ( name =', pop.name, ', size =', pop.size,')')
         if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
@@ -879,12 +836,12 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         pop._instantiate(cython_module)
 
         if ConfigManager().get('show_time', net_id):
-            Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('  instantiate of the population took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Instantiate projection ( pre =', proj.pre.name, ', post =', proj.post.name, ', target =', proj.target, ')')
         if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
@@ -892,7 +849,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         proj._instantiate(cython_module)
 
         if ConfigManager().get('show_time', net_id):
-            Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('  instantiate of the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
     cython_module.pyx_initialize(ConfigManager().get('dt', net_id))
@@ -904,17 +861,17 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Initializing population', pop.name)
+            Messages._print('Initializing C++ counterpart of population', pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get('verbose', net_id):
-            Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Initializing C++ counterpart of projection', proj.name)
         proj._init_attributes()
 
     # Start the monitors
     for monitor in NetworkManager().get_network(net_id).get_monitors():
         monitor._init_monitoring()
 
-    if Profiler().enabled:
+    if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t1 = time.time()
-        Profiler().update_entry(t0, t1, "overall", "instantiate")
+        NetworkManager().get_network(net_id=net_id)._profiler.update_entry(t0, t1, "overall", "instantiate")

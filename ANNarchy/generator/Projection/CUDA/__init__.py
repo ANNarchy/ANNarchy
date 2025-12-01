@@ -24,6 +24,8 @@ BaseTemplates:
 
         * CSR_T:        csrc (transposed)
 """
+from . import BaseTemplates
+
 from . import COO as COO_CUDA
 from . import BSR as BSR_CUDA
 from . import CSR as CSR_CUDA

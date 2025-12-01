@@ -79,7 +79,7 @@ continuous_transmission = {
     'sum' : """
     %(idx_type)s row_ptr_size = block_row_size();
     %(idx_type)s row_nr_off = 0;
-    %(idx_type)s row_max = this->get_num_rows();
+    %(idx_type)s row_max = this->num_rows();
     %(idx_type)s tile_size = get_tile_size();
     %(idx_type)s tile_size2 = tile_size*tile_size;
     auto block_ptr = block_row_pointer();
@@ -124,7 +124,7 @@ continuous_transmission_unroll_2x2 = {
     'sum' : """
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
-        %(idx_type)s row_max = this->get_num_rows();
+        %(idx_type)s row_max = this->num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
         auto block_ptr = block_row_pointer();
@@ -168,7 +168,7 @@ continuous_transmission_unroll_3x3 = {
     'sum' : """
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
-        %(idx_type)s row_max = this->get_num_rows();
+        %(idx_type)s row_max = this->num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
         auto block_ptr = block_row_pointer();
@@ -220,7 +220,7 @@ continuous_transmission_unroll_2x2_avx512 = {
     #ifdef __AVX512F__
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
-        %(idx_type)s row_max = this->get_num_rows();
+        %(idx_type)s row_max = this->num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
         auto block_ptr = block_row_pointer();
@@ -299,7 +299,7 @@ continuous_transmission_unroll_2x2_avx512 = {
     #ifdef __AVX512F__
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
-        %(idx_type)s row_max = this->get_num_rows();
+        %(idx_type)s row_max = this->num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
         auto block_ptr = block_row_pointer();

@@ -9,7 +9,6 @@ projection_header = """/*
 #pragma once
 
 #include "ANNarchy.hpp"
-#include "helper_functions.hpp"
 %(sparse_matrix_include)s
 %(include_additional)s
 %(include_profile)s
@@ -101,15 +100,15 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(access_additional)s
 
     // Memory management
-    long int size_in_bytes() {
+    size_t size_in_bytes() override final {
         long int size_in_bytes = 0;
 %(size_in_bytes)s
         return size_in_bytes;
     }
 
-    void clear() {
+    void clear() override final {
     #ifdef _DEBUG
-        std::cout << "PopStruct%(id_proj)s::clear()" << std::endl;
+        std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container)s
     }
@@ -122,10 +121,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(host_to_device)s
     }
 
-    void device_to_host() {
-    #if defined(_TRACE_INIT) || defined(_DEBUG)
-        std::cout << "  ProjStruct%(id_proj)s::device_to_host() called at t = " << t << " simulation steps." << std::endl;
-    #endif    
+    void device_to_host(std::string attr_name) {
 %(device_to_host)s
     }
 };
@@ -333,8 +329,8 @@ curand = {
     curandState* gpu_%(rd_name)s;
 """,
         'init': """
-        cudaMalloc((void**)&gpu_%(rd_name)s, this->nb_synapses() * sizeof(curandState));
-        init_curand_states( this->nb_synapses(), gpu_%(rd_name)s, global_seed );
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )

@@ -101,7 +101,7 @@ class ProjectionGenerator(object):
         #                       has not been evaluated yet.
         #                       Therefore, I limit the application of bitmasks to spiking networks without
         #                       learning.
-        use_bitmask = False if proj.synapse_type.description['plasticity'] else True
+        use_bitmask = False if (proj.synapse_type.description['plasticity'] or ConfigManager().get('disable_bitmask', net_id=self._net_id)) else True
 
         # Some matrix formats like have additional hyper-parameters or specialized optimizations
         # which change the number of provided argument and/or required data types. If not defined
@@ -354,7 +354,7 @@ class ProjectionGenerator(object):
                 # CPP template parameter: index type, size type, mask type, use row major
                 if proj._storage_order == "post_to_pre":
                     if _check_paradigm("openmp", self._net_id):
-                        sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, false>"
+                        sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, true>"
                         sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
                         single_matrix = True
 
@@ -396,11 +396,16 @@ class ProjectionGenerator(object):
 
         # For debug: printout the configured SpMV implementation
         if ConfigManager().get('verbose', self._net_id) and not suppress_printouts:
-            print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
+            _debug(f"Code configuration for projection {proj.name}:")
+            _debug(f"  - SpM format   : {sparse_matrix_format}({sparse_matrix_args})")
+            _debug(f"  - single matrix: {single_matrix}")
+            _debug(f"  - delay config : max_delay={proj.max_delay}, uniform_delay={proj.uniform_delay}")
+
+            #print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", , " single_matrix =", single_matrix )
             if proj._storage_format == "bsr":
-                _debug("  we will use a {} x {} tile".format(proj._bsr_tile_size, proj._bsr_tile_size))
+                _debug(f"  - dense tiles are {proj._bsr_tile_size} x {proj._bsr_tile_size}")
             elif proj._storage_format == "sell":
-                _debug("  we will use a block size of {} rows.".format(proj._sell_block_size))
+                _debug(f"  - block size of {proj._sell_block_size} rows")
 
         return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix
 
@@ -640,7 +645,7 @@ class ProjectionGenerator(object):
                     read_dirty_flag = ""
                 else:
                     write_dirty_flag = "%(name)s_host_to_device = true;" % {'name': var['name']}
-                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host();" % {'name': var['name']}
+                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host(name);" % {'name': var['name']}
             else:
                 write_dirty_flag = ""
                 read_dirty_flag = ""
@@ -825,7 +830,7 @@ class ProjectionGenerator(object):
                     
                 elif var['locality'] == "local":
                     if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):   # Init weights in CPP
-                        if proj.connector_weight_dist == None:
+                        if proj.connector_weight_dist is None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
                                 'type': var['ctype'],
@@ -851,14 +856,14 @@ class ProjectionGenerator(object):
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
 
                         elif isinstance(proj.connector_weight_dist, ANNRandom.LogNormal):
-                            if proj.connector_weight_dist.min==None and proj.connector_weight_dist.max==None:
+                            if proj.connector_weight_dist.min is None and proj.connector_weight_dist.max is None:
                                 if single_spmv_matrix:
                                     init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                                 else:
                                     init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
                             else:
-                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min==None else str(proj.connector_weight_dist.min)
-                                max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max==None else str(proj.connector_weight_dist.max)
+                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min is None else str(proj.connector_weight_dist.min)
+                                max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max is None else str(proj.connector_weight_dist.max)
                                 if single_spmv_matrix:
                                     init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0], "+min_code+", "+max_code+");"
                                 else:
@@ -884,10 +889,7 @@ class ProjectionGenerator(object):
                             'attr_type': attr_type,
                             'float_prec': ConfigManager().get('precision', self._net_id)
                         }
-                        if proj._storage_format=="dense":
-                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
-                        else:
-                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
+                        weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
                         if _check_paradigm("cuda", self._net_id):
                             weight_code += tabify("\nw_host_to_device = true;", 2)
 
@@ -917,7 +919,7 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             # Special case: we have non-uniform delays, but not determined by a RandomDistribution
             #               This will caused most likely by custom connectivity pattern
-            if proj.connector_delay_dist == None and proj.uniform_delay==-1:
+            if proj.connector_delay_dist is None and proj.uniform_delay==-1:
                 id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                 if proj.synapse_type.type == "rate":
                     delay_code = self._templates['delay']['nonuniform_rate_coded']['init']  % self._template_ids
@@ -926,7 +928,7 @@ class ProjectionGenerator(object):
 
             #
             # uniform delay
-            elif proj.connector_delay_dist == None:
+            elif proj.connector_delay_dist is None:
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
@@ -1019,10 +1021,10 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
 
         # Connectivity
         _, sparse_matrix_format, _, _ = self._select_sparse_matrix_format(proj)
-        code += """
+        code += f"""
         // connectivity
-        size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();
-""" % {'spm': sparse_matrix_format}
+        size_in_bytes += {sparse_matrix_format}::size_in_bytes();
+"""
 
         # Other variables
         for attr in proj.synapse_type.description['variables']+proj.synapse_type.description['parameters']:
@@ -1054,10 +1056,10 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         # Connectivity, either default format or overwritten by SpecificProjection
         _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
         if 'declare_connectivity_matrix' not in proj._specific_template.keys():
-            code = """
+            code = f"""
         // Connectivity
-        static_cast<%(spm)s*>(this)->clear();
-"""  % {'spm': spm_format}
+        {spm_format}::clear();
+"""
         else:
             code = ""
 

@@ -58,13 +58,13 @@ public:
     /**
      * \details     Clear the STL container
      */
-    void clear() {
-        // clear forward view
-        static_cast<CSRMatrix<IT, ST>*>(this)->clear();
-
+    void clear() override {
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::clear()" << std::endl;
     #endif
+        // clear forward view
+        CSRMatrix<IT, ST>::clear();
+
         // clear backward view
         _col_ptr.clear();
         _col_ptr.shrink_to_fit();
@@ -135,7 +135,6 @@ public:
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
     #endif
-        clear();
 
         // create forward view
         static_cast<CSRMatrix<IT, ST>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
@@ -147,10 +146,10 @@ public:
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-        clear();
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::fixed_probability_pattern():" << std::endl;
     #endif
+
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
         lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
@@ -243,11 +242,11 @@ public:
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
      */
-    size_t size_in_bytes() {
+    size_t size_in_bytes() override {
         size_t size = 0;
 
         // forward view of CSR
-        size += static_cast<CSRMatrix<IT, ST>*>(this)->size_in_bytes();
+        size += CSRMatrix<IT, ST>::size_in_bytes();
 
         // backward view
         size += sizeof(std::vector<ST>);

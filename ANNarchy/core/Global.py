@@ -12,8 +12,28 @@ from typing import Any
 from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
+
+__all__ = [
+    'clear',
+    'reset',
+    'magic_network',
+    'get_population',
+    'get_projection',
+    'populations',
+    'projections',
+    'monitors',
+    'add_function',
+    'functions',
+    'enable_learning',
+    'disable_learning',
+    'get_time',
+    'set_time',
+    'get_current_step',
+    'set_current_step',
+    'dt',
+    'set_seed',
+]
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
@@ -40,26 +60,12 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
         synapses=synapses, 
     )
 
-    # Remove the present profiler
-    if Profiler().enabled:
-        check_profile_results()
-        Profiler().disable_profiling()
-
     # Reinitialize initial state
     NetworkManager().clear()
 
-def check_profile_results():
+def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True, net_id:int=0):
     """
-    If the user enabled profiling, we here check if we recorded some results.
-    """
-    if Profiler().enabled:
-        Profiler().print_profile()
-
-        Profiler().store_cpp_time_as_csv()
-
-def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, net_id:int=0):
-    """
-    Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
+    Reinitialises the network to its state before the call to `compile()`. The network time will be set to 0ms.
 
     All monitors are emptied.
 
@@ -67,30 +73,9 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
     :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
     :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
     :param monitors: if True, the monitors will be emptied and reset (default=True).
+    ;param reseed_rng: if True, RNG generators will be reset using the stored seed (default=True).
     """
-
-    NetworkManager().get_network(net_id=net_id).instance.set_time(0)
-    
-    if populations:
-        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
-            pop.reset()
-
-        # pop.reset only clears spike container with no or uniform delay
-        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
-            if hasattr(proj.cyInstance, 'reset_ring_buffer'):
-                proj.cyInstance.reset_ring_buffer()
-
-    if synapses and not projections:
-        Messages._warning("reset(): if synapses is set to true this automatically enables projections==true")
-        projections = True
-
-    if projections:
-        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
-            proj.reset(attributes=-1, synapses=synapses)
-
-    if monitors:
-        for monitor in NetworkManager().get_network(net_id=net_id).get_monitors():
-            monitor.reset()
+    NetworkManager().get_network(net_id=net_id).reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, reseed_rng=reseed_rng)
 
 ################################
 ## Accessing shadow network

@@ -124,7 +124,9 @@ dense_summation_operation = {
 %(float_prec)s* __restrict__ target = %(post_prefix)s_sum_%(target)s.data();
 
 %(omp_code)s %(omp_clause)s %(omp_schedule)s
-for(i = 0; i < rows; i++) {
+for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+    i = post_ranks_[_idx];
+
     %(float_prec)s sum = 0.0;
     for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
@@ -159,7 +161,9 @@ continuous_transmission_sse = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             __m128d _tmp_reg_sum = _mm_setzero_pd();
 
             _s=i*columns;
@@ -214,8 +218,9 @@ continuous_transmission_sse = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             __m128 _tmp_reg_sum = _mm_setzero_ps();
 
             _s=i*columns;
@@ -275,7 +280,9 @@ continuous_transmission_avx = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
             _s=i*columns;
@@ -323,7 +330,9 @@ continuous_transmission_avx = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             __m256 _tmp_reg_sum = _mm256_setzero_ps();
 
             _s=i*columns;
@@ -373,7 +382,9 @@ continuous_transmission_avx = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             %(idx_type)s rk_post = i;
             __m256 _tmp_reg_sum = _mm256_setzero_ps();
 
@@ -428,7 +439,9 @@ continuous_transmission_avx512 = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             %(idx_type)s rk_post = i;
             __m512d _tmp_reg_sum = _mm512_setzero_pd();
 
@@ -475,7 +488,9 @@ continuous_transmission_avx512 = {
 
         // Row-wise SpMV
         #pragma omp for
-        for(i = 0; i < rows; i++) {
+        for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+            i = post_ranks_[_idx];
+
             %(idx_type)s rk_post = i;
             __m512 _tmp_reg_sum = _mm512_setzero_ps();
 

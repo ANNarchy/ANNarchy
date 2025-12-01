@@ -9,8 +9,7 @@ from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm, get_global_config
 from ANNarchy.intern import Messages
 
 import re
@@ -69,7 +68,7 @@ def extract_randomdist(description, net_id):
                     'args': processed_arguments,
                     'template': distributions_equivalents[dist],
                     'locality': variable['locality'],
-                    'ctype': 'double',
+                    'ctype': ConfigManager().get('precision', net_id),
                     'dependencies': dependencies
                 }
                 rk_rand += 1

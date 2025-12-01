@@ -20,8 +20,6 @@
  */
 #pragma once
 
-#include "helper_functions.hpp"
-
 /**
  *	\brief		Implementation of a blocked compressed sparse row (BSR) format.
  *	\details	A blocked variant of the classic compressed sparse row matrix format. It is basically
@@ -52,48 +50,10 @@ class BSRMatrixBitmask {
     std::vector<IT> block_row_pointer_;
     std::vector<IT> block_column_index_;
     std::vector<MT> tile_bitmask_;
-    ST num_tile_elems_;                       ///< number of elements stored across all tiles. Note that must not be the number of non-zeros as padding zeros are counted too.
+    ST num_tile_elems_;                       ///< number of elements stored across all tiles. Note that must not be the number of nonzeros as padding zeros are counted too.
 
     // not typical for BSR, but helpful for the usage in ANNarchy
     std::vector<IT> post_ranks_;
-
-    /**
-     *  @brief      check if the matrix fits into RAM
-     *  @details    Unlike CUDA it appears that the standard C++ API does not
-     *              provide a function to get the available RAM at a present time.
-     *              Many sources recommended to use the /proc/meminfo file
-     */
-    bool check_free_memory(size_t required) {
-    #ifdef __linux__
-        FILE *meminfo = fopen("/proc/meminfo", "r");
-        
-        // TODO:    I'm not completely sure, what we want to do
-        //          in this case. Currently, we would hope for the best ...
-        if(meminfo == nullptr) {
-            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
-            return true;
-        }
-
-        char line[256];
-        int ram;
-
-        while(fgets(line, sizeof(line), meminfo))
-        {
-            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
-                break;  // hit
-        }
-
-        fclose(meminfo);
-        size_t available = static_cast<size_t>(ram) * 1024;
-    #ifdef _DEBUG
-        std::cout << "BSRMatrixBitmask: allocate " << required << " from " << available << " bytes " << std::endl;
-    #endif
-        return required < available;
-
-    #else
-        return true;
-    #endif
-    }
 
     // Attention: this function returns the LIL indices, this easier for the following processing
     std::vector<std::vector<IT>> split_row_indices(std::vector<IT>& row_indices, IT nb_block_rows) {
@@ -133,7 +93,7 @@ class BSRMatrixBitmask {
     #endif
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "BSRMatrixBitmask::clear()" << std::endl;
     #endif
@@ -153,8 +113,12 @@ class BSRMatrixBitmask {
         tile_bitmask_.shrink_to_fit();
     }
 
-    inline IT get_num_rows() {
+    inline IT num_rows() {
         return this->num_rows_;
+    }
+
+    inline IT num_columns() {
+        return this->num_columns_;
     }
 
     //
@@ -190,8 +154,6 @@ class BSRMatrixBitmask {
     #ifdef _DEBUG
         std::cout << "BSRMatrixBitmask::init_matrix_from_lil()" << std::endl;
     #endif
-        // clear previously instantiated matrix
-        clear();
 
         // Construct the BSR format from LIL
         post_ranks_ = row_indices;
@@ -258,7 +220,7 @@ class BSRMatrixBitmask {
                     // fill the complete tile with zeros
                     std::fill(current_tile_bitmask.begin(), current_tile_bitmask.end(), static_cast<MT>(0.0));
 
-                    // set the positions of non-zeros
+                    // set the positions of nonzeros
                     for (auto it = idx_pairs_per_block[b_c_idx].begin(); it != idx_pairs_per_block[b_c_idx].end(); it++) {
                         IT tile_r_idx = it->first % tile_size_;
                         IT tile_c_idx = it->second % tile_size_;
@@ -474,7 +436,62 @@ class BSRMatrixBitmask {
             return std::vector<VT>();
         }
 
-        return std::vector<VT>(this->num_tile_elems_, default_value);
+        auto variable = std::vector<VT>(this->num_tile_elems_, static_cast<VT>(0.0));
+
+        for (IT b_r_idx = 0; b_r_idx < this->block_row_pointer_.size(); b_r_idx++) {
+            for (IT b_c_idx = block_row_pointer_[b_r_idx]; b_c_idx < block_row_pointer_[b_r_idx+1]; b_c_idx++) {
+                for (IT row_in_tile = 0; row_in_tile < tile_size_; row_in_tile++) {
+                    if (row_major) {
+                        ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
+                        for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
+                            if (tile_bitmask_[b_c_idx * tile_size_ + row_in_tile] & (1<<(col_in_tile%tile_size_)))
+                                variable[col_in_tile] = default_value;
+                        }
+                    } else {
+                        ST col_in_tile_begin = b_c_idx * tile_size_ * tile_size_;
+                        auto current_tile_bitmask = &tile_bitmask_[b_c_idx * tile_size_];
+                        for (IT col = 0; col < tile_size_; col++) {
+                            if ((current_tile_bitmask[col] & (1<<row_in_tile)) ? 1 : 0) {
+                                variable[col_in_tile_begin + col * tile_size_ + row_in_tile] = default_value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return variable;
+    }
+
+    template <typename VT>
+    std::vector< VT > init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+
+        std::uniform_real_distribution<VT> dis (a,b);
+        auto variable = std::vector<VT>(this->num_tile_elems_, static_cast<VT>(0.0));
+
+        for (IT b_r_idx = 0; b_r_idx < this->block_row_pointer_.size(); b_r_idx++) {
+            for (IT b_c_idx = block_row_pointer_[b_r_idx]; b_c_idx < block_row_pointer_[b_r_idx+1]; b_c_idx++) {
+                for (IT row_in_tile = 0; row_in_tile < tile_size_; row_in_tile++) {
+                    if (row_major) {
+                        ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
+                        for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
+                            if (tile_bitmask_[b_c_idx * tile_size_ + row_in_tile] & (1<<(col_in_tile%tile_size_)))
+                                variable[col_in_tile] = dis(rng);
+                        }
+                    } else {
+                        ST col_in_tile_begin = b_c_idx * tile_size_ * tile_size_;
+                        auto current_tile_bitmask = &tile_bitmask_[b_c_idx * tile_size_];
+                        for (IT col = 0; col < tile_size_; col++) {
+                            if ((current_tile_bitmask[col] & (1<<row_in_tile)) ? 1 : 0) {
+                                variable[col_in_tile_begin + col * tile_size_ + row_in_tile] = dis(rng);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return variable;
     }
 
     template <typename VT>
@@ -641,10 +658,26 @@ class BSRMatrixBitmask {
     }
 
     //
+    //  Initialization and Update of vector variables.
+    //
+
+    /**
+     *  \brief      Initialize a vector variable
+     *  \details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  \tparam     VT              data type of the variable.
+     *  \param[in]  default_value   value to initialize all elements in the vector
+     *  \returns    the initialized vector containing DenseMatrix::num_rows_ elements.
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
+    }
+
+    //
     //  Other helpful functions
     //
 
-    inline size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         size_t size = 0;
 
         size += 4*sizeof(IT) + sizeof(ST);               // constants

@@ -7,11 +7,10 @@ object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
 :license: GPLv2, see LICENSE for details.
 """
 import re
-import ANNarchy
-
 from copy import deepcopy
 
-from ANNarchy.core import Global
+import ANNarchy
+
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 
@@ -216,7 +215,6 @@ class CUDAGenerator(ProjectionGenerator):
         proj_desc['custom_func'] = device_local_func
 
         proj_desc['host_to_device'] = tabify("proj%(id)s->host_to_device();" % {'id':proj.id}, 1)+"\n"
-        proj_desc['device_to_host'] = tabify("proj%(id)s->device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
 
@@ -332,6 +330,12 @@ class CUDAGenerator(ProjectionGenerator):
             'id_proj': proj.id
         }
         return init_code, update_code
+
+    def creating(self, proj):
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on CUDA devices.")
+
+    def pruning(self, proj):
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on CUDA devices.")
 
     def _computesum_rate(self, proj):
         """
@@ -977,7 +981,6 @@ if(%(condition)s){
             }
             invoke_kernel += template['invoke_kernel'] % {
                 'id_proj': proj.id,
-                'target_arg': proj.target,
                 'kernel_args': kernel_args_header,
                 'kernel_args_invoke': kernel_args_invoke,
                 'target_arg': targets_header,
@@ -1066,7 +1069,7 @@ if(%(condition)s){
         kernel_args_call = ""
 
         for dep in deps:
-            # The variable dep is part of pre-/post population
+            # Check whether the variable *dep* is part of pre-/post-population
             if dep in pop_deps:
 
                 if dep in proj.synapse_type.description['dependencies']['pre']:
@@ -1076,7 +1079,7 @@ if(%(condition)s){
                         'name': attr_dict['name'],
                         'id': proj.pre.id
                     }
-                    kernel_args_decl += ", %(type)s* pre_%(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ pre_%(name)s" % ids
                     kernel_args_invoke += ", pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
@@ -1087,14 +1090,13 @@ if(%(condition)s){
                         'name': attr_dict['name'],
                         'id': proj.post.id
                     }
-                    kernel_args_decl += ", %(type)s* post_%(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ post_%(name)s" % ids
                     kernel_args_invoke += ", post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
-            # The variable dep is part of the projection
-            else:
-                attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
-
+            # Check whether the variable *dep* is part of the projection
+            attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
+            if attr_type is not None:
                 if attr_type == "par":
                     ids = {
                         'id_proj': proj.id,
@@ -1107,7 +1109,7 @@ if(%(condition)s){
                         kernel_args_invoke += ", %(name)s" % ids
                         kernel_args_call += ", proj%(id_proj)s->%(name)s" % ids
                     else:
-                        kernel_args_decl += ", %(type)s* %(name)s" % ids
+                        kernel_args_decl += ", %(type)s* __restrict__ %(name)s" % ids
                         kernel_args_invoke += ", %(name)s" % ids
                         kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
@@ -1117,7 +1119,7 @@ if(%(condition)s){
                         'type': attr_dict['ctype'],
                         'name': attr_dict['name']
                     }
-                    kernel_args_decl += ", %(type)s* %(name)s" % ids
+                    kernel_args_decl += ", %(type)s* __restrict__ %(name)s" % ids
                     kernel_args_invoke += ", %(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
@@ -1170,7 +1172,7 @@ if(%(condition)s){
         return kernel_args_decl, kernel_args_invoke, kernel_args_call
 
     def _header_structural_plasticity(self, proj):
-        Messages._error("Structural Plasticity is not supported on GPUs yet.")
+        raise Messages.CodeGeneratorException("Structural plasticity is not supported on GPUs.")
 
     def _local_functions(self, proj):
         """
@@ -1417,8 +1419,9 @@ _last_event%(local_index)s = t;
         try:
             templates = self._templates['post_event']
 
-        except KeyError:
-            raise Messages._error("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
+        except KeyError as err:
+            err_detail = f"No CUDA code template for post_event ( format ={proj._storage_format}, and order = {proj._storage_order})"
+            raise Messages.CodeGeneratorException(err_detail) from err
 
         # Fill code templates
         postevent_body = templates['device_kernel'] % {
@@ -1475,6 +1478,11 @@ _last_event%(local_index)s = t;
                 code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
         return code
+
+    def _update_random_distributions(self, proj):
+        # Nothing to do here, as the RNG values are drawn directly within the
+        # kernels.
+        pass
 
     def _memory_transfers(self, proj):
         """

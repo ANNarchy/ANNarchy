@@ -94,7 +94,7 @@ delay = {
     void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);

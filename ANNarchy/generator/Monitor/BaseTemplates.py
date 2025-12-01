@@ -32,9 +32,26 @@ public:
 
     virtual void record() = 0;
     virtual void record_targets() = 0;
+
+    /**
+     *  @brief      compute an estimate of allocated memory.
+     *  @details    not exported to python
+     *  @return     number of allocated bytes.
+     */
+    virtual size_t estimate_size_in_bytes(int num_steps) = 0;
+
+    /**
+     *  @brief      allocated memory
+     *  @return     number of allocated bytes.
+     */
     virtual long int size_in_bytes() = 0;
+
+    /**
+     *  @brief      clear recorded data.
+     */
     virtual void clear() = 0;
 
+protected:
     // Attributes
     bool partial;
     std::vector<int> ranks;
@@ -112,7 +129,7 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
 }
         """,
         'cuda': """
-        // TODO:
+// TODO: record spike events
         """
     },
     'clear': {
@@ -126,7 +143,7 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
     }
         """,
         'cuda': """
-        // TODO:
+// TODO: clear spike events
         """
     }
 }

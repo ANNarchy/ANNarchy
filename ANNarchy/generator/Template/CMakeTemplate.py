@@ -109,14 +109,6 @@ include_directories(
     %(thirdparty_include)s
 )
 
-# For lower CMake versions, setting these flags leads to strange
-# behavior (HD: 29th July 2024)
-if (CMAKE_VERSION GREATER_EQUAL 3.17)
-    # Additional compiler flags (-fPIC will is added already)
-    add_compile_options(%(cpu_flags)s)
-    add_link_options(%(cpu_flags)s)
-endif()
-
 # Compile source files and generate shared library
 nanobind_add_module(
     # Target name
@@ -127,6 +119,15 @@ nanobind_add_module(
     ANNarchy.cpp
     ANNarchyKernel.cu
 )
+
+if (CMAKE_VERSION GREATER_EQUAL 3.17)
+    target_compile_options(${MODULE_NAME} PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>: %(cpu_flags)s>
+    )
+    target_compile_options(${MODULE_NAME} PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>: %(gpu_flags)s -Xcompiler=%(xcompiler_flags)s>
+    )
+endif()
 
 # Set the required C++ standard
 target_compile_features(${MODULE_NAME} PUBLIC cxx_std_14)

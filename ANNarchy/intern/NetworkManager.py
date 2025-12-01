@@ -5,8 +5,6 @@
 import os
 import shutil
 import time
-import random
-import string
 
 from ANNarchy.intern import ConfigManagement
 from ANNarchy.intern import Messages
@@ -78,24 +76,10 @@ class NetworkManager :
         """
         Adds an empty structure for a new network and returns the new network ID.
         """
+        new_id = len(self._networks)
+        self._networks.append(net)
 
-        found = -1
-        # scan for slots which were freed before
-        for i, entry in enumerate(self._networks):
-            if entry == None :
-                found = i
-                break
-
-        # dependent on the scan append at the end
-        # or fill free slot
-        if found == -1:
-            new_id = len(self._networks)
-            self._networks.append(net)
-        else:
-            new_id = found
-            self._networks[new_id] = net
-
-        Messages._debug("Added network", new_id)
+        Messages._debug("NetworkManager: added network " + str(net) + " and assigned ID = " + str(new_id))
 
         return new_id
 
@@ -248,5 +232,3 @@ class NetworkManager :
 
         for mon in self._networks[net_id]._data.monitors:
             print(mon.name, _bytes_human_readable(mon._size_in_bytes()))
-
- 

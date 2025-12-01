@@ -162,9 +162,19 @@ delay = {
     std::vector<std::vector<int>> get_delay() {
         return get_matrix_variable_all<int, std::vector<std::vector<int>>>(delay);
     }
+    std::vector<int> get_dendrite_delay(int idx) {
+        if (idx < delay.size()) {
+            return get_matrix_variable_row<int, std::vector<std::vector<int>>>(delay, idx);
+        } else {
+            std::cerr << "ProjStruct%(id)s::get_dendrite_delay(): invalid idx used." << std::endl;
+            return std::vector<int>();
+        }
+    }
     void set_delay(std::vector<std::vector<int>> value) {
         update_matrix_variable_all<int, std::vector<std::vector<int>>>(delay, value);
     }
+    int get_max_delay() { return max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
         delay = init_matrix_variable<int, std::vector<std::vector<int>>>(1);
@@ -174,7 +184,7 @@ delay = {
         max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
+            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ) );
         }
     #ifdef _DEBUG
         std::cout << "Inited _delayed_spikes[" << global_num_threads << "][" << max_delay << "] and " << std::endl;
@@ -194,7 +204,7 @@ delay = {
         max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
+            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ) );
         }
 """
     }
@@ -434,7 +444,9 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 ###############################################################
 spiking_summation_fixed_delay = """
 // Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
+    const auto& part_post_rank = sub_matrices_[tid]->get_post_rank(); 
+    const auto& part_inv_pre_rank = sub_matrices_[tid]->get_inv_pre_rank();
 
     // Iterate over all incoming spikes (possibly delayed constantly)
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
@@ -442,17 +454,15 @@ if (_transmission && %(post_prefix)s_active){
         int rk_j = %(pre_array)s[_idx_j];
 
         // Find the presynaptic neuron in the inverse connectivity matrix
-        auto inv_post_ptr = sub_matrices_[tid]->inv_pre_rank.find(rk_j);
-        if (inv_post_ptr == sub_matrices_[tid]->inv_pre_rank.end())
+        std::map<int, std::vector<std::pair<int, int>>>::const_iterator inv_post_ptr = part_inv_pre_rank.find(rk_j);
+        if (inv_post_ptr == part_inv_pre_rank.end())
             continue;
 
         // List of postsynaptic neurons receiving spikes from that neuron
-        std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
-        // Number of post neurons
-        int nb_post = inv_post.size();
+        const auto& inv_post = inv_post_ptr->second;
 
         // Iterate over connected post neurons
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+        for (int _idx_i = 0; _idx_i < inv_post.size(); _idx_i++){
             // Retrieve the correct indices
             int i = inv_post[_idx_i].first;
             int j = inv_post[_idx_i].second;
@@ -472,19 +482,26 @@ if (_transmission && %(post_prefix)s_active){
 # Uses a ring buffer to process non-uniform delays in spiking networks
 spiking_summation_variable_delay = """
 // Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
+    const auto& part_post_rank = sub_matrices_[tid]->get_post_rank();
+    const auto& part_inv_pre_rank = sub_matrices_[tid]->get_inv_pre_rank();
 
     // Iterate over the spikes emitted during the last step in the pre population
     for(int idx_spike=0; idx_spike<%(pre_prefix)sspiked.size(); idx_spike++){
 
         // Get the rank of the pre-synaptic neuron which spiked
         int rk_pre = %(pre_prefix)sspiked[idx_spike];
-        // List of post neurons receiving connections
-        auto rks_post_beg = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).begin();
-        auto rks_post_end = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).end();
 
-        // Iterate over the post neurons
-        for (auto rks_post_it = rks_post_beg; rks_post_it != rks_post_end; rks_post_it++){
+        // Find the pre-synaptic neuron in the inverse connectivity matrix
+        std::map<int, std::vector<std::pair<int, int>>>::const_iterator inv_post_ptr = part_inv_pre_rank.find(rk_pre);
+        if (inv_post_ptr == part_inv_pre_rank.end())
+            continue;   // no out-going connections from this neuron
+
+        // List of post-synaptic neurons receiving spikes from this neuron
+        const auto& inv_post = inv_post_ptr->second;
+
+        // Iterate over connected post neurons and update the corresponding queues.
+        for (auto rks_post_it = inv_post.cbegin(); rks_post_it != inv_post.cend(); rks_post_it++){
             // Index of the post neuron in the connectivity matrix
             int i = rks_post_it->first ;
             // Index of the pre neuron in the connecivity matrix
@@ -583,8 +600,8 @@ conn_ids = {
     'local_index': "[tid][i][j]",
     'semiglobal_index': '[tid][i]',
     'global_index': '',
-    'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
-    'post_index': '[sub_matrices_[tid]->post_rank[i]]',
+    'pre_index': '[part_pre_rank[i][j]]',
+    'post_index': '[part_post_rank[i]]',
     'delay_nu' : '[delay[tid][i][j]-1]', # non-uniform delay
     'delay_u' : '[delay-1]' # uniform delay
 }

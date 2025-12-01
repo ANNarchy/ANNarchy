@@ -40,9 +40,19 @@ public:
 %(recording_target_code)s
     }
 
+    size_t estimate_size_in_bytes(int num_steps) {
+        // What is already stored?
+        size_t estimate = this->size_in_bytes();
+
+        // What could be added?
+        int num_rec = static_cast<int>(num_steps / this->period_);
+%(size_in_bytes_estimate_code)s
+        return estimate;
+    }
+
     long int size_in_bytes() {
         size_t size_in_bytes = 0;
-%(size_in_bytes)s
+%(size_in_bytes_code)s
         return static_cast<long int>(size_in_bytes);
     }
 
@@ -50,7 +60,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
+        std::cout << "PopRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_all_container_code)s
 
@@ -67,7 +77,7 @@ public:
     bool record_%(name)s ; """,
     'init': """
         this->%(name)s = std::vector< std::vector< %(type)s > >();
-        this->record_%(name)s = false; """,
+        this->record_%(name)s = false;""",
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             cudaMemcpy(pop%(id)s->%(name)s.data(), pop%(id)s->gpu_%(name)s, pop%(id)s->size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
@@ -75,18 +85,23 @@ public:
             auto err = cudaGetLastError();
             if ( err != cudaSuccess ) {
                 std::cout << "record %(name)s on pop%(id)s failed: " << cudaGetErrorString(err) << std::endl;
-            } else {
-                std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
             }
         #endif
-            if(!this->partial)
+
+            if(!this->partial) {
                 this->%(name)s.push_back(pop%(id)s->%(name)s);
-            else{
+            #ifdef _TRACE_SIMULATION_STEPS
+                std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
+            #endif
+            } else {
                 std::vector<%(type)s> tmp = std::vector<%(type)s>();
                 for (unsigned int i=0; i<this->ranks.size(); i++){
                     tmp.push_back(pop%(id)s->%(name)s[this->ranks[i]]);
                 }
                 this->%(name)s.push_back(tmp);
+            #ifdef _TRACE_SIMULATION_STEPS
+                std::cout << "record %(name)s - [min, max]: " << *std::min_element(tmp.begin(), tmp.end() ) << ", " << *std::max_element(pop%(id)s->%(name)s.begin(), pop%(id)s->%(name)s.end() ) << std::endl;
+            #endif
             }
         }""",
     'clear': """
@@ -98,7 +113,17 @@ public:
         this->%(name)s.clear();
     }
 """,
-    'size_in_bytes': ""
+    'size_in_bytes': """
+    // Local variable %(name)s
+    size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
+    for (auto it = %(name)s.cbegin(); it != %(name)s.cend(); it++)
+        size_in_bytes += it->capacity() * sizeof(%(type)s);
+""",
+    'size_in_bytes_estimate': """
+    // local variable %(name)s
+    if (this->record_%(name)s)
+        estimate += num_rec * sizeof(%(type)s) * ( (this->partial) ? this->ranks.size() : pop%(id)s->size );
+"""
     },
     'semiglobal': { # Does not exist for populations
         'struct': "",
@@ -124,7 +149,15 @@ public:
         this->%(name)s.clear();
     }
     """,
-    'size_in_bytes': ""
+    'size_in_bytes': """
+// global variable %(name)s
+size_in_bytes += sizeof(%(type)s) * this->%(name)s.capacity();
+""",
+    'size_in_bytes_estimate': """
+// global variable %(name)s
+if (this->record_%(name)s)
+    estimate += num_rec * sizeof(%(type)s);
+"""
     }
 }
 
@@ -154,7 +187,7 @@ public:
         }
         post_indices.clear();
 
-        // initialize container    
+        // initialize container
 %(init_code)s
 
         // add monitor to global list
@@ -169,14 +202,26 @@ public:
     };
 
     void record_targets() { /* nothing to do here */ }
+
+    size_t estimate_size_in_bytes(int num_steps) {
+        // What is already stored?
+        size_t estimate = this->size_in_bytes();
+
+        // What could be added?
+        int num_rec_synapses = ranks.size() * static_cast<int>(static_cast<double>(proj%(id)s->nb_synapses())/static_cast<double>(proj%(id)s->nb_dendrites()));
+        int num_rec_steps = static_cast<int>(num_steps / this->period_);
+%(size_in_bytes_estimate_code)s
+        return estimate;
+    }
+
     long int size_in_bytes() {
-        std::cout << "ProjMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
+        std::cout << "ProjRecorder::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
         return 0;
     }
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "ProjMonitor%(id)s::clear()." << std::endl;
+        std::cout << "ProjRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container_code)s
     }
@@ -228,6 +273,11 @@ size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += sizeof(%(type)s) * it->capacity();
 }
+""",
+        'size_in_bytes_estimate': """
+// local variable %(name)s
+if (this->record_%(name)s)
+    estimate += num_rec_steps * num_rec_synapses * sizeof(%(type)s);
 """
     },
     'semiglobal': {
@@ -275,6 +325,10 @@ size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += sizeof(%(type)s) * it->capacity();
 }
+""",
+        'size_in_bytes_estimate': """
+if (this->record_%(name)s)
+     estimate += num_rec_steps * ranks.size() * sizeof(%(type)s);
 """
     },
     'global': {
@@ -312,6 +366,10 @@ for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
         'size_in_bytes': """
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
+""",
+        'size_in_bytes_estimate': """
+if (this->record_%(name)s)
+    estimate += num_rec_steps * sizeof(%(type)s);
 """
     }
 }

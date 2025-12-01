@@ -22,70 +22,21 @@
 #pragma once
 #include "SELLMatrix.hpp"
 
+/**
+ * @brief   GPU wrapper implementation for SELLMatrix
+ * 
+ * @tparam  IT  @see SELLMatrix
+ * @tparam  ST  @see SELLMatrix
+ */
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
-  protected:
-    bool check_free_memory(size_t required) {
-          size_t free, total;
-          cudaMemGetInfo(&free, &total);
-
-    #ifdef _DEBUG
-          std::cout << "Allocate " << required << " and have " << free << "( " << (double(required) / double(total)) * 100.0 << " percent of total memory)" << std::endl;
-    #endif
-        return (required < free);
-    }
-
-    void free_device_memory() {
-        if(d_row_ptr) {
-            cudaFree(d_row_ptr);
-            d_row_ptr = nullptr;
-        }
-        if (d_col_idx) {
-            cudaFree(d_col_idx);
-            d_col_idx = nullptr;
-        }
-
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess)
-            std::cerr << "SELLMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
-    }
-
-    bool host_to_device_transfer() {
-        //compute memory require
-        size_t row_ptr_size = this->row_ptr_.size() * sizeof(ST);
-        size_t col_idx_size = this->col_idx_.size() * sizeof(IT);
-
-        // Sanity check: can we allocate the data?
-        check_free_memory(row_ptr_size + col_idx_size);
-
-        // Allocate the data arrays
-        cudaMalloc((void**)&d_row_ptr, row_ptr_size);
-        cudaMalloc((void**)&d_col_idx, col_idx_size);
-
-        // Copy the data arrays
-        cudaMemcpy(d_row_ptr, this->row_ptr_.data(), row_ptr_size, cudaMemcpyHostToDevice);
-        cudaMemcpy(d_col_idx, this->col_idx_.data(), col_idx_size, cudaMemcpyHostToDevice);
-
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "ELLMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
-            return false;
-        }
-        
-        return true;
-    }
-
   public:
-    ST* d_row_ptr;
-    IT* d_col_idx;
-
-
     /**
      *  Default constructor
      */
     explicit SELLMatrixCUDA<IT,ST>(const IT num_rows, const IT num_columns, const IT block_size) : SELLMatrix<IT,ST, false>(num_rows, num_columns, block_size) {
     #ifdef _DEBUG
-        std::cout << "SELLMatrixCUDA::SELLMatrixCUDA()" << std::endl;
+        std::cout << "SELLMatrixCUDA::SELLMatrixCUDA(this=" << this << ")" << std::endl;
     #endif
         d_row_ptr = nullptr;
         d_col_idx = nullptr;
@@ -106,7 +57,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      */
     ~SELLMatrixCUDA() {
     #ifdef _DEBUG
-        std::cout << "SELLMatrixCUDA::~SELLMatrixCUDA()" << std::endl;
+        std::cout << "SELLMatrixCUDA::~SELLMatrixCUDA(this=" << this << ")" << std::endl;
     #endif
     }
 
@@ -114,21 +65,33 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      *  @brief      clear the matrix
      *  @details    should be called before destructor.
      */
-    void clear() {
+    void clear() override {
     #ifdef _DEBUG
-            std::cout << "SELLMatrixCUDA::clear()" << std::endl;
+            std::cout << "SELLMatrixCUDA::clear(this=" << this << ")" << std::endl;
     #endif
         // clear host
-        static_cast<SELLMatrix<IT, ST, false>*>(this)->clear();
+        SELLMatrix<IT, ST, false>::clear();
 
         // clear device
         free_device_memory();
     }
 
+/************************************************************************************************************/
+/*  Accessors to member variables                                                                            */
+/************************************************************************************************************/
 
-    /*
-    *   init matrix from lil format  
-    */
+    IT* get_device_row_ptr() {
+        return d_row_ptr;
+    }
+
+    IT* get_device_col_idx() {
+        return d_col_idx;
+    }
+
+/************************************************************************************************************/
+/*  Initialize the sparse matrix representation                                                             */
+/************************************************************************************************************/
+
     bool init_matrix_from_lil(std::vector<IT>& post_ranks, std::vector< std::vector<IT> >& pre_ranks) {
         assert((post_ranks.size() == pre_ranks.size()));
         assert((post_ranks.size() > 0));
@@ -169,10 +132,10 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         host_to_device_transfer();
     }  */
 
+/************************************************************************************************************/
+/*  Transfer Matrix/Vector Variables to GPU                                                                 */
+/************************************************************************************************************/
 
-    //
-    //  Init variables
-    //
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT>& host_variable) {
     #ifdef _DEBUG
@@ -180,7 +143,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        if (!check_free_memory(size_in_bytes))
+        if (!check_free_memory_cuda(size_in_bytes))
             return nullptr;
 
         // Allocate
@@ -208,7 +171,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     VT* init_vector_variable_gpu(const std::vector<VT>& host_variable) {
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
-        check_free_memory(size_in_bytes);
+        check_free_memory_cuda(size_in_bytes);
 
         // Allocate
         VT* new_variable;
@@ -219,9 +182,6 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         return new_variable;
     }
 
-    //
-    // Read-out variables from GPU and return as LIL
-    //
     /*template <typename VT>
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
         auto tmp = std::vector<std::vector<VT>>();
@@ -236,56 +196,59 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         cudaMemcpy(host_variable.data(), d_variable, size_in_bytes, cudaMemcpyDeviceToHost);
     }
 
-    IT* get_device_col_idx() {
-        return d_col_idx;
-    }
-
+  protected:
     /**
-     *  \brief      overloaded std::ostream operator<<
-     *  \details    for the object itself
-     *  \param[IN]  os      ostream instance
-     *  \param[IN]  matrix  object instance
-     *  \return     manipulated ostream instance
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. 
      */
-    friend std::ostream& operator<< (std::ostream& os, const SELLMatrixCUDA<IT>& matrix) {
-        os << "num_rows_: " << matrix.num_rows_ << std::endl;
-        os << "blocksize_: " << matrix.blocksize_ << std::endl;
-        os << "num_blocks_: " << matrix.num_blocks_ << std::endl;
-        os << "num_non_zeros_: " << matrix.num_non_zeros_ << std::endl;
-
-        os << "col_idx_:" << std::endl;
-        os << "[ ";
-        for (int s = 0; s < matrix.col_idx_.size(); s++) {
-            os << matrix.col_idx_[s] << " ";
-        }
-        os << "]" << std::endl;
-
-        os << "post_ranks_:" << std::endl;
-        os << "[ ";
-        for (int s = 0; s < matrix.post_ranks_.size(); s++) {
-            os << matrix.post_ranks_[s] << " ";
-        }
-        os << "]" << std::endl;
-
-        os << "rowptr_:" << std::endl;
-        os << "[ ";
-        for (int s = 0; s < matrix.rowptr_.size(); s++) {
-            os << matrix.rowptr_[s] << " ";
-        }
-        os << "]" << std::endl;
-
-        return os;
+    void print_data_representation() {
+        std::cout << "Host-side initialization:" << std::endl;
+        SELLMatrix<IT, ST, false>::print_data_representation();
     }
 
-    /**
-     *  \brief      overloaded std::ostream operator<<
-     *  \details    for the reference to an object
-     *  \param[IN]  os      ostream instance
-     *  \param[IN]  matrix  object reference
-     *  \return     manipulated ostream instance
-     */
-    friend std::ostream& operator<< (std::ostream& os, SELLMatrixCUDA<IT>* matrix) {
-        return os << *matrix;
+    bool host_to_device_transfer() {
+        //compute memory require
+        size_t row_ptr_size = this->row_ptr_.size() * sizeof(ST);
+        size_t col_idx_size = this->col_idx_.size() * sizeof(IT);
+
+        // Sanity check: can we allocate the data?
+        check_free_memory_cuda(row_ptr_size + col_idx_size);
+
+        // Allocate the data arrays
+        cudaMalloc((void**)&d_row_ptr, row_ptr_size);
+        cudaMalloc((void**)&d_col_idx, col_idx_size);
+
+        // Copy the data arrays
+        cudaMemcpy(d_row_ptr, this->row_ptr_.data(), row_ptr_size, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_col_idx, this->col_idx_.data(), col_idx_size, cudaMemcpyHostToDevice);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "ELLMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
+            return false;
+        }
+        
+        return true;
     }
 
+    void free_device_memory() {
+        if(d_row_ptr) {
+            cudaFree(d_row_ptr);
+            d_row_ptr = nullptr;
+        }
+        if (d_col_idx) {
+            cudaFree(d_col_idx);
+            d_col_idx = nullptr;
+        }
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess)
+            std::cerr << "SELLMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
+    }
+
+  protected:
+    // allocated GPU memory indicating begin/end of each row
+    ST* d_row_ptr;
+    // allocated GPU memory for column indices
+    IT* d_col_idx;
 };

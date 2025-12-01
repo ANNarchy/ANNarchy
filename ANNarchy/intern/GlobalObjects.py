@@ -95,7 +95,7 @@ class GlobalObjectManager:
             Messages._error(f"add_function(): the global function {name} already exists at the global level.")
         self._objects['functions'].append( (name, function) )
 
-    def functions(name:str, network=None):
+    def functions(self, name:str, network=None):
 
         net_id = 0 if network is None else network.id
         try:
@@ -122,7 +122,7 @@ class GlobalObjectManager:
 
     def number_functions(self):
         return len(self._objects['functions'])
-    
+
 
     ################################
     ## Constants
@@ -134,7 +134,13 @@ class GlobalObjectManager:
         """
         names = []
         for network in NetworkManager().get_networks():
+            if network is None:
+                # The network was either already deleted or not completely
+                # initialized ...
+                continue
+
             constants = network.get_constants()
             for c in constants:
                 names.append(c.name)
+
         return list(set(names))

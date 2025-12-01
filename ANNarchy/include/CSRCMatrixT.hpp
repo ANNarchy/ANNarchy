@@ -21,7 +21,6 @@
 #pragma once
 
 #include "LILMatrix.hpp"
-#include "helper_functions.hpp"
 
 /**
  *  @brief      A flipped CSRC representation.
@@ -153,8 +152,6 @@ class CSRCMatrixT{
     #ifdef _DEBUG
         std::cout << "CSRCMatrixT::init_matrix_from_lil()" << std::endl;
     #endif
-        clear();
-
         // post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>(num_rows_, num_columns_);
         lil_mat->init_matrix_from_lil(post_ranks, pre_ranks);
@@ -274,8 +271,6 @@ class CSRCMatrixT{
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
     #endif
-        clear();
-
         post_ranks_ = post_ranks;
 
         // temporary container
@@ -313,8 +308,6 @@ class CSRCMatrixT{
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-        clear();
-
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT, ST>(num_rows_, num_columns_);
         lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
@@ -597,10 +590,9 @@ class CSRCMatrixT{
     #ifdef _DEBUG
         std::cout << "CSRCMatrixT::~CSRCMatrixT()" << std::endl;
     #endif
-        clear();
     }
 
-    void clear() {
+    virtual void clear() {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixT::clear()" << std::endl;
     #endif
@@ -614,7 +606,7 @@ class CSRCMatrixT{
     }
 
     // Returns size in bytes for connectivity
-    size_t size_in_bytes() {
+    virtual size_t size_in_bytes() {
         //constants
         size_t size = 3 * sizeof(unsigned int);
 

@@ -303,7 +303,7 @@ void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_
 conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s block_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
-    'conn_call': "proj%(id_proj)s->nb_dendrites(), proj%(id_proj)s->get_block_size(), proj%(id_proj)s->d_row_ptr, proj%(id_proj)s->d_col_idx",
+    'conn_call': "proj%(id_proj)s->nb_dendrites(), proj%(id_proj)s->get_block_size(), proj%(id_proj)s->get_device_row_ptr(), proj%(id_proj)s->get_device_col_idx()",
     'conn_kernel': "post_size, block_size, row_ptr, rank_pre",
 
     # launch config

@@ -89,7 +89,7 @@ delay = {
     void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
     int get_max_delay() { return max_delay; }
-    void set_max_delay() { this->max_delay = max_delay; }
+    void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
@@ -150,7 +150,13 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     for (int i = 0; i < nb_post; i++) {
         rk_post = post_ranks_[i];
     %(semiglobal)s
-        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+
+        // column slice in CSRC_T
+        int beg = col_ptr_[rk_post];
+        int end = col_ptr_[rk_post+1];
+
+        // local variables
+        for(int j = beg; j < end; j++){
             rk_pre = row_idx_[j];
     %(local)s
         }
@@ -225,10 +231,14 @@ if(_transmission && %(post_prefix)s_active){
     #pragma omp for
     for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
-        rk_post = post_ranks_[%(post_prefix)sspiked[_idx_i]];
+        rk_post = %(post_prefix)sspiked[_idx_i];
+
+        // row slice in CSRC_T
+        int beg = col_ptr_[rk_post];
+        int end = col_ptr_[rk_post+1];
 
         // Iterate over all synapse to this neuron
-        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+        for(int j = beg; j < end; j++){
 %(event_driven)s
 %(post_event)s
         }
@@ -257,9 +267,9 @@ conn_templates = {
 }
 
 conn_ids = {
-    'local_index': '[j]',
-    'semiglobal_index': '[i]',
+    'local_index': '[inv_idx_[j]]',
+    'semiglobal_index': '[rk_post]',
     'global_index': '',
-    'post_index': '[i]',
+    'post_index': '[rk_post]',
     'pre_index': '[row_idx_[j]]',
 }

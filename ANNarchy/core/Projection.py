@@ -20,7 +20,6 @@ from ANNarchy.core import ConnectorMethods
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.core.Constant import Constant
 
@@ -350,15 +349,15 @@ class Projection :
 
         :param module:  cython module (ANNarchyCore instance)
         """
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time
             t1 = time.time()
 
         self.initialized = self._connect(module)
 
-        if Profiler().enabled:
+        if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
-            Profiler().add_entry(t1, t2, "proj"+str(self.id), "instantiate")
+            NetworkManager().get_network(net_id=self.net_id)._profiler.add_entry(t1, t2, "proj"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """
@@ -397,7 +396,9 @@ class Projection :
 
         # Debug printout
         if ConfigManager().get('verbose', self.net_id):
-            print("Connectivity parameter ("+self.name+"):", self._connection_args )
+            print("  Initialize connectivity for Projection '"+self.name+"':")
+            print("    pattern  :", self.connector_name)
+            print("    arguments:", self._connection_args )
 
         # Instantiate the Cython wrapper
         if not self.cyInstance:
@@ -526,9 +527,9 @@ class Projection :
         self._storage_order = storage_order
 
         # The user selected nothing therefore we use the standard since ANNarchy 4.4.0
-        if storage_format == None:
+        if storage_format is None:
             self._storage_format = "lil"
-        if storage_order == None:
+        if storage_order is None:
             if storage_format == "auto":
                 storage_order = "auto"
             else:
@@ -720,7 +721,7 @@ class Projection :
     @property
     def size(self):
         "Number of post-synaptic neurons receiving synapses."
-        if self.cyInstance == None:
+        if self.cyInstance is None:
             Messages._warning("Access 'size or len()' attribute of a Projection is only valid after compile()")
             return 0
 
@@ -926,7 +927,9 @@ class Projection :
         # Determine C++ data type
         ctype = self._get_attribute_cpp_type(attribute=attribute)
 
-        if attribute in self.synapse_type.description["local"]:
+        if attribute == "w" and self._has_single_weight():
+            return getattr(self.cyInstance, 'get_global_attribute_'+ctype)(attribute)
+        elif attribute in self.synapse_type.description["local"]:
             return getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
         elif attribute in self.synapse_type.description["semiglobal"]:
             return getattr(self.cyInstance, "get_semiglobal_attribute_all_"+ctype)(attribute)
@@ -1046,7 +1049,7 @@ class Projection :
             if self.max_delay <= 1 :
                 return ConfigManager().get('dt', self.net_id)
         elif self.uniform_delay != -1:
-                return self.uniform_delay * ConfigManager().get('dt', self.net_id)
+            return self.uniform_delay * ConfigManager().get('dt', self.net_id)
         else:
             return [[pre * ConfigManager().get('dt', self.net_id) for pre in post] for post in self.cyInstance.get_delay()]
 
@@ -1259,7 +1262,7 @@ class Projection :
             'post_ranks': self.post_ranks,
             'pre_ranks': np.array(self.cyInstance.pre_ranks(), dtype=object),
             'w': np.array(self.w, dtype=object),
-            'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
+            'delay': np.array(self._get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
             'max_delay': self.max_delay,
             'uniform_delay': self.uniform_delay,
             'size': self.size,
@@ -1271,7 +1274,7 @@ class Projection :
             Messages._print("Saving connectivity in gunzipped binary format...")
             try:
                 import gzip
-            except:
+            except ImportError:
                 Messages._error('gzip is not installed.')
                 return
             with gzip.open(filename, mode = 'wb') as w_file:
@@ -1339,10 +1342,7 @@ class Projection :
         # fill row-by-row with real values
         for rank in self.post_ranks:
             # row-rank
-            if self._storage_format == "dense":
-                idx = rank
-            else:
-                idx =  self.post_ranks.index(rank)
+            idx =  self.post_ranks.index(rank)
             # pre-ranks
             preranks = self.cyInstance.pre_rank(idx)
             # get the values
@@ -1359,7 +1359,8 @@ class Projection :
         """
         Gathers all receptive fields within this projection.
 
-        The method only works when the pre- and post-synaptic populations have a 2d geometry. It concatenates all receptive fields of the `post` population into a 2d array.
+        The method only works when the pre- and post-synaptic populations have a 2d geometry. The function
+        concatenates all receptive fields of the `post` population into a 2d array.
 
         :param variable: Name of the variable.
         :param in_post_geometry: If False, the data will be plotted as square grid.
@@ -1372,15 +1373,21 @@ class Projection :
             y_size = int( math.ceil(math.sqrt(self.post.size)) )
 
 
-        def get_rf(rank): # TODO: IMPROVE
-            res = np.zeros( self.pre.size )
-            for n in range(len(self.post_ranks)):
-                if self.post_ranks[n] == n:
-                    pre_ranks = self.cyInstance.pre_rank(n)
-                    data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, rank)
-                    for j in range(len(pre_ranks)):
-                        res[pre_ranks[j]] = data[j]
-            return res.reshape(self.pre.geometry)
+        def get_rf(post_rank):
+            try:
+                lil_idx = self.post_ranks.index(post_rank)
+
+                res = np.zeros( self.pre.size )
+                pre_ranks = self.cyInstance.pre_rank(lil_idx)
+                data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, lil_idx)
+
+                if len(res) == len(pre_ranks):
+                    res[pre_ranks] = data
+
+                return res.reshape(self.pre.geometry)
+            except ValueError:
+                # post_rank is not listed
+                return np.zeros(self.pre.geometry)
 
         res = np.zeros((1, x_size*self.pre.geometry[1]))
         for y in range ( y_size ):
@@ -1431,7 +1438,7 @@ class Projection :
         attributes = self.attributes
         if not 'w' in self.attributes:
             attributes.append('w')
- 
+
         # Save all attributes
         for var in attributes:
             try:
@@ -1454,7 +1461,7 @@ class Projection :
 
             except Exception as e:
                 Messages._print(e)
-                Messages._warning('Can not save the attribute ' + var + ' in the projection.')
+                Messages._warning('Can not save the attribute ' + var + ' in the projection (name='+str(self.name)+').')
 
         return desc
 
@@ -1513,7 +1520,7 @@ class Projection :
         Updates the projection with the stored data set.
         """
         # Sanity check
-        if desc == None:
+        if desc is None:
             # _load_proj should have printed an error message
             return
 

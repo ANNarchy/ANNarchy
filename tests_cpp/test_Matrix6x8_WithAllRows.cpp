@@ -1,0 +1,918 @@
+/*
+ *    test_Matrix6x8_WithAllRows.cpp
+ *
+ *    This file is part of ANNarchy.
+ *
+ *    Copyright (C) 2025  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+ *
+ *    This program is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 2 of the License, or
+ *    (at your option) any later version.
+ *
+ *    ANNarchy is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#include "test_MatrixCommon.hpp"
+
+template<typename Config>
+class Matrix6x8_WithAllRows: public ::testing::Test {
+protected:
+    // The matrix configuration which should be tested
+    using MatrixType = typename Config::MatrixClassType;
+    using StorageType = typename Config::MatrixValueType;
+
+    // Instance of the matrix
+    MatrixType* mat_;
+
+    // LIL representation used as "reference"
+    std::vector<int> post_ranks_;
+    std::vector<std::vector<int>> pre_ranks_;
+    std::vector<std::vector<double>> values_;
+
+    // run before each test ...    
+    void SetUp() override {
+
+        /*
+            We will use this matrix pattern as test example:
+
+                0,  0,  0,  0,  1,  0,  0,  0,
+                0,  2,  3,  0,  0,  0,  0,  0,
+                0,  0,  0,  4,  5,  6,  7,  0,
+                0,  0,  0,  0,  0,  0,  0,  8,
+                9,  0,  0,  0, 10,  0,  0,  0,
+                0, 11,  0,  0,  0,  0,  0, 12
+
+         */
+
+        // In ANNarchy matrices are initialized in most case from a LIL
+        // structure, we need to construct this here from hand:
+
+        post_ranks_.push_back(0);       // 1st row
+        pre_ranks_.push_back(std::vector<int>({4}));
+        values_.push_back(std::vector<double>({1.0}));
+
+        post_ranks_.push_back(1);       // 2nd row
+        pre_ranks_.push_back(std::vector<int>({1,2}));
+        values_.push_back(std::vector<double>({2.0, 3.0}));
+
+        post_ranks_.push_back(2);       // 3rd row
+        pre_ranks_.push_back(std::vector<int>({3,4,5,6}));
+        values_.push_back(std::vector<double>({4.0, 5.0, 6.0, 7.0}));
+
+        post_ranks_.push_back(3);       // 4th row
+        pre_ranks_.push_back(std::vector<int>({7}));
+        values_.push_back(std::vector<double>({8.0}));
+
+        post_ranks_.push_back(4);       // 5th row
+        pre_ranks_.push_back(std::vector<int>({0,4}));
+        values_.push_back(std::vector<double>({9.0, 10.0}));
+        
+        post_ranks_.push_back(5);       // 6th row 
+        pre_ranks_.push_back(std::vector<int>({1,7}));
+        values_.push_back(std::vector<double>({11.0, 12.0}));
+
+        //
+        // Initialize the Matrix container
+        if constexpr(std::is_same_v<MatrixType, BSRMatrix<int, int, char, true>> ||
+                     std::is_same_v<MatrixType, BSRMatrixBitmask<int, int, char, true>>) {
+            // BSR needs a additional block size
+            mat_ = new MatrixType(6, 8, 2);
+        } else if constexpr(std::is_same_v<MatrixType, SELLMatrix<int, int, true>>) {
+            // SELL needs slice size S, here I choose 3 this means two blocks will be created.
+            mat_ = new MatrixType(6, 8, 3);
+        } else {
+            // for most formats: num_rows, num_columns
+            mat_ = new MatrixType(6,8);
+        }
+
+        mat_->init_matrix_from_lil(post_ranks_, pre_ranks_);
+    }
+
+    // Run after each test ...    
+    void TearDown() override {
+        delete mat_;
+    }
+
+    /**
+     * @details     The matrix values are stored in a compressed fashion. However, the data container depends on the used format.
+     *              This function creates a pre-initialized variable which should be compared with the LIL representation
+     *              stored in MatrixWithMissingRows::values_.
+     */
+    StorageType generate_inited_matrix_variable() {
+        StorageType inited;
+
+        if constexpr(std::is_same_v<MatrixType, BSRMatrix<int, int, char, true>> ||
+                     std::is_same_v<MatrixType, BSRMatrixBitmask<int, int, char, true>>) {
+            // BSR formats
+            inited = {
+                0, 0, 0, 2, 0, 0, 3, 0, 1, 0, 0, 0,
+                0, 4, 0, 0, 5, 6, 0, 0, 7, 0, 0, 8,
+                9, 0, 0,11,10, 0, 0, 0, 0, 0, 0,12
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, COOMatrix<int, int>>) {
+            inited = {
+                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, CSRMatrix<int, int>> ||
+                            std::is_same_v<MatrixType, CSRCMatrix<int, int>>) {
+            // CSR-likes
+            inited = {
+                1,          // 1st row
+                2, 3,       // 2nd row
+                4, 5, 6, 7, // 3rd row
+                8,          // 4th row
+                9, 10,      // 5th row
+                11, 12      // 6th row
+            };
+            
+        } else if constexpr(std::is_same_v<MatrixType, DenseMatrix<int, int, char, true>> ||
+                            std::is_same_v<MatrixType, DenseMatrixBitmask<int, int, char, true>>) {
+            // Dense formats (row-major)
+            inited = {
+                 0,  0,  0,  0,  1,  0,  0,  0,
+                 0,  2,  3,  0,  0,  0,  0,  0,
+                 0,  0,  0,  4,  5,  6,  7,  0,
+                 0,  0,  0,  0,  0,  0,  0,  8,
+                 9,  0,  0,  0, 10,  0,  0,  0,
+                 0, 11,  0,  0,  0,  0,  0, 12
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, DenseMatrix<int, int, char, false>> ||
+                            std::is_same_v<MatrixType, DenseMatrixBitmask<int, int, char, false>>) {
+            // Dense formats (column-major)
+            inited = {
+                 0,  0,  0,  0,  9,  0,
+                 0,  2,  0,  0,  0, 11,
+                 0,  3,  0,  0,  0,  0,
+                 0,  0,  4,  0,  0,  0,
+                 1,  0,  5,  0, 10,  0,
+                 0,  0,  6,  0,  0,  0,
+                 0,  0,  7,  0,  0,  0,
+                 0,  0,  6,  8,  0, 12
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, ELLMatrix<int, int, true>> ||
+                            std::is_same_v<MatrixType, ELLRMatrix<int, int, true>>) {
+            // Note that ELLPACK and ELLPACK-R create the same dense vector as result
+            // maxnzr is 4
+            inited = {
+                 1,  0, 0, 0,
+                 2,  3, 0, 0,
+                 4,  5, 6, 7,
+                 8,  0, 0, 0,
+                 9, 10, 0, 0,
+                11, 12, 0, 0
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, ELLMatrix<int, int, false>> ||
+                            std::is_same_v<MatrixType, ELLRMatrix<int, int, false>>) {
+            // Note that ELLPACK and ELLPACK-R create the same dense vector as result
+            // maxnzr is 4
+            inited = {
+                1, 2, 4, 8,  9, 11,
+                0, 3, 5, 0, 10, 12,
+                0, 0, 6, 0,  0,  0,
+                0, 0, 7, 0,  0,  0
+            };
+
+        } else if constexpr(std::is_same_v<MatrixType, LILMatrix<int, int>> ||
+                            std::is_same_v<MatrixType, LILInvMatrix<int, int>>) {
+            // LIL-likes
+            inited.push_back({1.0});
+            inited.push_back({2.0, 3.0});
+            inited.push_back({4.0, 5.0, 6.0, 7.0});
+            inited.push_back({8.0});
+            inited.push_back({9.0, 10.0});
+            inited.push_back({11.0, 12.0});
+
+        } else if constexpr(std::is_same_v<MatrixType, SELLMatrix<int, int, true>>) {
+            // Sliced ELLPACK with S = 3
+            inited = {
+                // 1st block: maxnzr = 4 -> 12 values
+                1, 0, 0, 0, 2, 3, 0, 0, 4, 5, 6, 7,
+                // 2nd block: maxnzr = 2 -> 6 values
+                8, 0, 9, 10, 11, 12
+            };
+
+        } else {
+            std::cout << "Matrix6x8_WithAllRows::generate_inited_matrix_variable: Non-implemented case ..." << std::endl;
+        }
+
+        return inited;
+    }
+
+    /**
+     * @details     The matrix values are stored in a compressed fashion. However, the data container depends on the used format.
+     *              This function generates the expected output, if a init_matrix_variable() function with a fixed value 1.0 has
+     *              been called.
+     */
+    StorageType generate_expected_matrix_variable(int pattern) {
+        StorageType expected;
+        
+        if constexpr(std::is_same_v<MatrixType, BSRMatrix<int, int, char, true>> ||
+                     std::is_same_v<MatrixType, BSRMatrixBitmask<int, int, char, true>>) {
+            // BSR formats
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0,     // 1st row block
+                    0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1,     // 2nd row block
+                    1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1      // 3rd row block
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0,     // 1st row block
+                    0, 1, 0, 0, 3, 1, 0, 0, 1, 0, 0, 1,     // 2nd row block
+                    1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1      // 3rd row block
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                break;
+
+            case Pattern::UPDATE_ALL:
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, COOMatrix<int, int>>) {
+            // COO formats
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                break;
+
+            case Pattern::UPDATE_ALL:
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, CSRMatrix<int, int>> ||
+                            std::is_same_v<MatrixType, CSRCMatrix<int, int>>) {
+            // CSR-likes
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    1,          // 1st row
+                    1, 1,       // 2nd row
+                    1, 1, 1, 1, // 3rd row
+                    1,          // 4th row
+                    1, 1,       // 5th row
+                    1, 1        // 6th row
+                };            
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    1,          // 1st row
+                    1, 1,       // 2nd row
+                    1, 3, 1, 1, // 3rd row
+                    1,          // 4th row
+                    1, 1,       // 5th row
+                    1, 1        // 6th row
+                };            
+                break;
+
+            case Pattern::SINGLE_ROW:
+                expected = {
+                    1,          // 1st row
+                    1, 1,       // 2nd row
+                    2, 3, 3, 2, // 3rd row
+                    1,          // 4th row
+                    1, 1,       // 5th row
+                    1, 1        // 6th row
+                };            
+                break;
+
+            case Pattern::UPDATE_ALL:
+                expected = {
+                    2,          // 1st row
+                    2, 2,       // 2nd row
+                    2, 3, 3, 2, // 3rd row
+                    2,          // 4th row
+                    2, 2,       // 5th row
+                    2, 2        // 6th row
+                };            
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+            
+        } else if constexpr(std::is_same_v<MatrixType, DenseMatrix<int, int, char, true>> || 
+                            std::is_same_v<MatrixType, DenseMatrixBitmask<int, int, char, true>>) {
+            // Dense formats
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    0, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 1, 0, 0, 0, 0, 0,
+                    0, 0, 0, 1, 1, 1, 1, 0,
+                    0, 0, 0, 0, 0, 0, 0, 1,
+                    1, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 0, 0, 0, 0, 0, 1
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    0, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 1, 0, 0, 0, 0, 0,
+                    0, 0, 0, 1, 3, 1, 1, 0,
+                    0, 0, 0, 0, 0, 0, 0, 1,
+                    1, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 0, 0, 0, 0, 0, 1
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                expected = {
+                    0, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 1, 0, 0, 0, 0, 0,
+                    0, 0, 0, 2, 3, 3, 2, 0,
+                    0, 0, 0, 0, 0, 0, 0, 1,
+                    1, 0, 0, 0, 1, 0, 0, 0,
+                    0, 1, 0, 0, 0, 0, 0, 1
+                };
+                break;
+
+            case Pattern::UPDATE_ALL:
+                expected = {
+                    0, 0, 0, 0, 2, 0, 0, 0,
+                    0, 2, 2, 0, 0, 0, 0, 0,
+                    0, 0, 0, 2, 3, 3, 2, 0,
+                    0, 0, 0, 0, 0, 0, 0, 2,
+                    2, 0, 0, 0, 2, 0, 0, 0,
+                    0, 2, 0, 0, 0, 0, 0, 2
+                };
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, DenseMatrix<int, int, char, false>> || 
+                            std::is_same_v<MatrixType, DenseMatrixBitmask<int, int, char, false>>) {
+            // Dense formats (column-major)
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    0, 0, 0, 0, 1, 0,
+                    0, 1, 0, 0, 0, 1,
+                    0, 1, 0, 0, 0, 0,
+                    0, 0, 1, 0, 0, 0,
+                    1, 0, 1, 0, 1, 0,
+                    0, 0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0, 0,
+                    0, 0, 0, 1, 0, 1
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                expected = {
+                };
+                break;
+
+            case Pattern::UPDATE_ALL:
+                expected = {
+                };
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, ELLMatrix<int, int, true>> ||
+                            std::is_same_v<MatrixType, ELLRMatrix<int, int, true>>) {
+
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    1, 0, 0, 0,
+                    1, 1, 0, 0,
+                    1, 1, 1, 1,
+                    1, 0, 0, 0,
+                    1, 1, 0, 0,
+                    1, 1, 0, 0
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    1, 0, 0, 0,
+                    1, 1, 0, 0,
+                    1, 3, 1, 1,
+                    1, 0, 0, 0,
+                    1, 1, 0, 0,
+                    1, 1, 0, 0
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                expected = {
+                };
+                break;
+
+            case Pattern::UPDATE_ALL:
+                expected = {
+                };
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, ELLMatrix<int, int, false>> ||
+                            std::is_same_v<MatrixType, ELLRMatrix<int, int, false>>) {
+
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    1, 1, 1, 1, 1, 1,
+                    0, 1, 1, 0, 1, 1,
+                    0, 0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0, 0,
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    1, 1, 1, 1, 1, 1,
+                    0, 1, 3, 0, 1, 1,
+                    0, 0, 1, 0, 0, 0,
+                    0, 0, 1, 0, 0, 0
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                expected = {
+                };
+                break;
+
+            case Pattern::UPDATE_ALL:
+                expected = {
+                };
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+            
+        } else if constexpr(std::is_same_v<MatrixType, LILMatrix<int, int>> ||
+                            std::is_same_v<MatrixType, LILInvMatrix<int, int>>) {
+            // CSR-likes
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected.push_back({1});
+                expected.push_back({1, 1});
+                expected.push_back({1, 1, 1, 1});
+                expected.push_back({1});
+                expected.push_back({1, 1});
+                expected.push_back({1, 1});
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected.push_back({1});
+                expected.push_back({1, 1});
+                expected.push_back({1, 3, 1, 1});
+                expected.push_back({1});
+                expected.push_back({1, 1});
+                expected.push_back({1, 1});
+                break;
+
+            case Pattern::SINGLE_ROW:
+                break;
+
+            case Pattern::UPDATE_ALL:
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else if constexpr(std::is_same_v<MatrixType, SELLMatrix<int, int, true>>) {
+            // Sliced ELLPACK - S = 3 -> 2 blocks
+            switch (pattern)
+            {
+            case Pattern::INIT:
+                expected = {
+                    // 1st block: maxnzr = 4 -> 12 values
+                    1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1,
+                    // 2nd block: maxnzr = 2 -> 6 values
+                    1, 0, 1, 1, 1, 1
+                };
+                break;
+
+            case Pattern::SINGLE_POS:
+                expected = {
+                    // 1st block: maxnzr = 4 -> 12 values
+                    1, 0, 0, 0, 1, 1, 0, 0, 1, 3, 1, 1,
+                    // 2nd block: maxnzr = 2 -> 6 values
+                    1, 0, 1, 1, 1, 1
+                };
+                break;
+
+            case Pattern::SINGLE_ROW:
+                break;
+
+            case Pattern::UPDATE_ALL:
+                break;
+
+            default:
+                std::cout << "Non-implemented sub-pattern " << pattern << " ..." << std::endl;
+                break;
+            }
+
+        } else {
+            std::cout << "Matrix6x8_WithAllRows::generate_expected_matrix_variable: non-implemented case ..." << std::endl;
+        }
+
+        return expected;
+    }
+
+};
+
+//
+// Add the SpMV implementations, see MatrixCommon.hpp for a list of formats.
+TYPED_TEST_SUITE(Matrix6x8_WithAllRows, MatrixImplementations);
+
+/********************************************************************************************/
+/*  Represent the non-zeros aka connectivity                                                */
+/*  which includes the ANNarchy wrapper accessors                                           */
+/********************************************************************************************/
+
+TYPED_TEST(Matrix6x8_WithAllRows, DenseSizeAccessors) {
+    // dense sizes   
+    EXPECT_EQ(this->mat_->num_rows(), 6);
+    EXPECT_EQ(this->mat_->num_columns(), 8);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, PostRanksAccessor) {
+    // read-out
+    auto post_ranks = this->mat_->get_post_rank();
+
+    // Top-level vectors equal in size?
+    EXPECT_EQ(this->post_ranks_.size(), post_ranks.size());
+
+    // Compare the content of the vectors
+    auto post_it1 = this->post_ranks_.cbegin();
+    auto post_it2 = post_ranks.cbegin();
+
+    for(; post_it1 != this->post_ranks_.cend(); ++post_it1, ++post_it2) {
+        EXPECT_EQ(*post_it1, *post_it2);
+    }
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, PreRanksAccessor) {
+    // read-out column indices, placed row-wise in vectors
+    auto pre_ranks = this->mat_->get_pre_ranks();
+
+    // Top-level vectors equal in size?
+    EXPECT_EQ(this->pre_ranks_.size(), pre_ranks.size());
+
+    // Compare for each sub-vector if they are equal in size?
+    auto pre_it1 = this->pre_ranks_.cbegin();
+    auto pre_it2 = pre_ranks.cbegin();
+
+    for(; pre_it1 != this->pre_ranks_.cend(); ++pre_it1, ++pre_it2) {
+        EXPECT_EQ(pre_it1->size(), pre_it2->size());
+    }
+
+    // Last, we compare the column indices, row-by-row
+    pre_it1 = this->pre_ranks_.cbegin();
+    pre_it2 = pre_ranks.cbegin();
+    for(; pre_it1 != this->pre_ranks_.cend(); ++pre_it1, ++pre_it2) {
+        auto pre_sub_it1 = pre_it1->cbegin();
+        auto pre_sub_it2 = pre_it2->cbegin();
+
+        for(; pre_sub_it1 != pre_it1->cend(); ++pre_sub_it1, ++pre_sub_it2) {
+            EXPECT_EQ(*pre_sub_it1, *pre_sub_it2);
+        }
+    }
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetNumberOfDendrites) {
+    // Compare number of rows with non-zeros
+    EXPECT_EQ(this->mat_->nb_dendrites(), this->pre_ranks_.size());
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetNumberOfSynapses) {
+    // How many non-zeros
+    int nnz = 0;
+    for (auto it = this->pre_ranks_.cbegin(); it != this->pre_ranks_.cend(); ++it)
+        nnz += it->size();
+
+    EXPECT_EQ(this->mat_->nb_synapses(), nnz);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetDendriteSize) {
+    // compare row-lengths (note need to access with LIL index)
+    int i = 0;
+    for (auto it = this->pre_ranks_.cbegin(); it != this->pre_ranks_.cend(); ++it, ++i)
+        EXPECT_EQ(it->size(), this->mat_->dendrite_size(i));
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetDendriteRanks) {
+    // compare the access to a specific row
+    auto exp_pre_ranks = this->pre_ranks_[2];
+    auto act_pre_ranks = this->mat_->get_dendrite_pre_rank(2);
+
+    EXPECT_EQ(exp_pre_ranks.size(), act_pre_ranks.size());
+
+    auto it1 = exp_pre_ranks.cbegin();
+    auto it2 = act_pre_ranks.cbegin();
+
+    for (; it1 != exp_pre_ranks.cend(); ++it1, ++it2) {
+        EXPECT_EQ(*it1, *it2);
+    }
+}
+
+/********************************************************************************************/
+/*  Initialize matrix values                                                                */
+/********************************************************************************************/
+
+TYPED_TEST(Matrix6x8_WithAllRows, InitMatrixWithOneValue) {
+    // Reference
+    auto expected = this->generate_expected_matrix_variable(Pattern::INIT);
+    
+    // create a matrix variable
+    auto actual = this->mat_->template init_matrix_variable<double>(1.0);
+
+    // has the returned variable the correct size?
+    EXPECT_EQ(expected.size(), actual.size());
+
+    // Is the content correct?
+    auto it1 = expected.cbegin();
+    auto it2 = actual.cbegin();
+    size_t num_mismatches = 0;
+
+    for (; it1 != expected.cend(); ++it1, ++it2) {
+        if (*it1 != *it2) {
+            num_mismatches++;
+        }
+    }
+    EXPECT_EQ(num_mismatches, 0);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, InitMatrixWithUniform) {
+    std::mt19937 rng;
+
+    // TODO: this is not clean, I assume here that init_matrix_variable() is implemented correctly...
+    auto expected = this->mat_->template init_matrix_variable<double>(1.0);
+    auto actual = this->mat_->template init_matrix_variable_uniform<double>(0.0, 1.0, rng);
+
+    // has the returned variable the correct size?
+    EXPECT_EQ(expected.size(), actual.size());
+}
+
+/********************************************************************************************/
+/*  Update matrix values                                                                    */
+/********************************************************************************************/
+
+TYPED_TEST(Matrix6x8_WithAllRows, UpdateMatrixSinglePosition) {
+    
+    auto matrix_variable = this->mat_->template init_matrix_variable<double>(1.0);
+
+    auto expected = this->generate_expected_matrix_variable(Pattern::SINGLE_POS);
+
+    // Try to update the matrix.
+    this->mat_->template update_matrix_variable<double>(matrix_variable, 2, 4, 3.0);
+
+    // Was the update successful?
+    auto it1 = expected.cbegin();
+    auto it2 = matrix_variable.cbegin();
+    size_t num_mismatches = 0;
+
+    for (; it1 != expected.cend(); ++it1, ++it2) {
+        if (*it1 != *it2) {
+            num_mismatches++;
+        }
+    }
+    EXPECT_EQ(num_mismatches, 0);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, UpdateMatrixSingleRow) {
+    // Reference
+    auto expected = this->generate_expected_matrix_variable(Pattern::SINGLE_ROW);
+    
+    // create a matrix variable
+    auto matrix_variable = this->mat_->template init_matrix_variable<double>(1.0);
+
+    // Try to update the matrix.
+    std::vector<double> new_w = {2.0, 3.0, 3.0, 2.0};
+    this->mat_->template update_matrix_variable_row<double>(matrix_variable, 2, new_w);
+
+    // Was the update successful?
+    auto it1 = expected.cbegin();
+    auto it2 = matrix_variable.cbegin();
+    bool equal = true;
+
+    for (; it1 != expected.cend(); ++it1, ++it2) {
+        if (*it1 != *it2) {
+            equal = false;
+            break;
+        }
+    }
+    EXPECT_EQ(equal, true);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, UpdateMatrixAllAtOnce) {
+    // Init variable
+    auto matrix_variable = this->mat_->template init_matrix_variable<double>(1.0);
+
+    // Reference
+    auto expected = this->generate_expected_matrix_variable(Pattern::UPDATE_ALL);
+
+    // Try to update the matrix. There is an overlap with UpdateOneRow,
+    // but the sanity checks are performed anyways.
+    auto new_values_as_lil = std::vector<std::vector<double>>();
+    new_values_as_lil.push_back({2.0});
+    new_values_as_lil.push_back({2.0, 2.0});
+    new_values_as_lil.push_back({2.0, 3.0, 3.0, 2.0});
+    new_values_as_lil.push_back({2.0});
+    new_values_as_lil.push_back({2.0, 2.0});
+    new_values_as_lil.push_back({2.0, 2.0});
+    this->mat_->template update_matrix_variable_all<double>(matrix_variable, new_values_as_lil);
+
+    // Was the update successful?
+    auto it1 = expected.cbegin();
+    auto it2 = matrix_variable.cbegin();
+    bool equal = true;
+
+    for (; it1 != expected.cend(); ++it1, ++it2) {
+        if (*it1 != *it2) {
+            equal = false;
+            break;
+        }
+    }
+    EXPECT_EQ(equal, true);
+}
+
+/********************************************************************************************/
+/*  Read-out the matrix variable as LIL                                                     */
+/********************************************************************************************/
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetMatrixSinglePosition) {
+    auto variable = this->generate_inited_matrix_variable();
+
+    auto value = this->mat_->template get_matrix_variable<double>(variable, 2, 4);
+
+    EXPECT_EQ(value, 5.0);
+}
+
+// Note: this function is often implicitly called by get_matrix_variable_all, so one
+// could technically leave it out, but it won't hurt anyways ...
+TYPED_TEST(Matrix6x8_WithAllRows, GetMatrixSingleRow) {
+
+    auto variable_inited = this->generate_inited_matrix_variable();
+
+    // retrieve a single row.
+    auto exp_values = std::vector<double>({4,5,6,7});
+    auto ret_values = this->mat_->template get_matrix_variable_row<double>(variable_inited, 2);
+
+    // compare size
+    EXPECT_EQ(exp_values.size(), ret_values.size());
+
+    // compare content
+    auto it1 = exp_values.cbegin();
+    auto it2 = ret_values.cbegin();
+    for(; it1 != exp_values.cend(); ++it1, ++it2)
+        EXPECT_EQ(*it1, *it2);
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetMatrixAllAtOnce) {
+    auto expected = this->values_;
+
+    auto variable_inited = this->generate_inited_matrix_variable();
+    auto variable_as_lil = this->mat_->template get_matrix_variable_all<double>(variable_inited);
+
+    auto pre_it1 = expected.cbegin();
+    auto pre_it2 = variable_as_lil.cbegin();
+
+    for(; pre_it1 != expected.cend(); ++pre_it1, ++pre_it2) {
+        EXPECT_EQ(pre_it1->size(), pre_it2->size());
+    }
+
+    pre_it1 = expected.cbegin();
+    pre_it2 = variable_as_lil.cbegin();
+    for(; pre_it1 != expected.cend(); ++pre_it1, ++pre_it2) {
+        auto pre_sub_it1 = pre_it1->cbegin();
+        auto pre_sub_it2 = pre_it2->cbegin();
+
+        for(; pre_sub_it1 != pre_it1->cend(); ++pre_sub_it1, ++pre_sub_it2) {
+            EXPECT_EQ(*pre_sub_it1, *pre_sub_it2);
+        }
+    }
+}
+
+/********************************************************************************************/
+/*  Initialize vector values                                                                */
+/********************************************************************************************/
+
+TYPED_TEST(Matrix6x8_WithAllRows, InitVectorWithOneValue) {
+    auto variable_vec = this->mat_->template init_vector_variable<double>(1.0);
+
+    // The variable should contain one space for each row.
+    EXPECT_EQ(variable_vec.size(), this->mat_->num_rows());
+}
+
+/********************************************************************************************/
+/*  Update vector values                                                                    */
+/********************************************************************************************/
+
+/*
+TYPED_TEST(Matrix6x8_WithAllRows, UpdateVectorAll) {
+    auto variable_vec = this->mat_->template init_vector_variable<double>(1.0);
+
+    auto new_vec = std::vector<double>({2.0, 2.0, 2.0, 2.0, 2.0, 2.0});
+
+    // Update the vector.
+    this->mat_->template update_vector_variable_all<double>(variable_vec, new_vec);
+
+    // The variable should be updated now.
+    auto read_out_vec = this->mat_->template get_vector_variable_all<double>(variable_vec);
+
+    // Check if the update was successful.
+    auto vec_it1 = new_vec.cbegin();
+    auto vec_it2 = read_out_vec.cbegin();
+
+    for(; vec_it1 != new_vec.cend(); ++vec_it1, ++vec_it2) {
+        EXPECT_EQ(*vec_it1, *vec_it2);
+    }
+}
+*/
+
+/********************************************************************************************/
+/*  Read-out the vector values                                                              */
+/********************************************************************************************/
+/*
+TYPED_TEST(Matrix6x8_WithAllRows, GetVectorAll) {
+    std::vector<double> variable_vec = this->mat_->template init_vector_variable<double>(1.0);
+
+    // The variable should contain one space for each row.
+    auto read_out_vec = this->mat_->template get_vector_variable_all<double>(variable_vec);
+
+    // The return of the above method should only contain rows with at least on non-zero.
+    EXPECT_EQ(read_out_vec.size(), this->mat_->nb_dendrites());
+
+    // Check the content of the vector
+    for (const auto val : read_out_vec) {
+        EXPECT_EQ(val, 1.0);
+    }
+}
+
+TYPED_TEST(Matrix6x8_WithAllRows, GetVectorSinglePosition) {
+
+    std::vector<double> variable_vec = this->mat_->template init_vector_variable<double>(1.0);
+
+    auto read_out = this->mat_->template get_vector_variable<double>(variable_vec, 2);
+
+    EXPECT_EQ(read_out, 1.0);
+}
+*/

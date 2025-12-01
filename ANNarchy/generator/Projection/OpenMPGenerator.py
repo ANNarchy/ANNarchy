@@ -361,7 +361,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     raise NotImplementedError
 
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK-R format is not available for spiking models.")
+                raise Messages.InvalidConfiguration("    "+proj.name+": ELLPACK-R format is not available for spiking models.")
 
         elif proj._storage_format == "sell":
             if proj.synapse_type.type == "rate":
@@ -373,7 +373,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     raise NotImplementedError
 
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": sliced ELLPACK format is not available for spiking models.")
+                raise Messages.InvalidConfiguration("    "+proj.name+": sliced ELLPACK format is not available for spiking models.")
 
         elif proj._storage_format == "ell":
             if proj.synapse_type.type == "rate":
@@ -385,7 +385,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     raise NotImplementedError
 
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK format is not available for spiking models.")
+                raise Messages.InvalidConfiguration("    "+proj.name+": ELLPACK format is not available for spiking models.")
 
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
@@ -1052,7 +1052,7 @@ if (%(condition)s) {
                 template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
 
         # sanity check
-        if template == None:
+        if template is None:
             raise Messages.CodeGeneratorException("\tproj{}: no template available (Configuration: format={}, order={}, single_matrix={}, pattern={})".format(proj.id, proj._storage_format, proj._storage_order, single_matrix, proj._parallel_pattern))
 
         # Axonal spike events
@@ -1554,7 +1554,7 @@ _last_event%(local_index)s = t;
 
         // Insert as many empty vectors as need at the current pointer position
         for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid].insert(_delayed_spikes[tid].begin() + idx_delay, add_steps, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ));
+            _delayed_spikes[tid].insert(_delayed_spikes[tid].begin() + idx_delay, add_steps, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ));
         }
 
         // The delay index has to be updated

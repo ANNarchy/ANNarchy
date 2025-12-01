@@ -12,7 +12,6 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.Extraction import extract_functions
-from ANNarchy.intern.Profiler import Profiler
 
 class NanoBindGenerator:
     """
@@ -74,7 +73,7 @@ class NanoBindGenerator:
                 proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
         # Profiling of simulation kernel is optional
-        profiling_code = profiler_template if Profiler().enabled else ""
+        profiling_code = profiler_template if self.network._profiler is not None else ""
 
         return basetemplate % {
             'net_id': self.net_id,
@@ -96,7 +95,11 @@ class NanoBindGenerator:
         attributes = ""
 
         # synaptic delay
-        attributes += """\t\t.def("update_max_delay", &PopStruct{id}::update_max_delay)\n""".format(id=pop.id)
+        attributes += f"""\t\t.def("update_max_delay", &PopStruct{pop.id}::update_max_delay)\n"""
+
+        # On GPUs, we need to trigger a device-to-host explicitly
+        if _check_paradigm("cuda", self.net_id):
+            attributes += f"""\t\t.def("device_to_host", &PopStruct{pop.id}::device_to_host)\n"""
 
         # Model attributes
         for attr in pop.neuron_type.description['attributes']:
@@ -125,17 +128,16 @@ class NanoBindGenerator:
         for func in pop.neuron_type.description['functions']:
             # Wrapper
             additional_func += f"""
-        .def("{func['name']}", &PopStruct{pop.id}::{func['name']})"""    
-        
+        .def("{func['name']}", &PopStruct{pop.id}::{func['name']})"""
 
         # Type-specific functions
         if pop.neuron_type.type == "spike":
-            additional_func += """\t\t.def("compute_firing_rate", &PopStruct{id}::compute_firing_rate)\n""".format(id=pop.id)
+            additional_func += f"""\t\t.def("compute_firing_rate", &PopStruct{pop.id}::compute_firing_rate)\n"""
 
             if (pop.neuron_type.refractory or pop.refractory):
-                additional_func += """\t\t.def_rw("refractory", &PopStruct{id}::refractory)\n""".format(id=pop.id)
+                additional_func += f"""\t\t.def_rw("refractory", &PopStruct{pop.id}::refractory)\n"""
                 if _check_paradigm("cuda", self.net_id):
-                    additional_func += """\t\t.def_rw("refractory_dirty", &PopStruct{id}::refractory_dirty)\n""".format(id=pop.id)
+                    additional_func += f"""\t\t.def_rw("refractory_dirty", &PopStruct{pop.id}::refractory_dirty)\n"""
 
         wrapper_code = pop_struct_wrapper % {
             'id': pop.id,
@@ -152,9 +154,13 @@ class NanoBindGenerator:
         additional_func = ""
 
         # Connectivity as LIL
+        # HD (18th Aug. 2025):  The C++ template library offers in some cases a const- and non-const accessor.
+        #                       To ensure that Python accesses only using the non-const accessor an additional
+        #                       "nanobind::overload_cast<>" is needed. Otherwise, its compiler dependent which
+        #                       version is bound consequently resulting in strange side-effects ...
         connectivity = f"""
         .def("init_from_lil", &ProjStruct{proj.id}::init_from_lil)
-        .def("post_rank", &ProjStruct{proj.id}::get_post_rank)
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct{proj.id}::get_post_rank))
         .def("dendrite_size", &ProjStruct{proj.id}::dendrite_size)
         .def("nb_dendrites", &ProjStruct{proj.id}::nb_dendrites)
         .def("pre_ranks", &ProjStruct{proj.id}::get_pre_ranks)

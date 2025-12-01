@@ -54,7 +54,7 @@ class CodeGenerator(object):
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
-        if ConfigManager().get('profiling', self.net_id):
+        if self._network._profiler is not None:
             if ConfigManager().get('paradigm', self.net_id) == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
@@ -107,7 +107,7 @@ class CodeGenerator(object):
               logic of a projection respectively synapse object (filename:
               proj<id>)
         """
-        if Profiler().enabled:
+        if self._network._profiler is not None:
             t0 = time.time()
 
         if ConfigManager().get('verbose', self.net_id):
@@ -182,9 +182,9 @@ class CodeGenerator(object):
 
         self._generate_file_overview(source_dest)
 
-        if Profiler().enabled:
+        if self._network._profiler is not None:
             t1 = time.time()
-            Profiler().add_entry(t0, t1, "generate", "compile")
+            self._network._profiler.add_entry(t0, t1, "generate", "compile")
 
     def _generate_file_overview(self, source_dest):
         """
@@ -195,15 +195,21 @@ class CodeGenerator(object):
 
         * source_dest: path to folder where generated files are stored.
         """
+        pop_desc = """pop%(id_pop)s, %(type_pop)s(name ='%(name_pop)s', neuron='%(neuron_type)s')\n"""
+        proj_desc = """proj%(id_proj)s, %(type_proj)s(pre='%(pre_name)s', post='%(post_name)s', target='%(target)s', synapse='%(synapse_type)s', name='%(name)s') using connector: %(pattern)s \n"""
+
         # Equal to target path in CodeGenerator.generate()
-        with open(source_dest+"codegen.log", 'w') as ofile:
+        with open(source_dest+"codegen.log", 'w', encoding="utf-8") as ofile:
             ofile.write("Filename, Object Description\n")
             for pop in self._populations:
                 pop_type = type(pop).__name__
-                desc = """pop%(id_pop)s, %(type_pop)s( name = %(name_pop)s )\n""" % {
-                    'id_pop': pop.id, 'name_pop': pop.name, 'type_pop': pop_type
+                desc_dict = {
+                    'id_pop': pop.id,
+                    'name_pop': pop.name,
+                    'neuron_type': pop.neuron_type.name,
+                    'type_pop': pop_type
                 }
-                ofile.write(desc)
+                ofile.write(pop_desc % desc_dict)
 
             for proj in self._projections:
                 proj_type = type(proj).__name__
@@ -213,6 +219,7 @@ class CodeGenerator(object):
                     'pre_name': proj.pre.name,
                     'post_name': proj.post.name,
                     'target': proj.target,
+                    'synapse_type': proj.synapse_type.name,
                     'name': proj.name
                 }
 
@@ -222,8 +229,7 @@ class CodeGenerator(object):
                 else:
                     desc_dict.update({'pattern': proj.connector_description.split(',')[0]})
 
-                desc = desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s, name = %(name)s ) using connector: %(pattern)s \n""" % desc_dict
-                ofile.write(desc)
+                ofile.write(proj_desc % desc_dict)
 
     def _propagate_global_ops(self):
         """
@@ -670,9 +676,13 @@ void set_%(name)s(%(float_prec)s value) {
 
             # memory transfers
             host_device_transfer, device_host_transfer = "", ""
-            for pop in self._pop_desc + self._proj_desc:
+            for pop in self._pop_desc:
                 host_device_transfer += pop['host_to_device']
-                device_host_transfer += pop['device_to_host']
+                # DtoH is performed only when an accessor is called.
+
+            for proj in self._proj_desc:
+                host_device_transfer += proj['host_to_device']
+                # DtoH is performed only when an accessor is called.
 
             # Profiling
             if self._profgen:
@@ -735,7 +745,7 @@ void set_%(name)s(%(float_prec)s value) {
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        profiling_init = "" if not ConfigManager().get('profiling', self.net_id) else self._profgen.generate_init_network()
+        profiling_init = "" if self._profgen is None else self._profgen.generate_init_network()
 
         # Initialize populations
         population_init = "    // Initialize populations\n"

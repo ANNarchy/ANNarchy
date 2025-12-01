@@ -15,7 +15,7 @@ extern long int t;
 
 // RNG - defined in ANNarchy.cu
 extern unsigned long long global_seed;
-extern void init_curand_states( int N, curandState* states, unsigned long long seed );
+extern void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
 
 %(include_additional)s
 %(include_profile)s
@@ -133,17 +133,14 @@ struct PopStruct%(id)s{
 
     // Memory transfers
     void host_to_device() {
-    #if defined(_TRACE_INIT) || defined(_DEBUG)
-        std::cout << "  PopStruct%(id)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
-    #endif
 %(host_to_device)s
     }
 
-    void device_to_host() {
-    #if defined(_TRACE_INIT) || defined(_DEBUG)
-        std::cout << "  PopStruct%(id)s::device_to_host() called at t = " << t << " simulation steps." << std::endl;
-    #endif
+    void device_to_host(std::string attr_name) {
 %(device_to_host)s
+    #ifdef _DEBUG
+        std::cout << "No memory transfer performed for attribute '" << attr_name << "'" << std::endl;
+    #endif
     }
 
     // Memory Management: track memory consumption
@@ -350,10 +347,10 @@ gpu_delayed_%(name)s.shrink_to_fit();
 attribute_transfer = {
     'HtoD_local': """
         // %(attr_name)s: local
-        if( %(attr_name)s_host_to_device )
+        if ( %(attr_name)s_host_to_device )
         {
-        #ifdef _DEBUG
-            std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
+        #if defined(_TRACE_INIT) || defined(_DEBUG)
+            std::cout << "HtoD %(attr_name)s ( PopStruct%(id)s, t = " << t << " )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(attr_name)s, %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
             %(attr_name)s_host_to_device = false;
@@ -364,13 +361,13 @@ attribute_transfer = {
                 std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
         #endif
         }
-    """,
+""",
     'HtoD_global': """
         // %(attr_name)s: global
-        if( %(attr_name)s_host_to_device )
+        if ( %(attr_name)s_host_to_device )
         {
-        #ifdef _DEBUG
-            std::cout << "HtoD: %(attr_name)s ( pop%(id)s )" << std::endl;
+        #if defined(_TRACE_INIT) || defined(_DEBUG)
+            std::cout << "HtoD: %(attr_name)s ( PopStruct%(id)s, t = " << t << " )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(attr_name)s, &%(attr_name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
             %(attr_name)s_host_to_device = false;
@@ -381,26 +378,49 @@ attribute_transfer = {
                 std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
         #endif
         }
-    """,
+""",
     'DtoH_local':"""
         // %(attr_name)s: local
-        if( %(attr_name)s_device_to_host < t ) {
-        #ifdef _DEBUG
-            std::cout << "DtoH: %(attr_name)s ( pop%(id)s )" << std::endl;
+        if (attr_name.compare("%(attr_name)s") == 0)
+        {
+            if (%(attr_name)s_device_to_host >= t)
+                return;     // already up to date
+
+        #if defined(_TRACE_INIT) || defined(_DEBUG)
+            std::cout << "DtoH: %(attr_name)s ( PopStruct%(id)s, t = " << t << " )" << std::endl;
         #endif
             cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            %(attr_name)s_device_to_host = t;
+
         #ifdef _DEBUG
             cudaError_t err_%(attr_name)s = cudaGetLastError();
             if ( err_%(attr_name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
         #endif
-            %(attr_name)s_device_to_host = t;
+            return;
         }
-    """,
+""",
     'DtoH_global':"""
     // %(attr_name)s: global
-    cudaMemcpy( &%(attr_name)s,  gpu_%(attr_name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
-    """
+        if (attr_name.compare("%(attr_name)s") == 0)
+        {
+            if (%(attr_name)s_device_to_host >= t)
+                return;     // already up to date
+
+        #if defined(_TRACE_INIT) || defined(_DEBUG)
+            std::cout << "DtoH: %(attr_name)s ( PopStruct%(id)s, t = " << t << " )" << std::endl;
+        #endif
+            cudaMemcpy( &%(attr_name)s,  gpu_%(attr_name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            %(attr_name)s_device_to_host = t;
+
+        #ifdef _DEBUG
+            cudaError_t err_%(attr_name)s = cudaGetLastError();
+            if ( err_%(attr_name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
+        #endif
+            return;
+        }
+"""
 }
 
 # Definition for the usage of CUDA device random
@@ -416,8 +436,8 @@ curand = {
     curandState* gpu_%(rd_name)s;
 """,
         'init': """
-        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
-        init_curand_states( size, gpu_%(rd_name)s, global_seed );
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
 """,
 	'clear': """
 cudaFree(gpu_%(rd_name)s);
@@ -429,7 +449,7 @@ cudaFree(gpu_%(rd_name)s);
 """,
         'init': """
         cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(curandState));
-        init_curand_states( 1, gpu_%(rd_name)s, global_seed );
+        init_curand_states(1, 1, gpu_%(rd_name)s, global_seed );
 #ifdef _DEBUG
         cudaError_t err_%(rd_name)s = cudaGetLastError();
         if ( err_%(rd_name)s != cudaSuccess )
@@ -554,7 +574,8 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
         'device_kernel': """// Updating local variables of population %(id)s
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    int tid = threadIdx.x + blockDim.x * blockIdx.x;
+    int i = tid;
 %(pre_loop)s
 
     while ( i < %(pop_size)s )
@@ -563,6 +584,8 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 
         i += blockDim.x * gridDim.x;
     }
+
+%(post_loop)s
 }
 """,
         'invoke_kernel': """

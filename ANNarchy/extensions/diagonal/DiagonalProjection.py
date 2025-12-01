@@ -6,7 +6,6 @@
 from ANNarchy.core.Projection import Projection
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
-import ANNarchy.core.Global as Global
 
 import numpy as np
 
@@ -113,15 +112,15 @@ class DiagonalProjection(Projection):
     def _create(self):
         # create fake CSR object, just for compilation.
         try:
-            from ANNarchy.cython_ext.Connector import CSR
+            from ANNarchy.cython_ext.Connector import LILConnectivity
         except:
             Messages._error('ANNarchy was not successfully installed.')
-        csr = CSR()
-        csr.max_delay = 0
-        csr.uniform_delay = 0
+        lil = LILConnectivity(dt=ConfigManager().get('dt', self.net_id))
+        lil.max_delay = 0
+        lil.uniform_delay = 0
         self.connector_name = "Diagonal Projection"
         self.connector_description = "Diagonal Projection"
-        self._store_connectivity(self._load_from_csr, (csr, ), 0)
+        self._store_connectivity(self._load_from_lil, (lil, ), 0)
 
 
     def _connect(self, module):
