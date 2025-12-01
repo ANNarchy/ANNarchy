@@ -104,7 +104,5 @@ for name in _deprecated:
         globals()[name] = _deprecated_wrapper(obj, name, message)
 
 
->>>>>>> master
-
 print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
