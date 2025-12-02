@@ -139,17 +139,28 @@ class TimedArray(SpecificPopulation):
     def r(self, new_r):
         Messages._error("The value of r is defined through the '*'rates' argument.")
 
-    def update(self, rates:np.ndarray, schedule:float=0., period:float=-1) -> None:
+    def update(self, rates:np.ndarray, schedule:float=None, period:float=None) -> None:
         """
-        Set a new array of inputs. 
-        
+        Set a new array of inputs.
+
         The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
         geometry is set during construction phase of the object.
 
         :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
-        :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+        :param schedule: either a single value or a list of time points where inputs should be set. Default: the initial schedule remains.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
         """
+
+        # If period or schedule not provided, use the existing ones
+        if schedule is None:
+            schedule = self.schedule
+
+        if period is None:
+            period = self.period
+
+        # before update reset the internal timers
+        if self.initialized:
+            self.reset()
 
         # Check the schedule
         if isinstance(schedule, (int, float)):
