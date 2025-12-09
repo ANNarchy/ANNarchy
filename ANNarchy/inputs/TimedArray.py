@@ -139,16 +139,49 @@ class TimedArray(SpecificPopulation):
     def r(self, new_r):
         Messages._error("The value of r is defined through the '*'rates' argument.")
 
-    def update(self, rates:np.ndarray, schedule:float=None, period:float=None) -> None:
+    def update(self, rates:np.ndarray, schedule:float=None, period:float=None, reset:bool=False) -> None:
         """
         Set a new array of inputs.
 
         The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
         geometry is set during construction phase of the object.
 
-        :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
-        :param schedule: either a single value or a list of time points where inputs should be set. Default: the initial schedule remains.
+        :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
         :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates. If False, the simulation will continue with values of the provided rates at the position of the current internal timers.  Default: False.
+
+        Example:
+
+        Set an input for the next 10 time steps:
+
+        ```python
+        inp = ann.TimedArray(rates=inputs_a) # inputs_a shape = (10, N)
+        ```
+
+        Simulate for 5 ms (dt = 1 ms, using inputs_a[0] to inputs_a[4]):
+
+        ```python
+        ann.simulate(5.)
+        ```
+
+        Now either update the TimedArray with new inputs for 10 time steps, without resetting the internal timers (the next input will be inputs_b[5]):
+
+        ```python
+        inp.update(rates=inputs_b) # inputs_b shape = (10, N)
+        ```
+
+        Or update the TimedArray with new inputs for **the next** 10 time steps, and reset the internal timers (the next input will be inputs_b[0]):
+
+        ```python
+        inp.update(rates=inputs_b, reset=True) # inputs_b shape = (10, N)
+        ```
+
+        If the internalt timers are reset, one can also redefine the schedule and period parameters, e.g. providing input for the next 20 ms with a schedule of 2 ms and afterwards cycling over this input:
+
+        ```python
+        inp.update(rates=inputs_b, schedule=2., period=20., reset=True) # inputs_b shape = (10, N)
+        ```
+
         """
 
         # If period or schedule not provided, use the existing ones
@@ -159,7 +192,7 @@ class TimedArray(SpecificPopulation):
             period = self.period
 
         # before update reset the internal timers
-        if self.initialized:
+        if self.initialized and reset:
             self.reset()
 
         # Check the schedule
@@ -167,8 +200,18 @@ class TimedArray(SpecificPopulation):
             if float(schedule) <= 0.0:
                 schedule = ConfigManager().get('dt', self.net_id)
 
-            self.schedule = [ float(schedule*i) for i in range(rates.shape[0])]
+            tmp = [ float(schedule*i) for i in range(rates.shape[0])]
+            if not np.allclose(tmp, self.schedule):
+                # got a new schedule, we need to reset blocks
+                if self.initialized:
+                    self.reset()
+            self.schedule = tmp
+
         else:
+            if not np.allclose(schedule, self.schedule):
+                # got a new schedule, we need to reset blocks
+                if self.initialized:
+                    self.reset()
             self.schedule = schedule
 
         if len(self.schedule) > rates.shape[0]:
@@ -191,6 +234,44 @@ class TimedArray(SpecificPopulation):
             copied=True, 
             net_id=self.net_id if net_id is None else net_id)
 
+    def _generate(self):
+        # calls the required _generate_[paradigm]
+        super()._generate()
+
+        # Nanobind wrapper is almost the same for all paradigms.
+        cuda_acc = f".def_rw(\"r_host_to_device\", &PopStruct{self.id}::r_host_to_device)" if ConfigManager().get('paradigm', self.net_id) == "cuda" else ""
+
+        self._specific_template['wrapper'] = f"""
+    // TimedArray
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Access currently set vector
+        .def_rw("r", &PopStruct{self.id}::r)
+        {cuda_acc}
+
+        // Access buffer attributes
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_rates", &PopStruct{self.id}::set_buffer)
+        .def("get_rates", &PopStruct{self.id}::get_buffer)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+
+"""
+
     def _generate_st(self):
         """
         adjust code templates for the specific population for single thread and openMP.
@@ -208,7 +289,13 @@ class TimedArray(SpecificPopulation):
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[_block]; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+        _buffer = buffer;
+        if (_schedule[_block] > _t)
+            r = _buffer[_block-1];
+        else
+            r = _buffer[_block];
+    }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
@@ -233,7 +320,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template['update_variables'] = """
         if(_active) {
         #ifdef _DEBUG
-            std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
 
             // Check if it is time to set the input
@@ -276,7 +363,7 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -288,38 +375,6 @@ class TimedArray(SpecificPopulation):
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
-        # Nanobind
-        self._specific_template['wrapper'] = f"""
-    // TimedArray
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-
-        // Attributes
-		.def_rw("r", &PopStruct{self.id}::r)
-
-        // Access methods
-        .def("set_schedule", &PopStruct{self.id}::set_schedule)
-        .def("get_schedule", &PopStruct{self.id}::get_schedule)
-
-        .def("set_rates", &PopStruct{self.id}::set_buffer)
-        .def("get_rates", &PopStruct{self.id}::get_buffer)
-
-        .def("set_period", &PopStruct{self.id}::set_period)
-        .def("get_period", &PopStruct{self.id}::get_period)
-
-        // Other methods
-
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("clear", &PopStruct{self.id}::clear);
-
-"""
-
     def _generate_omp(self):
         """
         adjust code templates for the specific population for single thread and openMP.
@@ -337,7 +392,13 @@ class TimedArray(SpecificPopulation):
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[_block]; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+        _buffer = buffer;
+        if (_schedule[_block] > _t)
+            r = _buffer[_block-1];
+        else
+            r = _buffer[_block];
+    }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
@@ -367,7 +428,7 @@ class TimedArray(SpecificPopulation):
             #pragma omp single
             {
             #ifdef _DEBUG
-                std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+                std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
             #endif
 
                 // Check if it is time to set the input
@@ -408,7 +469,7 @@ class TimedArray(SpecificPopulation):
                 _t++;
             }
         }
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -420,39 +481,6 @@ class TimedArray(SpecificPopulation):
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
-
-        # Nanobind
-        self._specific_template['wrapper'] = f"""
-    // TimedArray
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-
-        // Attributes
-		.def_rw("r", &PopStruct{self.id}::r)
-
-        // Access methods
-        .def("set_schedule", &PopStruct{self.id}::set_schedule)
-        .def("get_schedule", &PopStruct{self.id}::get_schedule)
-
-        .def("set_rates", &PopStruct{self.id}::set_buffer)
-        .def("get_rates", &PopStruct{self.id}::get_buffer)
-
-        .def("set_period", &PopStruct{self.id}::set_period)
-        .def("get_period", &PopStruct{self.id}::get_period)
-
-        // Other methods
-
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("clear", &PopStruct{self.id}::clear);
-
-"""
-
     def _generate_cuda(self):
         """
         adjust code templates for the specific population for single thread and CUDA.
@@ -514,7 +542,11 @@ class TimedArray(SpecificPopulation):
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
-        gpu_r = _gpu_buffer[_block];
+        // set the correct read-out position
+        if (_schedule[_block] > _t)
+            gpu_r = _gpu_buffer[_block-1];
+        else
+            gpu_r = _gpu_buffer[_block];
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() {
         std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( _gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
@@ -614,40 +646,6 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
-
-        # Nanobind
-        self._specific_template['wrapper'] = f"""
-    // TimedArray
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-
-        // Attributes
-		.def_rw("r", &PopStruct{self.id}::r)
-        .def_rw("r_host_to_device", &PopStruct{self.id}::r_host_to_device)
-
-        // Access methods
-        .def("set_schedule", &PopStruct{self.id}::set_schedule)
-        .def("get_schedule", &PopStruct{self.id}::get_schedule)
-
-        .def("set_rates", &PopStruct{self.id}::set_buffer)
-        .def("get_rates", &PopStruct{self.id}::get_buffer)
-
-        .def("set_period", &PopStruct{self.id}::set_period)
-        .def("get_period", &PopStruct{self.id}::get_period)
-
-        // Other methods
-
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("clear", &PopStruct{self.id}::clear);
-
-"""
-
     def _instantiate(self, module):
         # Create the Cython instance
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
