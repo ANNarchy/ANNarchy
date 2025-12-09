@@ -142,14 +142,14 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         if isinstance(rates, (list, np.ndarray)):
             rates = list(rates)
             if len(rates) != len(schedule): 
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
         else:
             rates = [float(rates) for _ in range(len(schedule))]
 
         # corr also
         if isinstance(corr, (list, np.ndarray)):
             if len(corr) != len(schedule): 
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
             corr = list(corr)
         else:
             corr = [float(corr) for _ in range(len(schedule))]
@@ -203,6 +203,41 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self.init['mu'] = self.mu_list[0]
         self.init['sigma'] = self.sigma_list[0]
 
+    def update(self, rates:float | list[float], corr:float | list[float], schedule:list[float] = None, tau: float=None):
+        """
+
+        """
+        # either overwrite or reuse previous tau
+        if tau is not None:
+            self.tau = tau
+
+        # schedule should be a list of onset times.
+        if schedule is None:
+            schedule = [0.0]
+        else:
+            schedule = list(schedule)
+
+        # rates should be a list with one value per schedule
+        if isinstance(rates, (list, np.ndarray)):
+            rates = list(rates)
+            if len(rates) != len(schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
+        else:
+            rates = [float(rates) for _ in range(len(schedule))]
+
+        # corr also
+        if isinstance(corr, (list, np.ndarray)):
+            if len(corr) != len(schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
+            corr = list(corr)
+        else:
+            corr = [float(corr) for _ in range(len(schedule))]
+
+        # store schedule
+        self.schedule = schedule
+
+        # Correction of mu and sigma
+        self.mu_list, self.sigma_list = self._correction(rates, corr, self.tau)
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
@@ -723,7 +758,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule. Please consider update() if you want to change the number of elements in rates.")
 
             if self.initialized:
                 # Set the attribute
@@ -747,7 +782,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule. Please consider update() if you want to change the number of elements in corr.")
 
             if self.initialized:
                 # Set the attribute
