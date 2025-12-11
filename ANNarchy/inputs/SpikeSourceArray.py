@@ -67,7 +67,7 @@ class SpikeSourceArray(SpecificPopulation):
         )
 
         # Register Population
-        super().__init__(self, geometry=nb_neurons, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        super().__init__(geometry=nb_neurons, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         self.init['spike_times'] = spike_times
 

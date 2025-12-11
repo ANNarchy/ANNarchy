@@ -44,7 +44,7 @@ class InputArray(SpecificPopulation):
         )
 
         # Register Population
-        super().__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        super().__init__(geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
     def _generate_st(self):
         """
