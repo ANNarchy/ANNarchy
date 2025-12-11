@@ -1168,7 +1168,6 @@ class Network (metaclass=NetworkMeta):
         # post is the criteria
         elif (post is not None) and (pre is None) and (target is None) :
             for proj in self._data.projections:
-                print(proj.post, post)
                 if proj.post == post:
                     res.append(proj)
 
