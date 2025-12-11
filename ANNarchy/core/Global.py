@@ -139,7 +139,7 @@ def projections(
     """
     Returns a list of all declared populations. 
     """
-    return NetworkManager().get_network(net_id=net_id).get_projections()
+    return NetworkManager().get_network(net_id=net_id).get_projections(post=post, pre=pre, target=target, suppress_error=suppress_error)
 
 def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     """
