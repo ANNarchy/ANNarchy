@@ -183,14 +183,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             description="Homogeneous correlated spike trains."
         )
 
-        SpecificPopulation.__init__(
-            self, 
-            geometry=geometry, 
-            neuron=corr_neuron, 
-            name=name, 
-            copied=copied, 
-            net_id=net_id
-        )
+        # Register Population
+        super().__init__(geometry=geometry, neuron=corr_neuron, name=name, copied=copied, net_id=net_id)
 
         # Initial values
         self.init['schedule'] = schedule

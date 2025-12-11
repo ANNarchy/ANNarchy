@@ -181,7 +181,9 @@ class PoissonPopulation(SpecificPopulation):
                 name="Poisson",
                 description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied, net_id=net_id)
+
+        # Register Population
+        super().__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied, net_id=net_id)
 
         if isinstance(rates, np.ndarray):
             self.rates = rates

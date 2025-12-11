@@ -100,7 +100,8 @@ class TimedPoissonPopulation(SpecificPopulation):
             description="Spiking neuron following a Poisson distribution."
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        # Register Population
+        super().__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         # Check arguments
         try:

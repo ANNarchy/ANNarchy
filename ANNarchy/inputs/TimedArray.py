@@ -119,7 +119,8 @@ class TimedArray(SpecificPopulation):
             description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(geometry, schedule, period)
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        # Register Population
+        super().__init__(geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         self.init['schedule'] = schedule
         self.init['rates'] = rates

@@ -43,13 +43,8 @@ class InputArray(SpecificPopulation):
             description="Input array source."
         )
 
-        SpecificPopulation.__init__(self, 
-            geometry=geometry,  
-            neuron=neuron, name=name, 
-            copied= copied,
-            net_id = net_id
-        )
-
+        # Register Population
+        super().__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
     def _generate_st(self):
         """
