@@ -10,6 +10,7 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
 
 class TimedArray(SpecificPopulation):
     """
@@ -198,6 +199,7 @@ class TimedArray(SpecificPopulation):
 
         # Check the schedule
         if isinstance(schedule, (int, float)):
+            # schedule step size must be at least one step
             if float(schedule) <= 0.0:
                 schedule = ConfigManager().get('dt', self.net_id)
 
@@ -654,7 +656,7 @@ class TimedArray(SpecificPopulation):
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                val_int = np.array((np.atleast_1d(value) / ConfigManager().get('dt', self.net_id)), dtype=np.int32)
+                val_int = convert_ms_to_steps(np.atleast_1d(value), self.net_id)
                 self.cyInstance.set_schedule( val_int )
             else:
                 self.init['schedule'] = value
@@ -676,7 +678,7 @@ class TimedArray(SpecificPopulation):
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
+                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['period'] = value
         else:
@@ -685,7 +687,7 @@ class TimedArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return [ConfigManager().get('dt', self.net_id) * val for val in self.cyInstance.get_schedule()]
+                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -703,7 +705,7 @@ class TimedArray(SpecificPopulation):
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
+                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
                 return self.init['period']
         else:

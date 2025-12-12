@@ -10,6 +10,8 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
+
 
 def _rectify(mu, corr, tau):
     """
@@ -710,8 +712,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         elif name == 'schedule':
             if self.initialized:
                 # Cast to steps (integer)
-                schedule_list = [int(val / ConfigManager().get('dt', self.net_id)) for val in value]
-                self.cyInstance.set_schedule( schedule_list )
+                self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['schedule'] = value
 
@@ -741,7 +742,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
+                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['period'] = value
 
@@ -813,7 +814,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         if name == 'schedule':
             if self.initialized:
-                return [ConfigManager().get('dt', self.net_id) * val for val in self.cyInstance.get_schedule() ]
+                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
               
@@ -822,30 +823,30 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.cyInstance.mu
             else:
                 return self.init['mu']
-            
+
         elif name == 'mu_list':
             if self.initialized:
                 return list(self.cyInstance.get_mu_list())
             else:
                 return self.init['mu_list']
-            
+
         elif name == 'sigma':
             if self.initialized:
                 return self.cyInstance.sigma
             else:
                 return self.init['sigma']
-            
+
         elif name == 'sigma_list':
             if self.initialized:
                 return list(self.cyInstance.get_sigma_list())
             else:
                 return self.init['sigma_list']
-                      
+
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
+                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
                 return self.init['period']
-            
+
         else:
             return Population.__getattribute__(self, name)

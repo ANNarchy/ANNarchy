@@ -10,7 +10,7 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
 
 
 class TimedPoissonPopulation(SpecificPopulation):
@@ -650,7 +650,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( [int(val / ConfigManager().get('dt', self.net_id))  for val in value])
+                self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
@@ -669,7 +669,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
+                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['period'] = value
         else:
@@ -678,7 +678,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return [float(ConfigManager().get('dt', self.net_id) * val) for val in self.cyInstance.get_schedule()]
+                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -696,7 +696,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
+                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
                 return self.init['period']
         else:
