@@ -252,6 +252,9 @@ class CUDAGenerator(PopulationGenerator):
         """
         from ANNarchy.generator.Utils import tabify
 
+        if 'clear_container' in pop._specific_template.keys():
+            return pop._specific_template['clear_container']
+
         # Variables (host-side), which contains also Mean-FR code
         code = PopulationGenerator._clear_container(self, pop)
 
@@ -1418,7 +1421,7 @@ class CUDAGenerator(PopulationGenerator):
 """ % {'id': pop.id}
 
         # Write back variables. The operation should be performed only if it hasn't done
-        # since the last simulate() / step() and for a given variable. 
+        # since the last simulate() / step() and for a given variable.
         for attr in pop.neuron_type.description['variables']:
             ids = {'attr_name': attr['name'], 'type': attr['ctype'], 'id': pop.id}
             if attr['name'] in pop.neuron_type.description['local']:

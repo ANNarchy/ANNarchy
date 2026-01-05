@@ -90,12 +90,12 @@ class TimedArray(SpecificPopulation):
     :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
 
     """
-    def __init__(self, 
-                 rates:np.ndarray=None, 
-                 geometry:int|tuple=None, 
-                 schedule:float=0., 
-                 period:float=-1., 
-                 name:str=None, 
+    def __init__(self,
+                 rates:np.ndarray=None,
+                 geometry:int|tuple=None,
+                 schedule:float=0.,
+                 period:float=-1.,
+                 name:str=None,
                  copied:bool=False,
                  net_id:int=0,
                  ):
@@ -229,21 +229,25 @@ class TimedArray(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return TimedArray(
-            rates=self.rates, 
-            geometry=self.geometry, 
-            schedule=self.schedule, 
-            period=self.period, 
-            name=self.name, 
-            copied=True, 
+            rates=self.rates,
+            geometry=self.geometry,
+            schedule=self.schedule,
+            period=self.period,
+            name=self.name,
+            copied=True,
             net_id=self.net_id if net_id is None else net_id)
 
     def _generate(self):
         # calls the required _generate_[paradigm]
         super()._generate()
 
-        # Nanobind wrapper is almost the same for all paradigms.
-        cuda_acc = f".def_rw(\"r_host_to_device\", &PopStruct{self.id}::r_host_to_device)" if ConfigManager().get('paradigm', self.net_id) == "cuda" else ""
+        # CUDA requires extra accessors for HtoD / DtoH - transfers
+        used_cuda = ConfigManager().get('paradigm', self.net_id) == "cuda"
+        cuda_acc = f".def_rw(\"r_host_to_device\", &PopStruct{self.id}::r_host_to_device)\n" if used_cuda else ""
+        cuda_acc += f"\t\t.def(\"host_to_device\", &PopStruct{self.id}::device_to_host)\n" if used_cuda else ""
+        cuda_acc += f"\t\t.def(\"device_to_host\", &PopStruct{self.id}::device_to_host)\n" if used_cuda else ""
 
+        # Nanobind wrapper is almost the same for all paradigms.
         self._specific_template['wrapper'] = f"""
     // TimedArray
     nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
@@ -287,7 +291,7 @@ class TimedArray(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -303,7 +307,7 @@ class TimedArray(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -377,7 +381,7 @@ class TimedArray(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
     def _generate_omp(self):
         """
         adjust code templates for the specific population for single thread and openMP.
@@ -390,7 +394,7 @@ class TimedArray(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -406,14 +410,14 @@ class TimedArray(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
-        
+
         self._specific_template['reset_additional'] ="""
         _t = 0;
         _block = 0;
@@ -483,18 +487,21 @@ class TimedArray(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
     def _generate_cuda(self):
         """
         adjust code templates for the specific population for single thread and CUDA.
         """
-        # HD (18. Nov 2016)
-        # I suppress the code generation for allocating the variable r on gpu, as
-        # well as memory transfer codes. This is only possible as no other variables
-        # allowed in TimedArray.
-        self._specific_template['init_parameters_variables'] = ""
+
+        # Don't allocate/free gpu_r, its just a reference to _gpu_buffer
+        self._specific_template['init_parameters_variables'] = """
+        r = std::vector<%(float_prec)s>(size, static_cast<%(float_prec)s>(0.0));
+        gpu_r = nullptr;    // will be set by update() / set_buffer()
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+        self._specific_template['clear_container'] = ""
+
+        # Disable write access to gpu_r
         self._specific_template['host_device_transfer'] = ""
-        self._specific_template['device_host_transfer'] = ""
 
         #
         # Code for handling the buffer and schedule parameters
@@ -506,23 +513,40 @@ class TimedArray(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
-    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    void set_schedule(std::vector<int> schedule) {
+    #ifdef _DEBUG
+        std::string arg_str = "";
+        for (auto it = schedule.begin(); it != schedule.end(); it++)
+            arg_str += std::to_string(*it) + ' ';
+        std::cout << "TimedArray%(id)s::set_schedule(schedule=[ " << arg_str << "])" << std::endl;
+    #endif
+        _schedule = schedule;
+    }
     std::vector<int> get_schedule() { return _schedule; }
+
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
     #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s::set_buffer()" << std::endl;
+        std::cout << "TimedArray%(id)s::set_buffer(buffer = " << std::to_string(buffer.size()) << " x " << std::to_string(buffer[0].size()) << " container)" << std::endl;
     #endif
         // clear a previous allocated container.
         if ( !_gpu_buffer.empty() ) {
+        #ifdef _DEBUG
+            std::cout << "  clear previously allocated buffers ..." << std::endl;
+        #endif
             for (auto it = _gpu_buffer.begin(); it != _gpu_buffer.begin(); it++) {
-                cudaFree(*it);
+                cudaError_t err_on_free = cudaFree(*it);
+                if ( err_on_free != cudaSuccess ) {
+                    std::cout << "TimedArray%(id)s::set_buffer():" << std::endl;
+                    std::cout << "  clearing of previously allocated buffers failed: " << cudaGetErrorString(err_on_free) << std::endl;
+                }
             }
             _gpu_buffer.clear();
             _gpu_buffer.shrink_to_fit();
         }
+
         // abort updating the container if no data is provided.
         if (buffer.empty()) {
             std::cerr << "The buffer provided to TimedArray should not be empty!" << std::endl;
@@ -535,14 +559,23 @@ class TimedArray(SpecificPopulation):
         _gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
 
         // allocate gpu arrays
-        for(int i = 0; i < buffer.size(); i++) {
-            cudaMalloc((void**)&_gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
+        for (int i = 0; i < buffer.size(); i++) {
+            assert(buffer[i].size() == size);
+
+            cudaError_t err_transfer_buffer = cudaMalloc((void**)&_gpu_buffer[i], size*sizeof(%(float_prec)s));
+            if ( err_transfer_buffer != cudaSuccess ) {
+                std::cout << "TimedArray%(id)s::set_buffer():" << std::endl;
+                std::cout << "  allocating new buffer arrays failed: " << cudaGetErrorString(err_transfer_buffer) << std::endl;
+            }
         }
 
-        auto host_it = buffer.begin();
-        auto dev_it = _gpu_buffer.begin();
-        for (; host_it != buffer.end(); host_it++, dev_it++) {
-            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
+        // transfer data to device
+        for (int i = 0; i < buffer.size(); i++) {
+            cudaError_t err_transfer_buffer = cudaMemcpy( _gpu_buffer[i], buffer[i].data(), size*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
+            if ( err_transfer_buffer != cudaSuccess ) {
+                std::cout << "TimedArray%(id)s::set_buffer():" << std::endl;
+                std::cout << "  copying data to new arrays failed: " << cudaGetErrorString(err_transfer_buffer) << std::endl;
+            }
         }
 
         // set the correct read-out position
@@ -550,6 +583,17 @@ class TimedArray(SpecificPopulation):
             gpu_r = _gpu_buffer[_block-1];
         else
             gpu_r = _gpu_buffer[_block];
+
+        // Explicitly update read-only r
+        cudaMemcpy( r.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);
+        r_device_to_host = t;
+
+    #ifdef _DEBUG
+        std::cout << "TimedArray%(id)s::set_buffer() - current r: [ ";
+        for(auto it = r.begin(); it != r.end(); it++)
+            std::cout << *it << " ";
+        std::cout << "]" << std::endl;
+    #endif
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() {
         std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( _gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
@@ -562,10 +606,16 @@ class TimedArray(SpecificPopulation):
 
         return buffer;
     }
-    void set_period(int period) { _period = period; }
+
+    void set_period(int period) {
+    #ifdef _DEBUG
+        std::cout << "TimedArray%(id)s::set_period(period="<<std::to_string(period)<<")" << std::endl;
+    #endif
+        _period = period;
+    }
     int get_period() { return _period; }
 """ % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -590,7 +640,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template['update_variables'] = """
         if(_active) {
         #ifdef _DEBUG
-            std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
             // Check if it is time to set the input
             if (_t == _schedule[_block]) {
@@ -627,13 +677,23 @@ class TimedArray(SpecificPopulation):
 
             // Always increment the internal time
             _t++;
+
+        #ifdef _DEBUG
+            std::cout << "TimedArray%(id)s::update() - current r: [ ";
+            auto tmp = std::vector<double>(size);
+            cudaMemcpy( tmp.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);
+            for(auto it = tmp.begin(); it != tmp.end(); it++)
+                std::cout << *it << " ";
+            std::cout << "]" << std::endl;
+        #endif
         }
-"""
-        # call the switch of CPU-buffers (host-side)
-        self._specific_template['update_variable_call'] = """
-    // host side update of neurons
-    pop%(id)s->update();
 """ % {'id': self.id}
+
+        # call the switch of CPU-buffers (host-side)
+        self._specific_template['update_variable_call'] = f"""
+    // host side update of neurons
+    pop{self.id}->update();
+"""
 
         self._specific_template['size_in_bytes'] = """
         // r
@@ -648,7 +708,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
     def _instantiate(self, module):
         # Create the Cython instance
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
@@ -710,5 +770,5 @@ class TimedArray(SpecificPopulation):
                 return self.init['period']
         else:
             return Population.__getattribute__(self, name)
-        
+
 
