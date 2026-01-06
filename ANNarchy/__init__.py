@@ -53,7 +53,7 @@ atexit.register(clear)
 
 # Version
 __version__ = '5.0'
-__release__ = '5.0.0rc10'
+__release__ = '5.0.0'
 
 # Deprecated imports from this module:
 _deprecated = {
@@ -81,7 +81,7 @@ def _deprecated_wrapper(obj, name, message=None):
         return DeprecatedClass
     else:
         return obj
-    
+
 for name in _deprecated:
     obj = globals().get(name)
     if obj is not None:

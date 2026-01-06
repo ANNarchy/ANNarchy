@@ -11,10 +11,6 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 * Forum: [google forum](https://groups.google.com/forum/#!forum/annarchy)
 * Bug reports and feature requests: [Issue Tracker](https://github.com/ANNarchy/ANNarchy/issues).
 
-> [!NOTE]
-> ANNarchy 5.0 has been released as pre-release. It is a major update with many new features and improvements. To use the new release, you need to install ANNarchy with *pip install ANNarchy==5.0.0rc10*. The documentation is available at [annarchy.github.io](https://annarchy.github.io). The documentation for ANNarchy 4.8 is available at [annarchy.github.io/ANNarchy4](https://annarchy.github.io/ANNarchy4).
-
-
 ### Citation
 
 If you use ANNarchy for your research, we would appreciate if you cite the following paper:
@@ -23,8 +19,9 @@ If you use ANNarchy for your research, we would appreciate if you cite the follo
 
 ### Authors
 
-* Julien Vitay (julien.vitay@informatik.tu-chemnitz.de).
+* Julien Vitay (julien.vitay@gmail.com).
 * Helge Ülo Dinkelbach (helge-uelo.dinkelbach@informatik.tu-chemnitz.de).
+* Oliver Maith (oliver.maith@informatik.tu-chemnitz.de)
 * Fred Hamker (fred.hamker@informatik.tu-chemnitz.de).
 
 ## Installation
