@@ -20,6 +20,7 @@ Next to the above breaking changes, we further updated/added:
     * Dense/BSR is limited to projections without PopulationViews (72dd33d)
 * Restructured unittests and changed the execution of them (see ANNarchy/tests/README.txt)
 * Added standalone C++ unittests for the sparse matrix implementations placed in ANNarchy/include
+* Added utility functions for conversion of ms into steps (commit 672c08e)
 * Reduced the number of memory transfers between GPU and Host to improve overall simulation time (e.g., c80d403,116264b)
 * Reduced the number of stored RNG states on GPUs (commit 02c1919)
 
