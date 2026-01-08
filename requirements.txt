@@ -9,3 +9,4 @@ ipykernel
 h5py
 tqdm
 lxml
+nanobind<=2.7.0
