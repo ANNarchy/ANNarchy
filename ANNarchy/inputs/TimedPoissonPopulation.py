@@ -10,7 +10,7 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
 
 
 class TimedPoissonPopulation(SpecificPopulation):
@@ -100,7 +100,8 @@ class TimedPoissonPopulation(SpecificPopulation):
             description="Spiking neuron following a Poisson distribution."
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        # Register Population
+        super().__init__(geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         # Check arguments
         try:
@@ -114,14 +115,52 @@ class TimedPoissonPopulation(SpecificPopulation):
         if nb_schedules != len(schedule):
             Messages._error("TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule.")
 
-
         if isinstance(rates[0], (float, int, )) : # One rate for the whole population
             rates = [np.full(self.size, rates[i]) for i in range(nb_schedules)]
+        else:
+            for i in range(nb_schedules):
+                if len(rates[i]) != self.size:
+                    Messages._error("TimedPoissonPopulation: the second axis of the rates must be either a single element or the size of the population.")
 
         # Initial values
         self.init['schedule'] = schedule
         self.init['rates'] = rates
         self.init['period'] = period
+
+    def update(self, rates:np.ndarray, schedule:float=None, period:float=None, reset:bool=False) -> None:
+        """
+        Set new parameters for the timed poisson input population.
+
+        :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
+        :param schedule: list of times (in ms) where the firing rate should change.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
+        """
+        # If period or schedule are not provided, use the existing ones
+        if schedule is None:
+            schedule = self.schedule
+
+        if period is None:
+            period = self.period
+
+        # before update reset the internal timers
+        if self.initialized and reset:
+            self.reset()
+
+        if isinstance(rates, list):
+            rates = np.array(rates)
+        if isinstance(rates[0], (float, int, )) : # One rate for the whole population
+            rates = [np.full(self.size, rates[i]) for i in range(len(schedule))]
+
+        if isinstance(rates[0], (float, int, )) : # One rate for the whole population
+            rates = [np.full(self.size, rates[i]) for i in range(len(schedule))]
+        else:
+            for i in range(len(schedule)):
+                if len(rates[i]) != self.size:
+                    Messages._error("TimedPoissonPopulation: the second axis of the rates must be either a single element or the size of the population.")
+
+        self.schedule = schedule
+        self.rates = np.array(rates)
+        self.period = period
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
@@ -144,7 +183,13 @@ class TimedPoissonPopulation(SpecificPopulation):
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) {
+        _buffer = buffer;
+        if (_schedule[_block] > _t)
+            r = _buffer[_block-1];
+        else
+            r = _buffer[_block];
+    }
     std::vector< std::vector< %(float_prec)s > > get_rates() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
@@ -605,7 +650,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( [int(val / ConfigManager().get('dt', self.net_id))  for val in value])
+                self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
@@ -624,7 +669,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
+                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['period'] = value
         else:
@@ -633,7 +678,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return [float(ConfigManager().get('dt', self.net_id) * val) for val in self.cyInstance.get_schedule()]
+                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -651,7 +696,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
+                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
                 return self.init['period']
         else:

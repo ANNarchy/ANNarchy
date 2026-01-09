@@ -6,9 +6,9 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
-from ANNarchy.core import Global
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 class NormProjection(SpecificProjection):
     """
@@ -304,9 +304,11 @@ def _update_num_aff_connections(net_id=0, verbose=False):
     This function should be used only internally!!! The function is
     called during Compiler.compile() call.
     """
+    net = NetworkManager().get_network(net_id)
+
     # Do we need to execute this procedure?
     need_to_execute = False
-    for proj in Global.projections():
+    for proj in net.get_projections():
         if isinstance(proj, NormProjection):
             need_to_execute = True
             break
@@ -315,11 +317,11 @@ def _update_num_aff_connections(net_id=0, verbose=False):
         return
 
     # iterate over all populations
-    for pop in Global.populations(net_id):
+    for pop in net.get_populations():
         nb_synapses = np.zeros((pop.size))
 
         # get afferent projections of this layer
-        aff_proj = Global.projections(net_id, pop.name)
+        aff_proj = net.get_projections(post=pop, suppress_error=True)
 
         # we accumulate the number of synapses per dendrite
         # across all afferent projections of this layer.
@@ -353,4 +355,5 @@ def _update_num_aff_connections(net_id=0, verbose=False):
 
             if verbose:
                 print('after:', nb_synapses_per_dend)
-            proj.cyInstance.set_semiglobal_attribute_all("nb_aff_synapse", nb_synapses_per_dend, "double")
+
+            getattr(proj.cyInstance, "set_semiglobal_attribute_all_"+ConfigManager().get("precision", net_id=net_id))("nb_aff_synapse", nb_synapses_per_dend)

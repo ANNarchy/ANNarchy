@@ -328,20 +328,157 @@ class test_TimedArrayUpdate(unittest.TestCase):
     def test_run_one_loop(self):
         """
         We provide 5 ms input data, then we set another input sequence and simulate 6 ms more. The
-        expected result is the last value in the input buffer, as cycling is disabled.
+        expected result is the last value in the input buffer, as cycling is disabled
+        and also the last input in the output population (from the 10th simulation step).
         """
         self._network.simulate(5)
         self.input.update(self.overwrite_inputs)
         self._network.simulate(6)
         numpy.testing.assert_allclose(self.output.sum("exc_1"), [2, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
-    def test_run_one_loop_and_period(self):
+    def test_run_one_loop_and_schedule(self):
         """
-        We provide 5 ms input data, then we set another input sequence and simulate 6 ms more. As we
-        have a schedule of 2 ms, the 5-th position should be read out.
+        We provide 5 ms input data, then we set another input sequence and simulate until
+        the end of the input sequence. With schedule=2 each input value is held for 2 ms.
+
+        What should be the input values at different times:
+        idx : timesteps
+        0 : 1-2
+        1 : 3-4
+        2 : 5-6  --> after simulate 5 ms there should be self.initial_inputs[2]
+        3 : 7-8
+        4 : 9-10
+        5 : 11-12 --> after simulate 11 ms there should be self.overwrite_inputs[5]
+        6 : 13-14
+        7 : 15-16
+        8 : 17-18
+        9 : 19-20 --> after simulate 20 ms there should be self.overwrite_inputs[9]
+
+        In the output population we should always have the sum of the inputs from the
+        previous timestep.
+        """
+
+        # first input block
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[0])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[0])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[0])
+        # second input block
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[1])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[0])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[1])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1])
+        # third input block - during block change input
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[2])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1])
+        self.input2.update(self.overwrite_inputs, schedule=2.0)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1]) # in output pop still old input
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        # fourth input block
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[3])
+        # fifth input block
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[4])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[3])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[4])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[4])
+        # sixth input block
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[5])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[4])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[5])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[5])
+        # 7th, 8th, 9th, 10th input blocks
+        self._network.simulate(8)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+
+    def test_run_one_loop_reset(self):
+        """
+        We provide 5 ms input data, then we set another input sequence for the next 10 ms
+        (by resetting the internal timers) and simulate 6 ms more. The expected result is
+        the 6-th value in the new input buffer instead of the last one (as without reset)
+        and the 5-th input in the output population.
         """
         self._network.simulate(5)
-        self.input2.update(self.overwrite_inputs, schedule=2.0)
+        self.input.update(self.overwrite_inputs, reset=True)
         self._network.simulate(6)
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), [0, 0, 0, 0, 1, 2, 0, 0, 0, 0])
+        numpy.testing.assert_allclose(self.input.r, self.overwrite_inputs[5])
+        numpy.testing.assert_allclose(self.output.sum("exc_1"), self.overwrite_inputs[4])
 
+    def test_run_one_loop_and_schedule_reset(self):
+        """
+        We provide 5 ms input data, then we set another input sequence for the next 20 ms
+        (by resetting the internal timers) and simulate 6 ms more. The expected result is:
+
+        idx : timesteps
+        0 : 1-2
+        1 : 3-4
+        2 : 5-  --> after simulate 5 ms we reset
+        0 : 6-7
+        1 : 8-9
+        2 : 10-11 --> after simulate 11 ms there should be self.overwrite_inputs[2]
+        """
+        self._network.simulate(5)
+        self.input2.update(self.overwrite_inputs, reset=True) # schedule is still 2.
+        self._network.simulate(6)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+
+    def test_run_one_loop_and_change_schedule_and_period_reset(self):
+        """
+        We provide 5 ms input data, then we set another input sequence for the next 40 ms
+        (by resetting the internal timers and setting schedule to 4) and simulate 6 ms more.
+        The expected result is:
+
+        idx : timesteps
+        0 : 1-2
+        1 : 3-4
+        2 : 5-  --> after simulate 5 ms we reset
+        0 : 6-9
+        1 : 10-13
+        2 : 14-17 --> after simulate 17 ms there should be self.overwrite_inputs[2]
+
+        Furthermore period is set to 40, so after 40 ms the input buffer should cycle:
+
+        idx : timesteps
+        9 : 37-40
+        0 : 41-44
+        """
+        self._network.simulate(5)
+        self.input2.update(self.overwrite_inputs, reset=True, schedule=4, period=40)
+        self._network.simulate(12)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        self._network.simulate(27) # after simulate total 40 ms we should be at the end of the input buffer and in following steps it should cycle
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[0])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[0])
+        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[0])

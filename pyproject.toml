@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ANNarchy"
-version = "5.0.1"
+version = "5.1.0"
 description = 'Artificial Neural Networks architect'
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "GPLv2+"}
 keywords = ["neural simulator"]
 authors = [
-  { name = "Julien Vitay", email = "julien.vitay@informatik.tu-chemnitz.de" },
+  { name = "Julien Vitay", email = "julien.vitay@gmail.com" },
   { name = "Helge Dinkelbach", email = "helge-uelo.dinkelbach@informatik.tu-chemnitz.de" },
+  { name = "Oliver Maith", email = "oliver.maith@informatik.tu-chemnitz.de"},
   { name = "Fred Hamker", email = "fred.hamker@informatik.tu-chemnitz.de" },
 ]
 classifiers = [

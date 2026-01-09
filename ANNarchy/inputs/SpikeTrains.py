@@ -10,6 +10,8 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
+
 
 def _rectify(mu, corr, tau):
     """
@@ -142,14 +144,14 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         if isinstance(rates, (list, np.ndarray)):
             rates = list(rates)
             if len(rates) != len(schedule): 
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
         else:
             rates = [float(rates) for _ in range(len(schedule))]
 
         # corr also
         if isinstance(corr, (list, np.ndarray)):
             if len(corr) != len(schedule): 
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
             corr = list(corr)
         else:
             corr = [float(corr) for _ in range(len(schedule))]
@@ -183,14 +185,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             description="Homogeneous correlated spike trains."
         )
 
-        SpecificPopulation.__init__(
-            self, 
-            geometry=geometry, 
-            neuron=corr_neuron, 
-            name=name, 
-            copied=copied, 
-            net_id=net_id
-        )
+        # Register Population
+        super().__init__(geometry=geometry, neuron=corr_neuron, name=name, copied=copied, net_id=net_id)
 
         # Initial values
         self.init['schedule'] = schedule
@@ -203,6 +199,41 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self.init['mu'] = self.mu_list[0]
         self.init['sigma'] = self.sigma_list[0]
 
+    def update(self, rates:float | list[float], corr:float | list[float], schedule:list[float] = None, tau: float=None):
+        """
+
+        """
+        # either overwrite or reuse previous tau
+        if tau is not None:
+            self.tau = tau
+
+        # schedule should be a list of onset times.
+        if schedule is None:
+            schedule = [0.0]
+        else:
+            schedule = list(schedule)
+
+        # rates should be a list with one value per schedule
+        if isinstance(rates, (list, np.ndarray)):
+            rates = list(rates)
+            if len(rates) != len(schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
+        else:
+            rates = [float(rates) for _ in range(len(schedule))]
+
+        # corr also
+        if isinstance(corr, (list, np.ndarray)):
+            if len(corr) != len(schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
+            corr = list(corr)
+        else:
+            corr = [float(corr) for _ in range(len(schedule))]
+
+        # store schedule
+        self.schedule = schedule
+
+        # Correction of mu and sigma
+        self.mu_list, self.sigma_list = self._correction(rates, corr, self.tau)
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
@@ -681,8 +712,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         elif name == 'schedule':
             if self.initialized:
                 # Cast to steps (integer)
-                schedule_list = [int(val / ConfigManager().get('dt', self.net_id)) for val in value]
-                self.cyInstance.set_schedule( schedule_list )
+                self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['schedule'] = value
 
@@ -712,7 +742,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
+                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
                 self.init['period'] = value
 
@@ -723,7 +753,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule. Please consider update() if you want to change the number of elements in rates.")
 
             if self.initialized:
                 # Set the attribute
@@ -747,7 +777,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+                Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule. Please consider update() if you want to change the number of elements in corr.")
 
             if self.initialized:
                 # Set the attribute
@@ -784,7 +814,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         if name == 'schedule':
             if self.initialized:
-                return [ConfigManager().get('dt', self.net_id) * val for val in self.cyInstance.get_schedule() ]
+                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
               
@@ -793,30 +823,30 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.cyInstance.mu
             else:
                 return self.init['mu']
-            
+
         elif name == 'mu_list':
             if self.initialized:
                 return list(self.cyInstance.get_mu_list())
             else:
                 return self.init['mu_list']
-            
+
         elif name == 'sigma':
             if self.initialized:
                 return self.cyInstance.sigma
             else:
                 return self.init['sigma']
-            
+
         elif name == 'sigma_list':
             if self.initialized:
                 return list(self.cyInstance.get_sigma_list())
             else:
                 return self.init['sigma_list']
-                      
+
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
+                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
                 return self.init['period']
-            
+
         else:
             return Population.__getattribute__(self, name)

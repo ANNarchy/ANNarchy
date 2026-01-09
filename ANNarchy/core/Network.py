@@ -1125,11 +1125,90 @@ class Network (metaclass=NetworkMeta):
         """
         return self._data.populations
 
-    def get_projections(self) -> list["Projection"]:
+    def get_projections(self,
+            post: Population|str=None,
+            pre: Population|str=None,
+            target:str=None,
+            suppress_error:bool=False) -> list["Projection"]:
         """
-        Returns a list of all declared projections for the current network. 
+        Returns by default a list of all declared projections for the current network.
+
+        The returned list can be restricted by the arguments *pre*, *post*, or *target*.
+        Note that, an error message will be thrown if no projections where found which match the criterias.
+
+        To prevent an error message, one can set the `suppress_error` flag. This should be done only in rare circumstances!
         """
-        return self._data.projections
+        # None of the arguments is set, so we return all
+        if post is None and pre is None and target is None:
+            return self._data.projections
+
+        # We need to collect the projections according to the criteria
+        res = []
+
+        # The user can provide an object or the name, however, the following code
+        # expects the population objects.
+        if isinstance(post, str):
+            obj = self.get_population(post.name)
+            if obj is None: # Sanity check
+                Messages._error("The post-synaptic population '{}' was not found".format(post.name))
+            post = obj
+
+        if isinstance(pre, str):
+            obj = self.get_population(pre.name)
+            if obj is None: # Sanity check
+                Messages._error("The pre-synaptic population '{}' was not found".format(pre.name))
+            pre = obj
+
+        # All criterias are used
+        if post is not None and pre is not None and target is not None:
+            for proj in self._data.projections:
+                if proj.post == post and proj.pre == pre and proj.target == target:
+                    res.append(proj)
+
+        # post is the criteria
+        elif (post is not None) and (pre is None) and (target is None) :
+            for proj in self._data.projections:
+                if proj.post == post:
+                    res.append(proj)
+
+        # pre is the criteria
+        elif (pre is not None) and (post is None) and (target is None):
+            for proj in self._data.projections:
+                if proj.pre == pre:
+                    res.append(proj)
+
+        # target is the criteria
+        elif (target is not None) and (post is None) and (pre is None):
+            for proj in self._data.projections:
+                if proj.target == target:
+                    res.append(proj)
+
+        # pre/target is the criteria
+        elif (pre is not None) and (target is not None) and (post is None) :
+            for proj in self._data.projections:
+                if proj.pre == pre and proj.target == target:
+                    res.append(proj)
+
+        # post/target is the criteria
+        elif (post is not None) and (target is not None) and (pre is None):
+            for proj in self._data.projections:
+                if proj.post == post and proj.target == target:
+                    res.append(proj)
+
+        # post/pre is the criteria
+        elif (post is not None) and (pre is not None) and (target is None):
+            for proj in self._data.projections:
+                if proj.post == post and proj.pre == pre:
+                    res.append(proj)
+
+        else:
+            # for sanity reasons, should not be reached
+            raise NotImplementedError
+
+        if not suppress_error and len(res)==0:
+            Messages._error(f"Could not find projections fitting post={post}, pre={pre}, and target={target}")
+
+        return res
 
     def get_monitors(self) -> list["Monitor"]:
         """

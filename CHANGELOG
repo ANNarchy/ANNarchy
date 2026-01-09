@@ -2,6 +2,8 @@
 
 * **Important**: this release introduces changes/features which are not compatible with ANNarchy 4.x
 * the construction of networks using a magic network is deprecated. All ANNarchy objects, such as populations or projections, should now use the *Network* class. A warning is printed when the old-style interface is called (e.g., 29a3154, 64ddc5d).
+* Changed the default for *reshape* argument for Monitor.get() from False to True (see commit b4142d1)
+* timed input populations, i.e., TimedArray, TimedPoissonPopulation, HomogeneousCorrelatedSpikeTrains, have now an update method. For this specific populations, its not recommended to use the direct accessors rates, schedule or period! (commit 9c8b4c0, 0d5c2e2)
 
 Next to the above breaking changes, we further updated/added:
 
@@ -18,6 +20,7 @@ Next to the above breaking changes, we further updated/added:
     * Dense/BSR is limited to projections without PopulationViews (72dd33d)
 * Restructured unittests and changed the execution of them (see ANNarchy/tests/README.txt)
 * Added standalone C++ unittests for the sparse matrix implementations placed in ANNarchy/include
+* Added utility functions for conversion of ms into steps (commit 672c08e)
 * Reduced the number of memory transfers between GPU and Host to improve overall simulation time (e.g., c80d403,116264b)
 * Reduced the number of stored RNG states on GPUs (commit 02c1919)
 

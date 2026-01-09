@@ -973,7 +973,7 @@ class Projection :
                 elif attribute in self.synapse_type.description['semiglobal']:
                     getattr(self.cyInstance, "set_semiglobal_attribute_all_"+ctype)(attribute, value)
                 else:
-                    Messages._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
+                    Messages._error(f"The parameter '{attribute}' is global to the projection '{self.name}', cannot assign a list.")
             else:
                 Messages._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
 

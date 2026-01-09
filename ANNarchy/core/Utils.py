@@ -4,13 +4,61 @@
 """
 
 import numpy as np
+import time
+from functools import wraps
+
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 
-from functools import wraps
-import time
+def convert_ms_to_steps(values: int|float|list|np.ndarray, net_id=0) -> int | list| np.ndarray:
+    """
+    Attributes such as synaptic delays or schedules in timed inputs are given by the user in milliseconds.
+    For the simulation they need to be converted into a number of steps.
 
+    :param values: elements to converted in milliseconds
+    :param net_id: in order to obatin the discretization time step we require the corresponding network id.
+
+    Note:
+        In ANNarchy we apply a rather simple rule: values stored on C++ side always refer to steps,
+        while on Python side values refers to milliseconds.
+    """
+    dt = ConfigManager().get('dt', net_id=net_id)
+
+    if isinstance(values, (float, int)):
+        return int(np.rint(values/dt))
+
+    elif isinstance(values, np.ndarray):
+        return np.rint(values/dt).astype(np.int32)
+
+    elif isinstance(values, list):
+        return [int(np.rint(val/dt)) for val in values]
+
+    else:
+        raise ValueError("convert_ms_to_steps: expected either scalar, list or np.ndarray")
+
+def convert_steps_to_ms(values: int|list|np.ndarray, net_id=0) -> float|list|np.ndarray:
+    """
+    Reverse method to `convert_ms_to_steps`.
+
+    Note:
+        In ANNarchy we apply a rather simple rule: values stored on C++ side always refer to steps,
+        while on Python side values refers to milliseconds.
+    """
+    dt = ConfigManager().get('dt', net_id=net_id)
+
+    if isinstance(values, (float, int)):
+        return float(values * dt)
+
+    elif isinstance(values, np.ndarray):
+        return (values * dt).astype(float)
+
+    elif isinstance(values, list):
+        return [float(val * dt) for val in values]
+
+    else:
+        raise ValueError("convert_steps_to_ms: expected either scalar, list or np.ndarray")
 
 ######################
 # Time measurement
