@@ -52,8 +52,8 @@ import atexit
 atexit.register(clear)
 
 # Version
-__version__ = '5.0'
-__release__ = '5.1.0'
+__version__ = '5.1'
+__release__ = '5.1.0b'
 
 # Deprecated imports from this module:
 _deprecated = {
