@@ -724,7 +724,7 @@ class LILMatrix {
     }
 
     /**
-     *  @brief      Initialize a vector variable
+     *  @brief      Updates a vector variable
      *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    the vector variable which should be updated.

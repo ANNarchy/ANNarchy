@@ -632,6 +632,58 @@ class SELLMatrix {
         return std::vector<VT>(post_ranks_.size(), default_value);
     }
 
+    /**
+     *  @brief      Updates a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be updated.
+     *  @param[in]  values      new values for the row indicated by lil_idx.
+     */
+    template <typename VT>
+    inline void update_vector_variable_all(std::vector<VT> &variable, std::vector<VT> values) {
+        assert ( (variable.size() == values.size()) );
+
+        std::copy(values.begin(), values.end(), variable.begin());
+    }
+
+    /**
+     *  @brief      Updates a single item from a vector variable
+     *  @param[in]  variable    the vector variable which should be read-out.
+     *  @param[in]  lil_idx     position of the vector to be updated.
+     *  @param[in]  value       new value for the matrix entry.
+     */
+    template <typename VT>
+    inline void update_vector_variable(std::vector<VT> &variable, IT lil_idx, VT value) {
+        assert ( (lil_idx < post_ranks_.size()) );
+
+        variable[lil_idx] = value;
+    }
+
+    /**
+     *  @brief      Get a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be read-out.
+     */
+    template <typename VT>
+    inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
+        return variable;
+    }
+
+    /**
+     *  @brief      Get a single item from a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  variable    the vector variable which should be read-out.
+     *  @param[in]  lil_idx     position of the vector to be read-out.
+     */
+    template <typename VT>
+    inline VT get_vector_variable(std::vector<VT> variable, IT lil_idx) {
+        assert( (lil_idx < post_ranks_.size()) );
+
+        return variable[lil_idx];
+    }
+
 /************************************************************************************************************/
 /*  Other helpful functions                                                                                 */
 /************************************************************************************************************/

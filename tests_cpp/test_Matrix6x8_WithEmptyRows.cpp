@@ -825,7 +825,7 @@ TYPED_TEST(Matrix6x8_WithEmptyRows, InitVectorWithOneValue) {
 /********************************************************************************************/
 /*  Update vector values                                                                    */
 /********************************************************************************************/
-/*
+
 TYPED_TEST(Matrix6x8_WithEmptyRows, UpdateVectorAll) {
     std::vector<double> variable_vec = this->mat_->template init_vector_variable<double>(1.0);
 
@@ -845,12 +845,11 @@ TYPED_TEST(Matrix6x8_WithEmptyRows, UpdateVectorAll) {
         EXPECT_EQ(*vec_it1, *vec_it2);
     }
 }
-*/
 
 /********************************************************************************************/
 /*  Read-out the vector values                                                              */
 /********************************************************************************************/
-/*
+
 TYPED_TEST(Matrix6x8_WithEmptyRows, GetVectorAll) {
     std::vector<double> variable_vec = this->mat_->template init_vector_variable<double>(1.0);
 
@@ -873,4 +872,3 @@ TYPED_TEST(Matrix6x8_WithEmptyRows, GetVectorSinglePosition) {
 
     EXPECT_EQ(read_out, 1.0);
 }
-*/
