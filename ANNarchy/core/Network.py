@@ -1050,7 +1050,7 @@ class Network (metaclass=NetworkMeta):
             print(proj.name, proj._size_in_bytes())
 
         for mon in self._data.monitors:
-            print(type(mon), mon._size_in_bytes())
+            print(mon.name, mon._size_in_bytes())
 
     ###################################
     # Access methods using names
