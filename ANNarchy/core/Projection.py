@@ -409,7 +409,10 @@ class Projection :
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order, self.net_id):
             if not self._lil_connectivity:
                 # Call the connector method (either cythonized or user-defined python method)
-                synapses = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+                if self.connector_name in ["Random", "Random Convergent", "Random Divergent"]:
+                    synapses = self._connection_method(*((self.pre, self.post, NetworkManager().get_network(self.net_id).default_rng,) + self._connection_args))
+                else:
+                    synapses = self._connection_method(*((self.pre, self.post,) + self._connection_args))
                 success = self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
             else:
                 # LIL connectivity was built already by auto-tuning.
