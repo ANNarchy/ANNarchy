@@ -28,6 +28,8 @@ import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
 import ANNarchy.generator.Compiler as Compiler
 
+from ANNarchy.core.Utils import _rec_size_in_bytes
+
 # Meta class to avoid forcing the constructor
 class NetworkMeta(type):
 
@@ -1039,18 +1041,36 @@ class Network (metaclass=NetworkMeta):
     ###################################
     # Memory
     ###################################
+
+    def _py_memory_footprint(self):
+        """
+        Tries to estimate the number of bytes consumed by the current network.
+        """
+        print(f"Python objects part of Network{self.id} consume a total of {_rec_size_in_bytes(self, seen=set())} bytes.")
+
     def _cpp_memory_footprint(self):
         """
         Print the C++ memory consumption for populations, projections on the console.
         """
+        print(f"C++ objects assigned to Network{self.id} consume in bytes:")
         for pop in self._data.populations:
-            print(pop.name, pop._size_in_bytes())
+            print(" ", pop.name, pop._size_in_bytes())
 
         for proj in self._data.projections:
-            print(proj.name, proj._size_in_bytes())
+            print(" ", proj.name, proj._size_in_bytes())
 
         for mon in self._data.monitors:
-            print(mon.name, mon._size_in_bytes())
+            print(" ", mon.name, mon._size_in_bytes())
+
+    def memory_footprint(self, show_py_side=True, show_cpp_side=True):
+        """
+        Print a memory estimation for the current state of the network. For easier tracking, we distinguish between Python and C++ side.
+        If required both printouts could be suppressed by setting the corresponding flag to *False*.
+        """
+        if show_py_side:
+            self._py_memory_footprint()
+        if show_cpp_side:
+            self._cpp_memory_footprint()
 
     ###################################
     # Access methods using names
