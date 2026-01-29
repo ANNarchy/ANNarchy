@@ -610,26 +610,29 @@ class Projection :
                 storage_format = "lil"
 
         else:
-            if self.synapse_type.type == "spike":
-                # we need to build up the matrix to analyze
+            # we need to build up the matrix to analyze
+            if self.connector_name in ["Random", "Random Convergent", "Random Divergent"]:
+                self._lil_connectivity = self._connection_method(*((self.pre, self.post, NetworkManager().get_network(self.net_id).default_rng,) + self._connection_args))
+            else:
                 self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
 
+            # heuristic decision tree
+            if self.synapse_type.type == "spike":
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+
+                # check criteria
                 if density >= 0.6:
                     storage_format = "dense"
                 else:
                     storage_format = "csr"
 
             else:
-                # we need to build up the matrix to analyze
-                self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
-
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
                 avg_nnz_per_row, _, _, _ = self._lil_connectivity.compute_average_row_length()
 
-                # heuristic decision tree
+                # check criteria
                 if density >= 0.6:
                     storage_format = "dense"
                 else:
