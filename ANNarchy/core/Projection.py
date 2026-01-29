@@ -48,14 +48,14 @@ class Projection :
     :param disable_omp: Especially for small- and mid-scale sparse spiking networks, the parallelization of spike propagation is not scalable and disabled by default. It can be re-enabled by setting this parameter to `False`.
     """
 
-    def __init__(self, 
-                 pre: str | Population, 
-                 post: str | Population, 
-                 target: str, 
-                 synapse: Synapse = None, 
-                 name:str = None, 
+    def __init__(self,
+                 pre: str | Population,
+                 post: str | Population,
+                 target: str,
+                 synapse: Synapse = None,
+                 name:str = None,
                  # Internal
-                 disable_omp:bool = True, 
+                 disable_omp:bool = True,
                  copied:bool = False,
                  net_id:int = 0):
 
@@ -248,7 +248,7 @@ class Projection :
 
     ################################
     ## Connectivity methods
-    ## 
+    ##
     ## connect_xxx is defined for 4.x legacy
     ################################
 
@@ -301,15 +301,15 @@ class Projection :
 
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        
+
         copied_proj = Projection(
-            pre=pre, 
-            post=post, 
-            target=self.target, 
-            synapse=self.synapse_type, 
-            name=self.name, 
-            disable_omp=self.disable_omp, 
-            copied=True, 
+            pre=pre,
+            post=post,
+            target=self.target,
+            synapse=self.synapse_type,
+            name=self.name,
+            disable_omp=self.disable_omp,
+            copied=True,
             net_id = self.net_id if net_id is None else net_id)
 
         # these flags are modified during connect_XXX called before Network()
@@ -768,16 +768,16 @@ class Projection :
         if self.cyInstance is None:
              Messages._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
              return None
-        
+
         return self.cyInstance.post_rank()
-    
+
     @property
     def pre_ranks(self):
         "List of lists of pre-synaptic ranks, for each post-synaptic neuron. Read-only."
         if self.cyInstance is None:
              Messages._warning("Access 'pre_ranks' attribute of a Projection is only valid after compile()")
              return None
-        
+
         return self.cyInstance.pre_ranks()
 
     @property
@@ -1001,7 +1001,7 @@ class Projection :
         else:
             if attribute == "w" and self._has_single_weight():
                 getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
-            
+
             elif attribute in self.synapse_type.description['local']:
                 # get old value
                 tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
@@ -1010,11 +1010,11 @@ class Projection :
                     tmp[idx] = [value for _ in range(self.cyInstance.dendrite_size(idx))]
                 # write to C++ core
                 getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
-            
+
             elif attribute in self.synapse_type.description['semiglobal']:
-                getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute, 
+                getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute,
                         [value for _ in range(len(self.post_ranks))])
-            
+
             else:
                 getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
 
@@ -1140,7 +1140,7 @@ class Projection :
         if not self.initialized:
             Messages._warning('the network is not compiled yet, cannot access the function ' + name)
             return
-        
+
         # Get the C++ function
         cpp_function = getattr(self.cyInstance, name)
 
@@ -1446,7 +1446,7 @@ class Projection :
         for var in attributes:
             try:
                 ctype = self._get_attribute_cpp_type(var)
-                
+
                 if var == "w" and self._has_single_weight():
                     desc[var] = getattr(self.cyInstance, 'get_global_attribute_' + ctype)("w")
 
@@ -1455,10 +1455,10 @@ class Projection :
                         desc[var] = np.array(getattr(self.cyInstance, 'get_local_attribute_all_' + ctype)(var), dtype=object)
                     else:
                         desc[var] = getattr(self.cyInstance, 'get_local_attribute_all_' + ctype)(var)
-                
+
                 elif var in self.synapse_type.description['semiglobal']:
                     desc[var] = getattr(self.cyInstance, 'get_semiglobal_attribute_all_' + ctype)(var)
-                
+
                 else:
                     desc[var] = getattr(self.cyInstance, 'get_global_attribute_' + ctype)(var) # linear array or single constant
 
@@ -1512,7 +1512,7 @@ class Projection :
         ```
 
         :param filename: the file name with relative or absolute path.
-        :param pickle_encoding: What encoding to use when reading Python 2 strings. Only useful when loading Python 2 generated pickled files in Python 3, which includes npy/npz files containing object arrays. Values other than `latin1`, `ASCII`, and `bytes` are not allowed, as they can corrupt numerical data. 
+        :param pickle_encoding: What encoding to use when reading Python 2 strings. Only useful when loading Python 2 generated pickled files in Python 3, which includes npy/npz files containing object arrays. Values other than `latin1`, `ASCII`, and `bytes` are not allowed, as they can corrupt numerical data.
         """
         from ANNarchy.core.IO import _load_connectivity_data
         self._load_proj_data(_load_connectivity_data(filename, pickle_encoding))
