@@ -397,6 +397,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
         .def("clear", &PopStruct{self.id}::clear);
         """
 

@@ -15,7 +15,7 @@ pooling_template_omp = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_ranks() { 
+    std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
@@ -68,9 +68,10 @@ pooling_template_omp = {
         .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
 
         // Other methods
+        .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
-    
+
 }
 
 pooling_template_cuda = {
@@ -86,11 +87,11 @@ pooling_template_cuda = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_ranks() { 
+    std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
-    }    
+    }
 """,
     'init_connectivity_matrix': "",
 
@@ -115,6 +116,7 @@ pooling_template_cuda = {
         .def_rw("pre_coords_dirty", &ProjStruct%(id_proj)s::pre_coords_dirty)
 
         // Other methods
+        .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
 
@@ -129,7 +131,7 @@ pooling_template_cuda = {
             auto err = cudaGetLastError();
             if (err != cudaSuccess)
                 std::cout << "something happened before ..." << std::endl;
-        
+
             // Flattening coords
             auto flat_coords = transform_2d_to_1d<int>(pre_coords);
             size_t size_in_bytes = flat_coords.size() * sizeof(int);
