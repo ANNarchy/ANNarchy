@@ -21,14 +21,14 @@ import re
 class Population :
     """
     Population of neurons.
-    
+
     The object is returned by `Network.create()` and should not be created directly.
 
     ```python
     net = ann.Network()
     pop = net.create(100, neuron=ann.Izhikevich, name="Excitatory population")
     ```
-    
+
     :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
     :param neuron: `Neuron` instance. It can be user-defined or a built-in model.
     :param name: unique name of the population (optional).
@@ -36,13 +36,13 @@ class Population :
     """
 
     def __init__(
-            self, 
-            geometry: tuple | int, 
-            neuron: "Neuron", 
-            name:str = None, 
-            stop_condition:str = None, 
+            self,
+            geometry: tuple | int,
+            neuron: "Neuron",
+            name:str = None,
+            stop_condition:str = None,
             # Internal use only
-            storage_order:str = 'post_to_pre', 
+            storage_order:str = 'post_to_pre',
             copied:bool = False,
             net_id:int = 0,
         ):
@@ -196,17 +196,17 @@ class Population :
         # Is overwritten by SpecificPopulations
         self._specific_template = {}
 
-        # Storage order. 
+        # Storage order.
         self._storage_order = storage_order
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
         return Population(
-            geometry=self.geometry, 
-            neuron=self.neuron_type, 
-            name=self.name, 
-            stop_condition=self.stop_condition, 
-            storage_order=self._storage_order, 
+            geometry=self.geometry,
+            neuron=self.neuron_type,
+            name=self.name,
+            stop_condition=self.stop_condition,
+            storage_order=self._storage_order,
             copied=True,
             net_id = self.net_id if net_id is None else net_id,
         )
@@ -237,7 +237,7 @@ class Population :
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
-        
+
         # Initialize the population
         self.initialized = True
 
@@ -518,7 +518,7 @@ class Population :
         if not self.initialized:
             Messages._warning('the network is not compiled yet, cannot access the function ' + name)
             return
-        
+
         # Get the C++ function
         cpp_function = getattr(self.cyInstance, name)
 
@@ -674,7 +674,7 @@ class Population :
             neuron.r = 0.0
         ```
 
-        Alternatively, one could also benefit from the ``__iter__`` special command. 
+        Alternatively, one could also benefit from the ``__iter__`` special command.
         The following code is equivalent:
 
         ```python
@@ -687,7 +687,7 @@ class Population :
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ 
+        """
         Returns neurons froms coordinates in the population.
 
         If only one argument is given, it is interpeted as a rank and returns a single neuron.
@@ -775,7 +775,7 @@ class Population :
                     Messages._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
                 if not max(ranks) < self.size:
                     Messages._error("Indices do not match the geometry of the population", self.geometry)
-                
+
                 return PopulationView(self, ranks, geometry=geometry)
 
         Messages._warning('Population' + self.name + ': can not address the population with', indices)
@@ -824,8 +824,8 @@ class Population :
 
     def normalized_coordinates_from_rank(self, rank:int, norm:float=1.) -> tuple:
         """
-        Returns normalized coordinates of a neuron based on its rank. 
-        
+        Returns normalized coordinates of a neuron based on its rank.
+
         The geometry of the population is mapped to the hypercube $[0, 1]^d$
 
         :param rank: rank of the neuron.
@@ -855,12 +855,12 @@ class Population :
         desc['name'] = self.name
         desc['geometry'] = self.geometry
         desc['size'] = self.size
-        
+
         # Attributes
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
-        
+
         # Save all attributes
         for var in self.neuron_type.description['parameters'] + self.neuron_type.description['variables']:
             try:
@@ -941,7 +941,7 @@ class Population :
                     data = desc[var].flatten().tolist()
 
                 else:
-                    data = desc[var]  
+                    data = desc[var]
 
                 setattr(self.cyInstance, var, data)
 

@@ -41,13 +41,13 @@ class DecodingProjection(SpecificProjection):
     :param name: optional name.
     """
     def __init__(
-            self, 
-            pre:"Population", 
-            post:"Population", 
-            target:str, 
-            window:float=0.0, 
-            name:str=None, 
-            copied:bool=False, 
+            self,
+            pre:"Population",
+            post:"Population",
+            target:str,
+            window:float=0.0,
+            name:str=None,
+            copied:bool=False,
             net_id=0):
 
         # Instantiate the projection
@@ -75,7 +75,7 @@ class DecodingProjection(SpecificProjection):
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
         copied_proj = DecodingProjection(
-            pre=pre, post=post, target=self.target, window=self.window, 
+            pre=pre, post=post, target=self.target, window=self.window,
             name=self.name, copied=True,
             net_id = self.net_id if net_id is None else net_id,
         )
@@ -124,12 +124,12 @@ class DecodingProjection(SpecificProjection):
                 pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
             }
         } // active
-""" % { 
-        'id_proj': self.id, 
-        'id_pre': self.pre.id, 
-        'id_post': self.post.id, 
+""" % {
+        'id_proj': self.id,
+        'id_pre': self.pre.id,
+        'id_post': self.post.id,
         'target': self.target,
-        'post_size': self.post.size, 
+        'post_size': self.post.size,
         'float_prec': ConfigManager().get('precision', self.net_id),
         'weight': "w" if self._has_single_weight() else "w[i][j]"
       }
@@ -184,12 +184,12 @@ class DecodingProjection(SpecificProjection):
                 }
             } // active
         }
-""" %   { 
-        'id_proj': self.id, 
-        'id_pre': self.pre.id, 
-        'id_post': self.post.id, 
+""" %   {
+        'id_proj': self.id,
+        'id_pre': self.pre.id,
+        'id_post': self.post.id,
         'target': self.target,
-        'post_size': self.post.size, 
+        'post_size': self.post.size,
         'float_prec': ConfigManager().get('precision', self.net_id),
         'weight': "w" if self._has_single_weight() else "w[i][j]"
         }

@@ -33,7 +33,7 @@ class PoissonPopulation(SpecificPopulation):
     ```python
     pop = net.create(
         ann.PoissonPopulation(
-            geometry=100, 
+            geometry=100,
             rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0"
         )
     )
@@ -95,16 +95,16 @@ class PoissonPopulation(SpecificPopulation):
     :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
     :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
     :param parameters: additional parameters which can be used in the `rates` equation.
-    :param refractory: refractory period in ms.    
+    :param refractory: refractory period in ms.
     """
 
-    def __init__(self, 
-                 geometry:int|tuple[int], 
-                 name:str=None, 
-                 rates:float|str=None, 
-                 target:str=None, 
-                 parameters:dict={}, 
-                 refractory:float=None, 
+    def __init__(self,
+                 geometry:int|tuple[int],
+                 name:str=None,
+                 rates:float|str=None,
+                 target:str=None,
+                 parameters:dict={},
+                 refractory:float=None,
                  copied:bool=False,
                  net_id:int = 0):
 
@@ -191,10 +191,10 @@ class PoissonPopulation(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return PoissonPopulation(
-            self.geometry, name=self.name, 
-            rates=self.rates_init, target=self.target, 
-            parameters=self.parameters_init, 
-            refractory=self.refractory_init, 
+            self.geometry, name=self.name,
+            rates=self.rates_init, target=self.target,
+            parameters=self.parameters_init,
+            refractory=self.refractory_init,
             copied=True,
             net_id = self.net_id if not net_id else net_id,
         )

@@ -39,8 +39,8 @@ class PopulationView :
 
         self.size = len(self.ranks)
         "Size of the PopulationView (number of neurons)."
-        
-        # Internal attributes        
+
+        # Internal attributes
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
         self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]

@@ -81,9 +81,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     pop_corr = net.create(
         ann.HomogeneousCorrelatedSpikeTrains(
-            geometry=200, 
-            rates=10., 
-            corr=0.3, 
+            geometry=200,
+            rates=10.,
+            corr=0.3,
             tau=10.)
     )
 
@@ -101,16 +101,16 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     ```python
     pop_corr = net.create(
         ann.HomogeneousCorrelatedSpikeTrains(
-            geometry = 200, 
-            rates = [10., 30.], 
-            corr = [0.3, 0.5], 
+            geometry = 200,
+            rates = [10., 30.],
+            corr = [0.3, 0.5],
             tau = 10.,
             schedule = [0., 1000.]
         )
     )
     ```
 
-    Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value. 
+    Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value.
 
     :param geometry: population geometry as tuple.
     :param rates: rate in Hz of the population (must be a float or a list of float)
@@ -121,36 +121,36 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     :param name: unique name of the population (optional).
     :param refractory: refractory period in ms (careful: may break the correlation)
     """
-    def __init__(self, 
-            geometry: int | tuple[int], 
-            rates:float | list[float], 
-            corr:float | list[float], 
-            tau:float, 
-            schedule:list[float] = None, 
-            period:float = -1., 
-            name:str = None, 
-            refractory:float = None, 
+    def __init__(self,
+            geometry: int | tuple[int],
+            rates:float | list[float],
+            corr:float | list[float],
+            tau:float,
+            schedule:list[float] = None,
+            period:float = -1.,
+            name:str = None,
+            refractory:float = None,
             copied:bool = False,
             net_id:int = 0,
         ):
 
-        # schedule should be a list of onset times. 
+        # schedule should be a list of onset times.
         if schedule is None:
             schedule = [0.0]
         else:
             schedule = list(schedule)
-        
+
         # rates should be a list with one value per schedule
         if isinstance(rates, (list, np.ndarray)):
             rates = list(rates)
-            if len(rates) != len(schedule): 
+            if len(rates) != len(schedule):
                 Messages._error("HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
         else:
             rates = [float(rates) for _ in range(len(schedule))]
 
         # corr also
         if isinstance(corr, (list, np.ndarray)):
-            if len(corr) != len(schedule): 
+            if len(corr) != len(schedule):
                 Messages._error("HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
             corr = list(corr)
         else:
@@ -161,7 +161,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self.rates = rates
         self.corr = corr
         self.tau = tau
-        
+
         # Store refractory
         self.refractory_init = refractory
 
@@ -238,15 +238,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return HomogeneousCorrelatedSpikeTrains(
-            geometry=self.geometry, 
-            rates=self.init['rates'], 
-            corr=self.init['corr'], 
-            tau=self.init['tau'], 
-            schedule=self.init['schedule'], 
-            period=self.init['period'], 
-            name=self.name, 
-            refractory=self.refractory_init, 
-            copied=True, 
+            geometry=self.geometry,
+            rates=self.init['rates'],
+            corr=self.init['corr'],
+            tau=self.init['tau'],
+            schedule=self.init['schedule'],
+            period=self.init['period'],
+            name=self.name,
+            refractory=self.refractory_init,
+            copied=True,
             net_id=self.net_id if net_id is None else net_id)
 
     def _correction(self, rates, corr, tau):
@@ -269,10 +269,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template['declare_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
     std::vector< int > _schedule; // List of times where new inputs should be set
-    
+
     std::vector< %(float_prec)s > _mu; // buffer holding the data
     std::vector< %(float_prec)s > _sigma; // buffer holding the data
-    
+
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
@@ -335,7 +335,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             _t++;
 
             //std::cout << "t: " << _t << " mu: " << mu << " sigma: " << sigma << std::endl;
-            
+
             // Generate spikes
             spiked.clear();
 
@@ -354,12 +354,12 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         } // active
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
-        
+
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
 
         # Nanobind
         self._specific_template['wrapper'] = f"""
@@ -407,10 +407,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template['declare_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
     std::vector< int > _schedule; // List of times where new inputs should be set
-    
+
     std::vector< %(float_prec)s > _mu; // buffer holding the data
     std::vector< %(float_prec)s > _sigma; // buffer holding the data
-    
+
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
@@ -501,7 +501,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             self._specific_template['update_variables'] = scheduling_block + update_block
         else:
             self._specific_template['update_variables'] = update_block
-        
+
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
@@ -524,7 +524,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -538,7 +538,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id), 'id': self.id}
-        
+
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -647,7 +647,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             pop%(id)s->mu,
             pop%(id)s->gpu_x,
             pop%(id)s->gpu_rand_0,
-            pop%(id)s->sigma 
+            pop%(id)s->sigma
         );
         #ifdef _DEBUG
             cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
@@ -746,7 +746,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 self.init['period'] = value
 
-        elif name == 'rates': 
+        elif name == 'rates':
             # Create a list of rates, even if only one value is provided
             if isinstance(value, (np.ndarray, list)):
                 value = list(value)
@@ -758,7 +758,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             if self.initialized:
                 # Set the attribute
                 Population.__setattr__(self, name, value)
-                
+
                 # Correction of mu and sigma everytime rates, corr or tau is changed
                 try:
                     mu_list, sigma_list = self._correction(value, self.corr, self.tau)
@@ -770,7 +770,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 self.init[name] = value
 
-        elif name == 'corr': 
+        elif name == 'corr':
             # Create a list of corrs, even if only one value is provided
             if isinstance(value, (np.ndarray, list)):
                 value = list(value)
@@ -782,7 +782,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             if self.initialized:
                 # Set the attribute
                 Population.__setattr__(self, name, value)
-                
+
                 # Correction of mu and sigma everytime rates, corr or tau is changed
                 try:
                     mu_list, sigma_list = self._correction(self.rates, value, self.tau)
@@ -793,11 +793,11 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 self.init[name] = value
 
-        elif name == 'tau': 
+        elif name == 'tau':
             if self.initialized:
                 # Set the attribute
                 Population.__setattr__(self, name, value)
-                
+
                 # Correction of mu and sigma everytime rates, corr or tau is changed
                 try:
                     mu_list, sigma_list = self._correction(self.rates, self.corr, value)
@@ -817,7 +817,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
                 return self.init['schedule']
-              
+
         elif name == 'mu':
             if self.initialized:
                 return self.cyInstance.mu

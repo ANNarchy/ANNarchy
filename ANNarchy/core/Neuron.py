@@ -14,9 +14,9 @@ class Neuron :
     """
     Base class to define a neuron model.
 
-    Neurons are rate-coded by default (in which case they must define the variable `r`). `parameters` expects a dictionary of parameter values, `equations` expects a list of variables. 
-    
-    Spiking neurons must define the `spike` condition (and usually also `reset`). They do not need to define `r`. 
+    Neurons are rate-coded by default (in which case they must define the variable `r`). `parameters` expects a dictionary of parameter values, `equations` expects a list of variables.
+
+    Spiking neurons must define the `spike` condition (and usually also `reset`). They do not need to define `r`.
 
     ```python
     LIF = ann.Neuron(
@@ -30,7 +30,7 @@ class Neuron :
         reset = "v = 0.0",
         refractory = 5.0,
         name = "LIF",
-        description = "Leaky Integrate-and-Fire spiking neuron with time constant $\\tau$." 
+        description = "Leaky Integrate-and-Fire spiking neuron with time constant $\\tau$."
     )
     ```
 

@@ -145,11 +145,11 @@ class Monitor :
         "Returns a copy of the monitor when creating networks. Internal use only."
 
         return Monitor(
-                obj=self.object, 
-                variables=self._variables, 
-                period=self._period, 
-                period_offset=self._period_offset, 
-                start=self._start, 
+                obj=self.object,
+                variables=self._variables,
+                period=self._period,
+                period_offset=self._period_offset,
+                start=self._start,
                 name=self.name,
                 net_id=self.net_id if net_id is None else net_id,
             )
@@ -620,7 +620,7 @@ class Monitor :
         ```python
         m = net.monitor(pop, 'spike')
         net.simulate(1000.0)
-        
+
         t, n = m.raster_plot()
         plt.plot(t, n, '.')
         ```
@@ -722,7 +722,7 @@ class Monitor :
     def coefficient_of_variation(self, spikes:dict=None, ranks:list[int]=None) -> list:
         """
         Computes the coefficient of variation for the recorded spikes in the population.
-   
+
         ```python
         m = net.monitor(pop, 'spike')
         net.simulate(1000.0)

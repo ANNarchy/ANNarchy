@@ -46,7 +46,7 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
             desc = json.load(rfile)
     except IOError as error:
         print(error)
-        Messages._error("load_parameters(): the json file does not exist")   
+        Messages._error("load_parameters(): the json file does not exist")
 
     if verbose:
         Messages._print('Loading parameters from file', filename)

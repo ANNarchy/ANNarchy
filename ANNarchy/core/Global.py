@@ -1,6 +1,6 @@
 """
 Contains global available functions and state variables,
-e.g., the config dictionary and holds a reference to 
+e.g., the config dictionary and holds a reference to
 network instances.
 
 :copyright: Copyright 2013 - now, see AUTHORS.
@@ -55,9 +55,9 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
     """
     # Reset globally defined objects
     GlobalObjectManager().clear(
-        functions=functions, 
-        neurons=neurons, 
-        synapses=synapses, 
+        functions=functions,
+        neurons=neurons,
+        synapses=synapses,
     )
 
     # Reinitialize initial state
@@ -131,22 +131,22 @@ def populations(net_id:int=0) -> list["Population"]:
     return NetworkManager().get_network(net_id=net_id).get_populations()
 
 def projections(
-        net_id:int=0, 
-        post:"Population"=None, 
-        pre:"Population"=None, 
-        target:str=None, 
+        net_id:int=0,
+        post:"Population"=None,
+        pre:"Population"=None,
+        target:str=None,
         suppress_error:bool=False) -> list["Projection"]:
     """
-    Returns a list of all declared populations. 
+    Returns a list of all declared populations.
     """
     return NetworkManager().get_network(net_id=net_id).get_projections(post=post, pre=pre, target=target, suppress_error=suppress_error)
 
 def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     """
-    Returns a list of declared monitors. 
-    
+    Returns a list of declared monitors.
+
     By default, all monitors are returned.
-    
+
     By setting *obj*, only monitors recording from this object, either *Population* or *Projection*, will be returned.
     """
     if obj is None:
@@ -177,7 +177,7 @@ def add_function(function:str):
     ann.add_function('''
         piecewise(x, a, b) = if x < a:
                                 a
-                             else: 
+                             else:
                                 if x > b :
                                     b
                                 else:
@@ -196,11 +196,11 @@ def functions(name:str, network=None):
     Allows to access a global function declared with ``add_function()`` and use it from Python using arrays **after compilation of the magic network**.
 
     The name of the function is not added to the global namespace to avoid overloading.
-    
-    ```python
-    add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
-    magic_network().compile()  
+    ```python
+    add_function("logistic(x) = 1. / (1. + exp(-x))")
+
+    magic_network().compile()
 
     result = functions('logistic')([0., 1., 2., 3., 4.])
     ```
@@ -330,7 +330,7 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     rng = np.random.default_rng(seed=42)
     A = rng.uniform(0.0, 1.0, (10, 10))
     ```
-    
+
     :param seed: integer value used to seed the C++ and Numpy RNG
     :param use_seed_seq: for openMP and parallel RNGs, we use either the STL SeedSequence (True, default) or a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details).
     """
@@ -338,7 +338,7 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     if net_id == 0:
         _update_global_config('seed', seed)
         _update_global_config('use_seed_seq', use_seed_seq)
-    
+
     try:
         if ConfigManager().get('disable_parallel_rng', net_id):
             NetworkManager().get_network(net_id=net_id).instance.set_seed(seed, 1, use_seed_seq)

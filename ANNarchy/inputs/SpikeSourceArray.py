@@ -75,7 +75,7 @@ class SpikeSourceArray(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
-            self.init['spike_times'], self.name, 
+            self.init['spike_times'], self.name,
             copied=True, net_id=self.net_id if net_id is None else net_id)
 
     def _sort_spikes(self, spike_times):
@@ -157,7 +157,7 @@ class SpikeSourceArray(SpecificPopulation):
         next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
         this->recompute_spike_times();
-""" 
+"""
 
         self._specific_template['reset_additional'] = """
         _t = 0;
@@ -296,7 +296,7 @@ class SpikeSourceArray(SpecificPopulation):
 
             if not isinstance(value[0], list): # several neurons
                 value = [ value ]
-            
+
             if not len(value) == self.size:
                 Messages._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population. Pad with `[]` if necessary.')
 
