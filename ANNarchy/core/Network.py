@@ -2,13 +2,13 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
-import numpy as np
 import time
 import secrets
 import inspect
-
 from typing import List
 from dataclasses import dataclass, field
+
+import numpy as np
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
@@ -28,11 +28,13 @@ import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
 import ANNarchy.generator.Compiler as Compiler
 
-# Meta class to avoid forcing the constructor 
+from ANNarchy.core.Utils import _rec_size_in_bytes
+
+# Meta class to avoid forcing the constructor
 class NetworkMeta(type):
 
     def __call__(cls, *args, **kwargs):
-        
+
         # Extract the seed and dt from kwargs if provided
         seed = kwargs.pop('seed', None)
         dt = kwargs.pop('dt', None)
@@ -103,7 +105,7 @@ class Network (metaclass=NetworkMeta):
     ```python
     net.simulate(1000.)
     ```
-    
+
     Refer to the manual for more functionalities. `dt` and `seed` must be passed with keywords.
 
     :param dt: step size in milliseconds.
@@ -155,12 +157,12 @@ class Network (metaclass=NetworkMeta):
         self._profiler = None
 
     def __del__(self):
-        
+
         # Overridden destructor for two reasons:
-        # 
+        #
         # a) track destruction of objects
         # b) manually deallocate C++ container data
-        # 
+        #
         # Hint: this function can be called explicitly (which is not recommended in many cases) or as
         #       finalizer from the garbage collection. If called explicitely, one should take in mind,
         #       that the function will be called twice. The better approach is to trigger this function
@@ -174,14 +176,14 @@ class Network (metaclass=NetworkMeta):
 
     def create(
             self,
-            geometry: tuple | int = None, 
-            neuron: Neuron = None, 
-            stop_condition:str = None, 
+            geometry: tuple | int = None,
+            neuron: Neuron = None,
+            stop_condition:str = None,
             name:str = None,
             population: Population = None,
 
             # Internal use only
-            storage_order:str = 'post_to_pre', 
+            storage_order:str = 'post_to_pre',
             ) -> Population:
         """
         Adds a population of neurons to the network.
@@ -208,15 +210,15 @@ class Network (metaclass=NetworkMeta):
         # if both population and geometry are None, error
         if geometry is None and population is None:
             Messages._error("Network.create(): either 'geometry' or 'population' argument must be provided.")
-        
+
         # if both are given as population instances, error
         if isinstance(geometry, Population) and population is not None:
             Messages._error("Network.create(): cannot provide both 'geometry' and 'population' as Population instances.")
-        
+
         # if population is given, check its type
         if population is not None and not isinstance(population, Population):
             Messages._error("Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses.")
-        
+
         # if a population instance is given, check that the other arguments are None
         if isinstance(geometry, Population) or population is not None:
             if neuron is not None or name is not None or stop_condition is not None:
@@ -234,27 +236,27 @@ class Network (metaclass=NetworkMeta):
         else:
             # Create the population
             pop = Population(
-                geometry=geometry, 
-                neuron=neuron, 
-                name=name, 
+                geometry=geometry,
+                neuron=neuron,
+                name=name,
                 stop_condition=stop_condition,
-                storage_order=storage_order, 
-                copied=False, 
+                storage_order=storage_order,
+                copied=False,
                 net_id=self.id
             )
 
         return pop
-    
+
     def connect(
             self,
-            pre: str | Population = None, 
-            post: str | Population = None, 
-            target: str = "", 
-            synapse: Synapse = None, 
-            name:str = None, 
+            pre: str | Population = None,
+            post: str | Population = None,
+            target: str = "",
+            synapse: Synapse = None,
+            name:str = None,
             projection:Projection = None,
             # Internal
-            disable_omp:bool = True, 
+            disable_omp:bool = True,
         ) -> "Projection":
         """
         Connects two populations by creating a projection.
@@ -312,26 +314,26 @@ class Network (metaclass=NetworkMeta):
                 Messages._error("Network.connect(): the target must be specified.")
 
             proj = Projection(
-                pre = pre, 
-                post = post, 
-                target = target, 
-                synapse = synapse, 
-                name = name, 
+                pre = pre,
+                post = post,
+                target = target,
+                synapse = synapse,
+                name = name,
                 # Internal
-                disable_omp = disable_omp, 
+                disable_omp = disable_omp,
                 copied = False,
                 net_id = self.id,
             )
-        
+
         return proj
-    
+
     def monitor(
             self,
-            obj: Population | PopulationView | Projection, 
-            variables:list=[], 
-            period:float=None, 
-            period_offset:float=None, 
-            start:bool=True, 
+            obj: Population | PopulationView | Projection,
+            variables:list=[],
+            period:float=None,
+            period_offset:float=None,
+            start:bool=True,
             name:str=None,
             ) -> Monitor:
         """
@@ -366,22 +368,22 @@ class Network (metaclass=NetworkMeta):
         :param start:
         :param name:
         """
-        
+
         if isinstance(obj, Monitor): # trick if one does not use obj=
             monitor = obj._copy(self.id)
         else:
             monitor = Monitor(
-                obj=obj, 
-                variables=variables, 
-                period=period, 
-                period_offset=period_offset, 
-                start=start, 
+                obj=obj,
+                variables=variables,
+                period=period,
+                period_offset=period_offset,
+                start=start,
                 name=name,
                 net_id=self.id
             )
-            
+
         return monitor
-    
+
     def boldmonitor(
             self,
             populations: list=None,
@@ -404,26 +406,26 @@ class Network (metaclass=NetworkMeta):
 
         m_bold = net.boldmonitor(
             # Recorded populations
-            populations = [pop1, pop2], 
+            populations = [pop1, pop2],
             # BOLD model to use (default is balloon_RN)
-            bold_model = bold.balloon_RN(), 
+            bold_model = bold.balloon_RN(),
             # Mapping from pop.r to I_CBF
-            mapping = {'I_CBF': 'r'}, 
+            mapping = {'I_CBF': 'r'},
             # Time window to compute the baseline.
-            normalize_input = 2000,  
+            normalize_input = 2000,
             # Variables to be recorded
-            recorded_variables = ["I_CBF", "BOLD"]  
+            recorded_variables = ["I_CBF", "BOLD"]
         )
 
         # Unlike regular monitors, BOLD monitors must be explicitly started
         m_bold.start()
-        net.simulate(5000) 
+        net.simulate(5000)
         bold_data = m_bold.get("BOLD")
         ```
 
         :param populations: list of recorded populations.
         :param bold_model: computational model for BOLD signal defined as a BoldModel object. Default is `bold.balloon_RN`.
-        :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
+        :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model.
         :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
         :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
         :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
@@ -445,7 +447,7 @@ class Network (metaclass=NetworkMeta):
             )
 
         return boldmonitor
-    
+
     def constant(self, name, value):
         """
         Adds a constant to the network.
@@ -457,7 +459,7 @@ class Network (metaclass=NetworkMeta):
         neuron = ann.Neuron(equations="r = c * sum(exc)")
 
         # Change the value of the constant in the network.
-        c.set(10.0) 
+        c.set(10.0)
         ```
 
         :param name: name of the constant.
@@ -465,7 +467,7 @@ class Network (metaclass=NetworkMeta):
         """
         constant = Constant(name, value, net_id=self.id)
         return constant
-    
+
     def _import_constants(self):
         """
         Tells the network to use the constants defined at the global level.
@@ -476,7 +478,7 @@ class Network (metaclass=NetworkMeta):
             # Create the constant inside this network
             c._set_child_network(self.id)
             c._copy(self.id)
-    
+
     ###################################
     # Compile
     ###################################
@@ -507,27 +509,27 @@ class Network (metaclass=NetworkMeta):
 
         """
         Compiler.compile(
-            directory=directory, 
-            clean=clean, 
-            silent=silent, 
-            debug_build=debug_build, 
-            add_sources=add_sources, 
-            extra_libs=extra_libs, 
-            compiler=compiler, 
-            compiler_flags=compiler_flags, 
-            cuda_config=cuda_config, 
-            annarchy_json=annarchy_json, 
-            profile_enabled=profile_enabled, 
+            directory=directory,
+            clean=clean,
+            silent=silent,
+            debug_build=debug_build,
+            add_sources=add_sources,
+            extra_libs=extra_libs,
+            compiler=compiler,
+            compiler_flags=compiler_flags,
+            cuda_config=cuda_config,
+            annarchy_json=annarchy_json,
+            profile_enabled=profile_enabled,
             net_id=self.id)
-        
-    
+
+
     ###################################
     # Simulation
     ###################################
     def simulate(self, duration:float, measure_time:bool=False):
         """
-        Runs the network for the given duration in milliseconds. 
-        
+        Runs the network for the given duration in milliseconds.
+
         The number of simulation steps is  computed relative to the discretization step `dt` declared in the constructor (default: 1 ms):
 
         ```python
@@ -543,7 +545,7 @@ class Network (metaclass=NetworkMeta):
     def simulate_until(self, max_duration:float, population:"Population", operator:str='and', measure_time:bool=False) -> float:
         """
         Runs the network for the maximal duration in milliseconds until a `stop_condition` is met.
-        
+
         Whenever the `stop_condition` defined in `population` becomes true, the simulation is stopped.
 
         The method returns the actual duration of the simulation in milliseconds.
@@ -554,9 +556,9 @@ class Network (metaclass=NetworkMeta):
 
         ```python
         pop1 = net.create( ..., stop_condition = "r > 1.0 : any")
-        
+
         net.compile()
-        
+
         net.simulate_until(max_duration=1000.0. population=pop1)
         ```
 
@@ -639,7 +641,7 @@ class Network (metaclass=NetworkMeta):
         for proj in projections:
             proj.disable_learning()
 
-        
+
     def clear(self):
         """
         Empties the network to prevent a memory leak until the garbage collector wakes up.
@@ -675,19 +677,19 @@ class Network (metaclass=NetworkMeta):
         Compiler._instantiate(self.id, import_id=import_id, cuda_config=None, user_config=None, core_list=None)
 
     def parallel_run(
-            self, 
+            self,
             method,
-            number:int, 
-            max_processes:int=-1, 
+            number:int,
+            max_processes:int=-1,
             seeds: int | str| list[int] = None,
-            measure_time:bool=False, 
+            measure_time:bool=False,
             **kwargs
         ):
         """
         Runs the provided method for multiple copies of the network.
 
-        **Important:** The network must have defined as a subclass of `Network`, not a `Network` instance where `create()` and `connect()` where sequentially called. 
-        
+        **Important:** The network must have defined as a subclass of `Network`, not a `Network` instance where `create()` and `connect()` where sequentially called.
+
         See the manual for more explanations:
 
         ```python
@@ -710,7 +712,7 @@ class Network (metaclass=NetworkMeta):
         ```
 
         :param method: method invoked for each copy of the network.
-        :param number: number of simulations. 
+        :param number: number of simulations.
         :param max_processes: maximum number of concurrent processes. Defaults to the number of cores.
         :param seeds: list of seeds for each network. If `None`, the seeds will be be randomly set. If `'same'`, it will be the same as the current network. If `'sequential'`, the seeds will be incremented for each network (42, 43, 44, etc).
         :param measure_time: if the total duration of the simulation should be reported at the end.
@@ -742,7 +744,7 @@ class Network (metaclass=NetworkMeta):
         init_args = [current_init_args.copy() for _ in range(number)]
         method_args = [{} for _ in range(number)]
 
-        # Iterate over 
+        # Iterate over
         for key, val in kwargs.items():
             if key in current_init_args.keys(): # put the value in the constructor
                 if isinstance(val, list):
@@ -772,13 +774,13 @@ class Network (metaclass=NetworkMeta):
         args = []
         for i in range(number):
             parameters = (
-                    self.id, 
-                    self.__class__, 
+                    self.id,
+                    self.__class__,
                     config,
                     method,
                     self.dt,
                     seeds[i],
-                    init_args[i], 
+                    init_args[i],
                     method_args[i],
             )
             args.append(parameters)
@@ -814,15 +816,15 @@ class Network (metaclass=NetworkMeta):
 
         # Instantiate the network but not compile
         net._instantiate(import_id=id)
-        
+
         # Run the simulation
         result = method(net, **method_args)
-        
+
         # Delete the network
         net.__del__()
-        
+
         return result
-    
+
     def _retrieve_initargs(self):
 
         # args and kwargs were saved here
@@ -831,30 +833,30 @@ class Network (metaclass=NetworkMeta):
         # inspect the signature of the constructor
         signature = inspect.signature(self.__init__)
         params = list(signature.parameters.values())
-        
+
         # Create a dictionary to hold the reconstructed arguments
         reconstructed_args = {
             param.name: param.default
             for param in params
             if param.default is not param.empty
         }
-        
+
         # Map *args to the corresponding parameter names
         for i, arg in enumerate(self._init_args):
             if i < len(params):
                 param_name = params[i].name
                 reconstructed_args[param_name] = arg
-        
+
         # Add the **kwargs to the reconstructed arguments
         reconstructed_args.update(self._init_kwargs)
-        
+
         return reconstructed_args
-    
+
 
     def copy(self, *args, **kwargs):
         """
-        Returns a new instance of the Network class, using the provided arguments to the constructor. 
-        
+        Returns a new instance of the Network class, using the provided arguments to the constructor.
+
         Beware, `Network.compile()` is not called, only the instantiation of the data structures. Nothing in the constructor should induce a recompilation.
         """
         if not 'dt' in kwargs.keys():
@@ -885,17 +887,17 @@ class Network (metaclass=NetworkMeta):
     def _set_config(self, key:str, value):
         "Sets the config value with the given key."
         return  ConfigManager().set(key=key, value=value, net_id=self.id)
-    
+
     def config(self, *args, **kwargs):
         """
-        Configuration of the network. 
+        Configuration of the network.
 
         This method is equivalent to calling `setup()` at the global level, but only influences the current network. The initial configuration of the network copies the values set in `setup()` at the time of the creation of the network.
-        
+
         It can be called multiple times until `compile()` is called, new values of keys erasing older ones.
 
         The only functional difference with `setup()` is the seed, which should be passed to the constructor of `Network`, otherwise any random number generation in the constructor might be unseeded. `dt` can also be passed to the constructor, but setting it in `config()` is also fine.
-        
+
         It takes various optional arguments. The most useful ones are:
 
         * `dt`: simulation step size in milliseconds (default: 1.0).
@@ -1039,18 +1041,36 @@ class Network (metaclass=NetworkMeta):
     ###################################
     # Memory
     ###################################
+
+    def _py_memory_footprint(self):
+        """
+        Tries to estimate the number of bytes consumed by the current network.
+        """
+        print(f"Python objects part of Network{self.id} consume a total of {_rec_size_in_bytes(self, seen=set())} bytes.")
+
     def _cpp_memory_footprint(self):
         """
         Print the C++ memory consumption for populations, projections on the console.
         """
+        print(f"C++ objects assigned to Network{self.id} consume in bytes:")
         for pop in self._data.populations:
-            print(pop.name, pop._size_in_bytes())
+            print(" ", pop.name, pop._size_in_bytes())
 
         for proj in self._data.projections:
-            print(proj.name, proj._size_in_bytes())
+            print(" ", proj.name, proj._size_in_bytes())
 
         for mon in self._data.monitors:
-            print(type(mon), mon._size_in_bytes())
+            print(" ", mon.name, mon._size_in_bytes())
+
+    def memory_footprint(self, show_py_side=True, show_cpp_side=True):
+        """
+        Print a memory estimation for the current state of the network. For easier tracking, we distinguish between Python and C++ side.
+        If required both printouts could be suppressed by setting the corresponding flag to *False*.
+        """
+        if show_py_side:
+            self._py_memory_footprint()
+        if show_cpp_side:
+            self._cpp_memory_footprint()
 
     ###################################
     # Access methods using names
@@ -1115,7 +1135,7 @@ class Network (metaclass=NetworkMeta):
                 return constant
         Messages._print('get_constant(): the constant', name, 'does not exist in this network.')
         return None
-    
+
     ###################################
     # Access methods for everything
     ###################################
@@ -1212,24 +1232,24 @@ class Network (metaclass=NetworkMeta):
 
     def get_monitors(self) -> list["Monitor"]:
         """
-        Returns a list of declared monitors. 
+        Returns a list of declared monitors.
         """
         return self._data.monitors
 
     def get_extensions(self) -> list:
         """
-        Returns a list of declared extensions (e.g. BOLD monitors). 
+        Returns a list of declared extensions (e.g. BOLD monitors).
         """
         return self._data.extensions
 
     def get_constants(self) -> list:
         """
-        Returns a list of declared constants. 
+        Returns a list of declared constants.
         """
         return self._data.constants
 
 
-    
+
     ###################################
     # Store objects in the data structure
     ###################################
@@ -1237,36 +1257,36 @@ class Network (metaclass=NetworkMeta):
         pop_id = len(self._data.populations)
         self._data.populations.append(population)
         return pop_id
-    
+
     def _add_projection(self, projection:Projection) -> int :
         proj_id = len(self._data.projections)
         self._data.projections.append(projection)
         return proj_id
-    
+
     def _add_monitor(self, monitor:Monitor) -> int :
         mon_id = len(self._data.monitors)
         self._data.monitors.append(monitor)
         return mon_id
-    
+
     def _add_extension(self, extension) -> int :
         ext_id = len(self._data.extensions)
         self._data.extensions.append(extension)
         return ext_id
-    
+
     def _add_constant(self, constant) -> int :
         const_id = len(self._data.constants)
         self._data.constants.append(constant)
         return const_id
-    
 
-    
+
+
     ###################################
     # Properties
     ###################################
     @property
     def instance(self):
         return self._data.instance
-    
+
     @instance.setter
     def instance(self, instance) -> None:
         self._data.instance = instance
@@ -1277,7 +1297,7 @@ class Network (metaclass=NetworkMeta):
         Boolean indicating whether the network has been compiled.
         """
         return self._data.compiled
-    
+
     @compiled.setter
     def compiled(self, compilation_state: bool) -> None:
         self._data.compiled = compilation_state
@@ -1288,7 +1308,7 @@ class Network (metaclass=NetworkMeta):
         Directory in which the network has been compiled.
         """
         return self._data.directory
-    
+
     @directory.setter
     def directory(self, directory: str) -> None:
         self._data.directory = directory

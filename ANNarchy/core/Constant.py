@@ -37,8 +37,8 @@ class Constant(float):
     net.compile()
     ```
 
-    The value of the constant can be changed anytime with the ``set()`` method. 
-    
+    The value of the constant can be changed anytime with the ``set()`` method.
+
     ```python
     tau.set(30.0)
     ```
@@ -49,7 +49,7 @@ class Constant(float):
     tau = net.get_constant('tau')
     tau.set(30.0)
     ```
-    
+
     Assignments will have no effect (e.g. `tau = 10.0` creates a new float and erases the `Constant` object).
 
     The value of constants defined as combination of other constants (`real_tau`) is not updated if the value of these constants changes (changing `tau` with `tau.set(10.0)` will not modify the value of `real_tau`).
@@ -60,7 +60,7 @@ class Constant(float):
 
     def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
-        
+
     def __init__(self, name:str, value:float, net_id=0):
 
         self.name = name
@@ -81,15 +81,15 @@ class Constant(float):
 
     def __repr__(self):
         return self.__str__()
-    
+
     def _set_child_network(self, net_id) -> None:
         "Tells the constant (of id 0) to also update the ones in networks on a change."
         self._child_nets.append(net_id)
 
     def set(self, value:float) -> None:
         """
-        Changes the value of the constant. 
-        
+        Changes the value of the constant.
+
         If the constant was declared globally, this impacts all networks. Call `Network.get_constant(name)` if you want to impact a single network.
 
         :param value: Value.

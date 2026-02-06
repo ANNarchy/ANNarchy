@@ -321,7 +321,7 @@ class Gamma(RandomDistribution):
 class Binomial(RandomDistribution):
     """
     Binomial distribution.
-    
+
     Parameters: n trials and p probability of success where n an integer >= 0 and p is in the interval [0,1].
 
     The returned values are the number of successes over the n trials.

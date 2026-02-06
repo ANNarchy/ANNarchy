@@ -280,7 +280,7 @@ class every :
     If multiple callbacks are defined, they will be called in the order of their declaration if they occur at the same time.
 
     ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()`
-    
+
     :param network: the network instance that will catch the callbacks. By default it is the top-level network of id 0.
     :param period: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
     :param offset: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
@@ -298,7 +298,7 @@ class every :
         self.wait = max(float(wait), 0.0)
 
     def __call__(self, f):
-        
+
         # If there are decorator arguments, __call__() is only called
         # once, as part of the decoration process! You can only give
         # it a single argument, which is the function object.

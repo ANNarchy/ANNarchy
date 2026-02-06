@@ -47,27 +47,27 @@ def one_to_one(pre, post, weights, delays, storage_format, storage_order):
 
     return projection
 
-def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format, storage_order):
+def fixed_probability(pre, post, rng_gen, probability, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_probability pattern."""
     # instantiate pattern
     projection = LILConnectivity(dt=get_dt(pre))
-    projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
+    projection.fixed_probability(pre, post, rng_gen, probability, weights, delays, allow_self_connections)
 
     return projection
 
-def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
+def fixed_number_pre(pre, post, rng_gen, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_pre pattern."""
     # instantiate pattern
     projection = LILConnectivity(dt=get_dt(pre))
-    projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
+    projection.fixed_number_pre(pre, post, rng_gen, number, weights, delays, allow_self_connections)
 
     return projection
 
-def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
+def fixed_number_post(pre, post, rng_gen, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
     # instantiate pattern
     projection = LILConnectivity(dt=get_dt(pre))
-    projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
+    projection.fixed_number_post(pre, post, rng_gen, number, weights, delays, allow_self_connections)
 
     return projection
 
@@ -303,7 +303,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(post_ranks[idx], r, w, d)
 
-    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
+    cpdef fixed_probability(self, pre, post, rng_gen, probability, weights, delays, allow_self_connections):
         " Implementation of the fixed-probability pattern "
         cdef double weight
         cdef int r_post, r_pre, size_pre, max_size_pre
@@ -319,7 +319,7 @@ cdef class LILConnectivity:
 
         for r_post in post_ranks:
             # List of pre ranks
-            random_values = np.random.random(max_size_pre)
+            random_values = rng_gen.random(max_size_pre)
             tmp = pre_ranks[random_values < probability]
             if not allow_self_connections:
                 tmp = tmp[tmp != r_post]
@@ -344,7 +344,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
+    cpdef fixed_number_pre(self, pre, post, rng_gen, int number, weights, delays, allow_self_connections):
         cdef double weight
         cdef int r_post, r_pre, size_pre
         cdef list pre_ranks, post_ranks
@@ -357,12 +357,12 @@ cdef class LILConnectivity:
 
         for r_post in post_ranks:
             # List of pre ranks
-            r = np.random.choice(pre_ranks, size=number, replace=False)
+            r = rng_gen.choice(pre_ranks, size=number, replace=False)
             if len(r) == 0:
                 continue
             if not allow_self_connections:
                 while r_post in list(r): # the post index is in the list
-                    r = np.random.choice(pre_ranks, size=number, replace=False)
+                    r = rng_gen.choice(pre_ranks, size=number, replace=False)
 
             # sort the indices to prevent irregular accesses
             r = np.sort(r)
@@ -381,7 +381,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef fixed_number_post(self, pre, post, int number, weights, delays, allow_self_connections):
+    cpdef fixed_number_post(self, pre, post, rng_gen, int number, weights, delays, allow_self_connections):
         cdef double weight
         cdef int r_post, r_pre, size_pre
         cdef list pre_ranks, post_ranks
@@ -401,11 +401,11 @@ cdef class LILConnectivity:
             if number >= len(post_ranks):
                 tmp = post_ranks
             else:
-                tmp = np.random.choice(post_ranks, size=number, replace=False)
+                tmp = rng_gen.choice(post_ranks, size=number, replace=False)
                 if not allow_self_connections:
                     # the post index is in the list, redraw
                     while r_pre in list(tmp):   # TODO: maybe a find() would be better
-                        tmp = np.random.choice(post_ranks, size=number, replace=False)
+                        tmp = rng_gen.choice(post_ranks, size=number, replace=False)
             for i in tmp:
                 rk_mat[i].append(r_pre)
 

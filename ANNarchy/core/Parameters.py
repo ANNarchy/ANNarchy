@@ -29,8 +29,8 @@ class Parameter:
     )
     ```
 
-    In a neuron or synapse model, parameters are global and use the float type if the `Parameter` class is not used. 
-    
+    In a neuron or synapse model, parameters are global and use the float type if the `Parameter` class is not used.
+
     If you need a local parameter (one value per neuron or synapse), the `Parameter` class allows to specify it. Note that you can also define global parameters by passing `locality='global'`.
 
     Semi-global synaptic parameters (one value per post-synaptic neuron) can be defined using `locality='semiglobalglobal'`.
@@ -67,8 +67,8 @@ class Variable:
 
     :param equation: string representing the equation.
     :param init: initial value of the variable. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
-    :param min: minimum value that the variable can take. 
-    :param max: maximum value that the variable can take. 
+    :param min: minimum value that the variable can take.
+    :param max: maximum value that the variable can take.
     :param method: numerical method to be used when the equation is an ODE. Must be in ['explicit', 'implicit', 'semiimplicit', 'exponential','midpoint', 'rk4', 'event-driven']
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
     :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
@@ -95,25 +95,25 @@ class Variable:
             if not has_flag: has_flag = True ; representation += " : "
             if isinstance(self.init, (RandomDistribution,)):
                 init = repr(self.init)
-            else: 
+            else:
                 init = self.init
-            flags.append(f"init={init}") 
+            flags.append(f"init={init}")
 
         if self.min is not None:
             if not has_flag: has_flag = True ; representation += " : "
-            flags.append(f"min={self.min}") 
+            flags.append(f"min={self.min}")
 
         if self.max is not None:
             if not has_flag: has_flag = True ; representation += " : "
-            flags.append(f"max={self.max}") 
+            flags.append(f"max={self.max}")
 
         if self.method is not None:
             if not has_flag: has_flag = True ; representation += " : "
-            flags.append(f"{self.method}") 
+            flags.append(f"{self.method}")
 
         if self.type != 'float':
             if not has_flag: has_flag = True ; representation += " : "
-            flags.append(f"{self.type}") 
+            flags.append(f"{self.type}")
 
         if self.locality != 'local':
             if not has_flag: has_flag = True ; representation += " : "
@@ -123,11 +123,11 @@ class Variable:
                 if self.locality in ['global', 'projection']: # both are OK
                     val = 'projection'
                 else: val = 'postsynaptic'
-            flags.append(f"{val}") 
+            flags.append(f"{val}")
 
 
         return representation + ', '.join(flags)
-    
+
 
 # Structural plasticity
 @dataclass
@@ -141,9 +141,9 @@ class Creating:
     CreatingSynapse = ann.Synapse(
 
         parameters = dict(eta = 0.1, T = 1.0),
-    
+
         equations = ann.Variable("dw/dt = eta * pre.r * post.r"),
-        
+
         creating = ann.Creating("pre.r * post.r > T", proba = 0.1, w = 0.01),
     )
     ```
@@ -156,7 +156,7 @@ class Creating:
     equation: str
     proba: float = 1.0
     w: float = 0.0
-    d: float = None 
+    d: float = None
 
 @dataclass
 class Pruning:
@@ -169,7 +169,7 @@ class Pruning:
     PruningSynapse = ann.Synapse(
         parameters = dict(T = ann.Parameter(10000, 'global', int),
         equations = ann.Variable('''
-            age = if pre.r * post.r > 0.0 : 
+            age = if pre.r * post.r > 0.0 :
                     0
                 else :
                     age + 1 : init = 0, int

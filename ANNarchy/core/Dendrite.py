@@ -86,7 +86,7 @@ class Dendrite :
     def __getitem__(self, *args, **kwds):
         # Returns the synapse of the given position in the presynaptic population.
         # If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        
+
         if len(args) == 1:
             return self.synapse(args[0])
         return self.synapse(args)
@@ -107,19 +107,19 @@ class Dendrite :
             if name == 'rank': # TODO: remove 'rank' in a future version
                 Messages._warning("Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead.")
                 return self.proj.cyInstance.pre_rank(self.idx)
-            
+
             elif name == 'pre_rank':
                 return self.proj.cyInstance.pre_rank(self.idx)
-            
+
             elif name == 'delay':
                 if self.proj.uniform_delay == -1:
                     return [d*ConfigManager().get('dt', self.proj.net_id) for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
                 else:
                     return self.proj.max_delay * ConfigManager().get('dt', self.proj.net_id)
-            
+
             elif name == "w" and self.proj._has_single_weight():
                 return getattr(self.proj.cyInstance, "get_global_attribute_"+ConfigManager().get('precision', self.proj.net_id))(name)
-            
+
             elif name in self.proj.attributes:
                 # Determine C++ data type
                 ctype = None
@@ -214,7 +214,7 @@ class Dendrite :
         """
         Returns the given variable as a receptive field.
 
-        A numpy array of the same geometry as the pre-synaptic population is returned. 
+        A numpy array of the same geometry as the pre-synaptic population is returned.
         Non-existing synapses are replaced by zeros (or the value ``fill``).
 
         :param variable: name of the variable (default = 'w')
@@ -236,7 +236,7 @@ class Dendrite :
         """
         Creates a single synapse for this dendrite with the given pre-synaptic neuron.
 
-        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work.
 
         ```python
         net = ann.Network()
@@ -284,10 +284,10 @@ class Dendrite :
 
         try:
             self.proj.cyInstance.add_single_synapse(
-                post_idx, 
-                rank, 
-                w, 
-                int(delay/ConfigManager().get('dt', self.proj.net_id)), 
+                post_idx,
+                rank,
+                w,
+                int(delay/ConfigManager().get('dt', self.proj.net_id)),
                 *extra_attributes
             )
         except Exception as e:
@@ -298,7 +298,7 @@ class Dendrite :
         """
         Creates a set of synapses for this dendrite with the given pre-synaptic neurons.
 
-        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work.
 
         ```python
         net = ann.Network()
@@ -371,10 +371,10 @@ class Dendrite :
         # Update connectivity
         try:
             self.proj.cyInstance.add_multiple_synapses(
-                post_idx, 
-                ranks, 
-                weights, 
-                delays, 
+                post_idx,
+                ranks,
+                weights,
+                delays,
                 *extra_attributes
             )
         except Exception as e:
@@ -384,7 +384,7 @@ class Dendrite :
         """
         Removes the synapse with the given pre-synaptic neuron from the dendrite.
 
-        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work.
 
         ```python
         net = ann.Network()
@@ -415,7 +415,7 @@ class Dendrite :
         """
         Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
 
-        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work.
 
         ```python
         net = ann.Network()

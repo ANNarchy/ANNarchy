@@ -12,12 +12,12 @@ class Synapse :
     """
     Base class to define a synapse model.
 
-    Synapses expect `parameters` as a dictionary and `equations` as a list of variable updates (including `w` if there is synaptic plasticity). 
+    Synapses expect `parameters` as a dictionary and `equations` as a list of variable updates (including `w` if there is synaptic plasticity).
 
     Rate-coded synapses can define `psp` and `operation` to modify synaptic transmission:
 
     ```python
-    nonlinear_synapse = ann.Synapse( 
+    nonlinear_synapse = ann.Synapse(
         psp = "log( (pre.r * w + 1 ) / (pre.r * w - 1) )",
         operation = 'max',
     )
@@ -42,11 +42,11 @@ class Synapse :
             g_target += w
             Apre += cApre * wmax
             w = clip(w - Apost, 0.0 , wmax)
-        ''',                  
+        ''',
         post_spike = '''
             Apost += cApost * wmax
             w = clip(w + Apre, 0.0 , wmax)
-        ''' 
+        '''
     )
     ```
 
@@ -67,19 +67,19 @@ class Synapse :
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
-    def __init__(self, 
-                 parameters:str|dict="", 
-                 equations:str|list="", 
-                 psp:str=None, 
-                 operation:str='sum', 
-                 pre_spike:str|list=None, 
-                 post_spike:str|list=None, 
-                 pre_axon_spike:str=None, 
-                 functions:str=None, 
-                 pruning:str=None, 
-                 creating:str=None, 
-                 name:str=None, 
-                 description:str=None, 
+    def __init__(self,
+                 parameters:str|dict="",
+                 equations:str|list="",
+                 psp:str=None,
+                 operation:str='sum',
+                 pre_spike:str|list=None,
+                 post_spike:str|list=None,
+                 pre_axon_spike:str=None,
+                 functions:str=None,
+                 pruning:str=None,
+                 creating:str=None,
+                 name:str=None,
+                 description:str=None,
                  extra_values:dict={} ):
 
 

@@ -30,14 +30,14 @@ class TimedPoissonPopulation(SpecificPopulation):
     ```
 
     This creates a population of 100 Poisson neurons whose rate will be:
-    
+
     * 10 Hz during the first 100 ms.
     * 20 HZ during the next 100 ms.
     * 100 Hz during the next 300 ms.
     * 20 Hz during the next 100 ms.
     * 5 Hz until the end of the simulation.
-    
-    
+
+
     If you want the TimedPoissonPopulation to "loop" over the schedule, you can specify a period:
 
     ```python
@@ -69,7 +69,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     inp = net.create(
         TimedPoissonPopulation(
             geometry = 100,
-            rates = [ 
+            rates = [
                 [10. + 0.05*i for i in range(100)], # First 100 ms
                 [20. + 0.05*i for i in range(100)], # After 100 ms
             ],
@@ -85,7 +85,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     :param name: optional name for the population.
     """
     def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False, net_id=0):
-        
+
         neuron = Neuron(
             parameters = """
             proba = 1.0
@@ -178,7 +178,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -194,7 +194,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -263,7 +263,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
 
         self._specific_template['wrapper'] = f"""
     // TimedPoissonPopulation
@@ -295,8 +295,9 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
         .def("clear", &PopStruct{self.id}::clear);
-""" 
+"""
 
     def _generate_omp(self):
         """
@@ -310,7 +311,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -320,7 +321,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -392,7 +393,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
 
         self._specific_template['wrapper'] = f"""
     // TimedPoissonPopulation
@@ -488,7 +489,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        
+
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -641,7 +642,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         .def("activate", &PopStruct{self.id}::set_active)
         .def("reset", &PopStruct{self.id}::reset)
         .def("clear", &PopStruct{self.id}::clear);
-""" 
+"""
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -657,12 +658,12 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             if self.initialized:
 
                 value = list(value)
-                
+
                 if isinstance(value[0], (float, int)): # same value for each neuron, create a list of list
                     value = [ [float(value[i]) for _ in range(self.size)] for i in range(len(value)) ]
                 else:
                     value = [list(np.array(value[i]).flatten()) for i in range(len(value))]
-                
+
                 self.cyInstance.set_rates(value)
 
             else:

@@ -22,10 +22,10 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-def connect_one_to_one(self: "Projection", 
-                       weights: float | RandomDistribution = 1.0, 
-                       delays: float | RandomDistribution = 0.0, 
-                       force_multiple_weights:bool=False, 
+def connect_one_to_one(self: "Projection",
+                       weights: float | RandomDistribution = 1.0,
+                       delays: float | RandomDistribution = 0.0,
+                       force_multiple_weights:bool=False,
                        storage_format:str=None, storage_order:str=None) -> "Projection":
     """
     one-to-one connection pattern.
@@ -116,7 +116,7 @@ def connect_gaussian(self: "Projection", amp:float, sigma:float, delays: float |
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
 
     self._store_connectivity(gaussian, (amp, sigma, delays, limit, allow_self_connections, storage_format, "post_to_pre"), delays, storage_format, "post_to_pre")
-    
+
     return self
 
 def connect_dog(self: "Projection", amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:float, delays:float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
@@ -270,8 +270,8 @@ def connect_with_func(self: "Projection", method, storage_format:str=None, stora
 
     proj = net.connect(pop1, pop2, target = 'inh')
     proj.from_function(
-        method=probabilistic_pattern, 
-        weight=1.0, 
+        method=probabilistic_pattern,
+        weight=1.0,
         probability=0.3
     )
     ```

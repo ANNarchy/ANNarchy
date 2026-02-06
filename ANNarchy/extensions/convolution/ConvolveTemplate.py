@@ -13,7 +13,7 @@ convolve_template_omp = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_ranks() { 
+    std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
@@ -49,6 +49,7 @@ convolve_template_omp = {
         %(delays)s
 
         // Other methods
+        .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
 
@@ -88,11 +89,11 @@ convolve_template_cuda = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_ranks() { 
+    std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
-    }    
+    }
 """ ,
 
     # Export the connectivity matrix
@@ -125,6 +126,7 @@ convolve_template_cuda = {
         .def_rw("w_dirty", &ProjStruct%(id_proj)s::host_w_dirty)
 
         // Other methods
+        .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
 
@@ -249,7 +251,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp
             RunConfig(pop%(id_post)s->size, 1, 0, proj%(id_proj)s->stream),
             pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
-    
+
     #ifdef _DEBUG
         auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {

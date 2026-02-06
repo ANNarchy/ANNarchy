@@ -20,6 +20,7 @@ pop_struct_wrapper = """
 %(additional)s
         .def("activate", &PopStruct%(id)s::set_active)
         .def("reset", &PopStruct%(id)s::reset)
+        .def("size_in_bytes", &PopStruct%(id)s::size_in_bytes)
         .def("clear", &PopStruct%(id)s::clear);
 """
 

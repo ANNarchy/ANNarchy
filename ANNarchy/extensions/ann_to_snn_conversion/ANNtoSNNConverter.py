@@ -3,7 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
+import numpy as np
+
 from ANNarchy.core.Network import Network
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
@@ -12,14 +13,12 @@ from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 from ANNarchy.intern import Messages
 
-import numpy as np
-
 from .InputEncoding import CPN, IB, PSO
 from .ReadOut import available_read_outs, IaF, IaF_ReadOut, IaF_TTKS, IaF_Acc
 
 class ANNtoSNNConverter :
     r"""
-    Converts a pre-trained Keras model `.keras` into an ANNarchy spiking neural network. 
+    Converts a pre-trained Keras model `.keras` into an ANNarchy spiking neural network.
 
     The implementation of the present module is inspired by the SNNToolbox (Rueckauer et al. 2017), and is largely based on the work of Diehl et al. (2015). We provide several input encodings, as suggested in the work of Park et al. (2019) and Auge et al. (2021).
 
@@ -48,7 +47,7 @@ class ANNtoSNNConverter :
     ```
 
     * Pooling must explicitly be done by `MaxPooling2D`/`AveragePooling2D`, strides are ignored.
-    
+
     Please be aware that the module is very experimental and the conversion may not work for many different reasons. Feel free to submit issues.
 
     **Processing Queue**
@@ -56,7 +55,7 @@ class ANNtoSNNConverter :
     The pre-trained ANN model to be converted should be saved in keras (extension `.keras`). The saved model is transformed layer by layer into a feed-forward ANNarchy spiking network. The structure of the network remains the same as in the original ANN, while the weights are normalised. Please note that the current implementation focuses primarily on the correctness of the conversion. Computational performance, especially of the converted CNNs, will be improved in future releases.
 
     :::callout-note
-    
+
     While the neurons are conceptually spiking neurons, there is one specialty: next to the spike event (stored automatically in ANNarchy), each event will be stored in an additional *mask* array. This *mask* value decays in absence of further spike events exponentially. The decay can be controlled by the *mask_tau* parameter of the population. The projections (either dense or convolution) will use this mask as pre-synaptic input, not the generated list of spike events.
     :::
 
@@ -65,7 +64,7 @@ class ANNtoSNNConverter :
     * Poisson ("CPN")
 
     This encoding uses a Poisson distribution where the pixel values of the image will be used as probability for each individual neuron.
-    
+
     * Intrinsically Bursting ("IB")
 
     This encoding is based on the Izhikevich (2003) model that comprises two ODEs:
@@ -83,7 +82,7 @@ class ANNtoSNNConverter :
 
     * Phase Shift Oscillation ("PSO")
 
-    Based on the description by Park et al. (2019), the spiking threshold $v_\text{th}$ is modulated by a oscillation function $\Pi$, whereas the membrane potential follows simply the input current. 
+    Based on the description by Park et al. (2019), the spiking threshold $v_\text{th}$ is modulated by a oscillation function $\Pi$, whereas the membrane potential follows simply the input current.
 
     $$
     \begin{cases}
@@ -119,7 +118,7 @@ class ANNtoSNNConverter :
 
     > Rueckauer B, Lungu I, Hu Y, et al. (2017) Conversion of Continuous-Valued Deep Networks to Efficient Event-Driven Networks for Image Classification., Front. Neurosci., 2017, 11. doi: 10.3389/fnins.2017.00682
 
-    > Park S, Kim S, Choe H, et al. (2019) Fast and Efficient Information Transmission with Burst Spikes in Deep Spiking Neural Networks. 
+    > Park S, Kim S, Choe H, et al. (2019) Fast and Efficient Information Transmission with Burst Spikes in Deep Spiking Neural Networks.
 
     > Auge D, Hille J, Mueller E et al. (2021) A Survey of Encoding Techniques for Signal Processing in Spiking Neural Networks. Neural Processing Letters. 2021; 53:4963-4710. doi:10.1007/s11063-021-10562-2
 
@@ -128,10 +127,10 @@ class ANNtoSNNConverter :
     :param read_out: a string which of the following read-out method should be used: `spike_count`, `time_to_first_spike`, `membrane_potential`.
     """
 
-    def __init__(self, 
-                 input_encoding:str='CPN', 
-                 hidden_neuron:str='IaF', 
-                 read_out:str='spike_count', 
+    def __init__(self,
+                 input_encoding:str='CPN',
+                 hidden_neuron:str='IaF',
+                 read_out:str='spike_count',
                  **kwargs):
 
         # Neuron model
@@ -175,11 +174,11 @@ class ANNtoSNNConverter :
 
         self._snn_network = None
 
-    def load_keras_model(self, 
-            filename:str, 
-            directory:str="annarchy", 
-            scale_factor:float=None, 
-            show_info:bool=True, 
+    def load_keras_model(self,
+            filename:str,
+            directory:str="annarchy",
+            scale_factor:float=None,
+            show_info:bool=True,
         ) -> "Network":
         """
         Loads the pre-trained model provided as a .keras file.
@@ -207,21 +206,21 @@ class ANNtoSNNConverter :
         # Input Population
         if not isinstance(model.layers[0], tf.keras.layers.InputLayer):
             Messages._error("The first layer of the network must be an Input layer.")
-        
+
         input_name = model.layers[0].name
         input_shape = get_shape(model.layers[0].output)[1:]
 
         input_pop = self._snn_network.create(
-            geometry=input_shape, 
+            geometry=input_shape,
             neuron=self._input_model,
-            name = input_name, 
+            name = input_name,
         )
 
         description += f"* Input layer: {input_name}, {input_shape}\n"
 
         # Iterate over layers
         weights = []
-        
+
         for idx, layer in enumerate(model.layers):
 
             # Get the name
@@ -232,7 +231,7 @@ class ANNtoSNNConverter :
 
             # The only supported layers are dense, conv* and pool*
             if isinstance(layer, tf.keras.layers.Dense):
-                
+
                 # Get incoming weights
                 W = layer.get_weights()[0].T
                 size = W.shape[0]
@@ -246,19 +245,19 @@ class ANNtoSNNConverter :
                 if idx == len(model.layers) - 1:
                     readout = True
                     if self._read_out == "membrane_potential":
-                        neuron_type = IaF_Acc 
+                        neuron_type = IaF_Acc
                         stop_condition = None
                     elif self._read_out == "time_to_first_spike":
                         neuron_type = IaF
                         stop_condition="spiked: any"
                     elif self._read_out == "time_to_k_spikes":
-                        neuron_type = IaF_TTKS 
+                        neuron_type = IaF_TTKS
                         stop_condition="sc >= k: any"
-                
+
                 # Create the population
                 pop = self._snn_network.create(
-                    geometry = size, 
-                    neuron=neuron_type, 
+                    geometry = size,
+                    neuron=neuron_type,
                     name=name,
                     stop_condition=stop_condition
                 )
@@ -271,8 +270,8 @@ class ANNtoSNNConverter :
 
                 # Create projection
                 proj = self._snn_network.connect(
-                    pre = self._snn_network.get_populations()[-2], post = pop, 
-                    target = "exc", 
+                    pre = self._snn_network.get_populations()[-2], post = pop,
+                    target = "exc",
                     name=f"dense_proj_{len(self._snn_network.get_populations())}"
                 )
 
@@ -284,18 +283,18 @@ class ANNtoSNNConverter :
                 description += f"    weights: {W.shape}\n"
                 description += f"    mean {np.mean(W)}, std {np.std(W)}\n"
                 description += f"    min {np.min(W)}, max {np.max(W)}\n"
-                
+
 
             elif isinstance(layer, tf.keras.layers.Conv2D):
-                
+
                 geometry = get_shape(layer.output)[1:]
 
                 pop = self._snn_network.create(
-                    geometry = geometry, 
-                    neuron=self._hidden_neuron_model, 
+                    geometry = geometry,
+                    neuron=self._hidden_neuron_model,
                     name=name
-                ) 
-                
+                )
+
                 #pop.vt = pop.vt - (0.05 * len(pops))
                 pop.vt = pop.vt - (0.05 * idx)
 
@@ -306,8 +305,8 @@ class ANNtoSNNConverter :
 
                 proj = self._snn_network.connect(
                     Convolution(
-                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc', 
-                        psp="pre.mask * w", 
+                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc',
+                        psp="pre.mask * w",
                         name=f'conv_proj_{len(self._snn_network.get_populations())}'
                     )
                 )
@@ -316,34 +315,34 @@ class ANNtoSNNConverter :
                 weights.append(W)
 
             elif isinstance(
-                layer, 
+                layer,
                 (tf.keras.layers.MaxPooling2D,
                  tf.keras.layers.AveragePooling2D)
                 ):
-                
+
                 geometry = get_shape(layer.output)[1:]
                 pool_size = layer.get_config()['pool_size'] + (1,)
                 operation = 'max' if isinstance(layer, tf.keras.layers.MaxPooling2D) else 'mean'
 
                 pop = self._snn_network.create(
-                    geometry = geometry, 
-                    neuron=self._hidden_neuron_model, 
+                    geometry = geometry,
+                    neuron=self._hidden_neuron_model,
                     name=name
-                ) 
-                
+                )
+
                 #pop.vt = pop.vt - (0.05 * len(pops))
                 pop.vt = pop.vt - (0.05 * idx)
 
                 description += f"* MaxPooling2D layer: {name}, {geometry} \n"
-                
+
                 proj = self._snn_network.connect(
                     Pooling(
-                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc', 
-                        operation=operation, psp="pre.mask", 
+                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc',
+                        operation=operation, psp="pre.mask",
                         name=f'pool_proj_{len(self._snn_network.get_populations())}'
                     )
                 )
-                
+
                 proj.pooling(extent=pool_size)
                 weights.append([])
 
@@ -375,9 +374,9 @@ class ANNtoSNNConverter :
         """
         return self._snn_network
 
-    def predict(self, 
-                samples:np.ndarray, 
-                duration_per_sample:int=1000, 
+    def predict(self,
+                samples:np.ndarray,
+                duration_per_sample:int=1000,
                 multiple:bool=False,
                 ) -> list[int]:
         """
@@ -450,7 +449,7 @@ class ANNtoSNNConverter :
 
             else:
                 raise NotImplementedError
-            
+
             # Treat ex-aequo
             if multiple:
                 predictions.append(list(prediction))
@@ -492,7 +491,7 @@ class ANNtoSNNConverter :
                 # Maximum input current over all post neurons
                 max_val = np.sum(w * (w > 0), axis=1).max()
 
-                # Normalize the incoming weights for each neuron, based on the maximum input for the complete connection 
+                # Normalize the incoming weights for each neuron, based on the maximum input for the complete connection
                 # and multiply it with the depth of the connection to boost the input current
                 factor = scale_factor[level]  / max_val
 
@@ -505,7 +504,7 @@ def get_shape(tensor) -> tuple:
     Returns the shape of the tensorflow tensor as a tuple.
 
     tf < 2.14 returned a TensorShape object, but now it is a tuple.
-    
+
     """
     if isinstance(tensor.shape, (tuple,)):
         return tensor.shape

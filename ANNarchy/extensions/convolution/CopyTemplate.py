@@ -35,8 +35,9 @@ copy_proj_template = {
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Other methods
-        .def("clear", &ProjStruct%(id_proj)s::clear);    
-    
+        .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+
     """,
 }
 

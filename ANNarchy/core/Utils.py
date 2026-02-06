@@ -3,14 +3,20 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
 import time
+import sys
 from functools import wraps
+from collections.abc import Mapping
+
+import numpy as np
 
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
+###################################
+# ms->steps / steps->ms conversion
+###################################
 
 def convert_ms_to_steps(values: int|float|list|np.ndarray, net_id=0) -> int | list| np.ndarray:
     """
@@ -60,41 +66,14 @@ def convert_steps_to_ms(values: int|list|np.ndarray, net_id=0) -> float|list|np.
     else:
         raise ValueError("convert_steps_to_ms: expected either scalar, list or np.ndarray")
 
-######################
-# Time measurement
-######################
-def timeit(func):
-    """
-    Decorator to measure the execution time of a method.
-
-    ```python
-    @ann.timeit
-    def run(net, T):
-        net.simulate(T)
-        return net.m.get()
-
-    net = ann.Network()
-    data = run(net, 1000)
-    ```
-    """
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        print(f'Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds')
-        return result
-    return timeit_wrapper
-
-######################
+###################################
 # Sparse matrices
-######################
+###################################
 
 def sparse_random_matrix(pre: "Population", post: "Population", proba:float, weights:float|RandomDistribution) -> "scipy.sparse.lil_matrix":
     """
     Returns a sparse lil-matrix for use in `Projection.from_sparse()`.
-    
+
     Creates a `scipy.sparse.lil_matrix` connectivity matrix that connects the `pre` and `post` populations with the probability `p` and the value `weight`, which can be either a constant or an ANNarchy random distribution object.
 
     ```python
@@ -116,21 +95,21 @@ def sparse_random_matrix(pre: "Population", post: "Population", proba:float, wei
     except:
         Messages._warning("scipy is not installed, sparse matrices won't work")
         return None
-    
+
     from random import sample
     W = lil_matrix((pre.size, post.size))
-    
+
     for i in range(pre.size):
         k=np.random.binomial(post.size, proba,1)[0]
         tmp = sample(range(post.size),k)
         W.rows[i]=list(np.sort(tmp))
-        
+
         if isinstance(weights, (int, float)):
             W.data[i] = [weights]*k
-        
+
         elif isinstance(weights, RandomDistribution):
             W.data[i] = weights.get_list_values(k)
-        
+
         else:
             raise ValueError("sparse_random_matrix expects either a float or RandomDistribution object.")
 
@@ -169,9 +148,33 @@ def sparse_delays_from_weights(weights: "scipy.sparse.lil_matrix", delays: float
 
     return delay_matrix
 
-################################
+###################################
 ## Performance Measurement
-################################
+###################################
+
+def timeit(func):
+    """
+    Decorator to measure the execution time of a method.
+
+    ```python
+    @ann.timeit
+    def run(net, T):
+        net.simulate(T)
+        return net.m.get()
+
+    net = ann.Network()
+    data = run(net, 1000)
+    ```
+    """
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f'Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
 
 def compute_delivered_spikes(proj, pre_spike_events, post_spike_events):
     """
@@ -219,12 +222,13 @@ def compute_delivered_afferent_spikes(proj, spike_events):
 
     return delivered_events
 
-def compute_delivered_spikes_per_second(proj, spike_events, time_in_seconds, scale_factor=(10**6)):
+def compute_delivered_spikes_per_second(proj, pre_spike_events, post_spike_events, time_in_seconds, scale_factor=(10**6)):
     """
     This function implements a throughput metric for spiking neural networks.
 
     :param proj: the Projection
-    :param spike_events: the spike events per time step (the result of a spike recording)
+    :param pre_spike_events: the pre-synaptic spike events per time step (the result of a spike recording)
+    :param post_spike_events: the post-synaptic spike events per time step (the result of a spike recording)
     :param time_in_seconds: computation time used for the operation
     :param scale_factor: usually the throughput value gets quite large, therefore its useful to rescale the value. By default, we re-scale to millions of events per second.
 
@@ -234,6 +238,48 @@ def compute_delivered_spikes_per_second(proj, spike_events, time_in_seconds, sca
     measured time (*time_in_seconds*) you need to compute the value individually for each Projection using the *compute_delivered_spikes*
     method and the times for instance retrieved from a run using --profile.
     """
-    num_events = compute_delivered_spikes(proj, spike_events)
+    num_events = compute_delivered_spikes(proj, pre_spike_events, post_spike_events)
 
     return (num_events / time_in_seconds) / scale_factor
+
+def _rec_size_in_bytes(obj, seen):
+    """
+    The Python *sys* package offers a *getsizeof* method to determine the size of an object. However, this contains only the data of the
+    object itself. Contained objects are explictly excluded, i.e., contained lists, dictionaries, or user-defined classes.
+
+    The here proposed solution follows the idea of the "recursive sizeof recipe" referenced in the Python documentation. Note, that we
+    exclude the C++ objects, as they are counted separately.
+
+    :param obj:     the object to be analyzed.
+    :seen:          a set of object id's which have already counted.
+    """
+    obj_id = id(obj)
+    if obj_id in seen:
+        # the object has been counted already
+        return 0
+    seen.add(obj_id)
+
+    # object itself
+    size = sys.getsizeof(obj)
+
+    # nanobind wrapper are handled extra. however, one can not easily check if an object is a nanobind object.
+    size_method = getattr(obj, "size_in_bytes", None)
+    if callable(size_method):
+        return 0
+
+    # containers, e.g., dict
+    if isinstance(obj, Mapping):
+        for k, v in obj.items():
+            size += _rec_size_in_bytes(k, seen)
+            size += _rec_size_in_bytes(v, seen)
+
+    # flat containers
+    elif isinstance(obj, (list, tuple, set, frozenset)):
+        for item in obj:
+            size += _rec_size_in_bytes(item, seen)
+
+    # custom Python objects
+    elif hasattr(obj, "__dict__"):
+        size += _rec_size_in_bytes(vars(obj), seen)
+
+    return size
