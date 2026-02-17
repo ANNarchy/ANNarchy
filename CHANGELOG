@@ -1,3 +1,10 @@
+**5.0.1**
+
+* added Network.memory_footprint() which prints out the current memory requirement of the Network (Python and CPP side)
+* Bugfixes: 
+    * the fixed_probability pattern did not consider the set default_rng (commit c020d5c)
+    * enabling automatic format selection did not work for some connectivity patterns (commit 990c9c2)
+
 **5.0.0**
 
 * **Important**: this release introduces changes/features which are not compatible with ANNarchy 4.x
