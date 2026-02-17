@@ -28,16 +28,16 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = [
-    "setuptools",
-    "cython",
-    "numpy",
-    "sympy",
-    "scipy",
-    "matplotlib",
+    "setuptools>=65.0",
+    "cython>=3.0",
+    "numpy>=1.21",
+    "sympy>1.11",
+    "scipy>1.9",
+    "matplotlib>=3.0",
     "tqdm",
     "h5py",
     "lxml",
-    "nanobind",
+    "nanobind<=2.7.0",
 ]
 
 [project.urls]
