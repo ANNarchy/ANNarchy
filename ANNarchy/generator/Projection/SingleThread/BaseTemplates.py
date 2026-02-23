@@ -181,7 +181,7 @@ attribute_template = {
     void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
     #ifdef _DEBUG
         auto min_value = std::numeric_limits<%(ctype)s>::max();
-        auto max_value = std::numeric_limits<%(ctype)s>::min();
+        auto max_value = std::numeric_limits<%(ctype)s>::lowest();
         for (auto it = value.cbegin(); it != value.cend(); it++ ){
             auto loc_min = *std::min_element(it->cbegin(), it->cend());
             if (loc_min < min_value)

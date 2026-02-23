@@ -23,16 +23,16 @@
 /**
  *  @brief      ELLPACK sparse matrix representation according to Kincaid et al. (1989) with some
  *              minor modifications as described below.
- * 
+ *
  *              Format description by Kincaid et al. (1989):
  *
  *                  https://web.ma.utexas.edu/CNA/ITPACK/manuals/userv2d/node3.html
- * 
+ *
  *  @details    The ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices
  *              where one represent the column indices and another one for each variable.
  *
  *              Let's consider the following example matrix
- * 
+ *
  *                      | 0 1 0 |
  *                  A = | 2 0 3 |
  *                      | 0 0 0 |
@@ -40,34 +40,34 @@
  *
  *              First we need to determine the maximum number of column-entries per row (we
  *              call this *maxnzr*), in our example 2.
- * 
+ *
  *              Then we read out the column entries and fill the created dense matrix from
  *              left. The original authors recommend that missing elements in a row should be
  *              padded with zeros other authors suggest -1, or the maximum value of a type.
  *              We choose the latter variant, as we want to use a) favourly unsigned data types
  *              to represent indices and b) want to be flexible as much as possible.
- * 
+ *
  *                              | 1 0 |
  *                  col_idx_ =  | 0 2 |
  *                              | 2 0 |
- * 
+ *
  *              As for LILMatrix and others one need to highlight that rows with no nonzeros are
  *              compressed. This means, that we don't allocate empty rows instead we have a row rank
  *              array which encode which row in the stored matrix corresponds to the dense row index.
  *              For the above matrix this would be:
- * 
+ *
  *                  post_ranks_ = [0, 1, 3]
  *
- *  @tparam     IT          index type, i. e. a data type, which can represent num_rows_ respectively num_column_ elements 
- *  @tparam     ST          size type, i. e. a data type, which can represent maxnzr_ * num_rows_, at maximum num_rows_ * 
+ *  @tparam     IT          index type, i. e. a data type, which can represent num_rows_ respectively num_column_ elements
+ *  @tparam     ST          size type, i. e. a data type, which can represent maxnzr_ * num_rows_, at maximum num_rows_ *
  *                          num_column_, elements (consequently this can differ from IT for small data types)
  *  @tparam     row_major   determines the matrix storage for the dense sub matrices. If
  *                          set to true, the matrix will be stored as row major, otherwise
- *                          in column major. 
+ *                          in column major.
  *                          Please note that the original format stores in row-major to ensure a
  *                          partial caching of data on CPUs. The column-major ordering is only
  *                          intended for the usage on GPUs.
- * 
+ *
  *  @todo       Maybe it would be a good idea, to distinguish the case of a) all rows are filled with at least
  *              one non-zero and b) the compressed case. So we could avoid to store the post_ranks_ if they are
  *              technically not needed.
@@ -180,7 +180,7 @@ class ELLMatrix {
     }
 
     /**
-     *  @brief      Accessor to ELLMatrix::col_idx_ 
+     *  @brief      Accessor to ELLMatrix::col_idx_
      *  @returns    the raw pointer of ELLMatrix::col_idx_
      */
     inline const IT* get_column_indices() {
@@ -200,7 +200,7 @@ class ELLMatrix {
      *  @details    get all stored column indices as LIL
      *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
      */
-    std::vector<std::vector<IT>> get_pre_ranks() { 
+    std::vector<std::vector<IT>> get_pre_ranks() {
         auto pre_ranks = std::vector<std::vector<IT>>();
 
         for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++)
@@ -301,7 +301,7 @@ class ELLMatrix {
         // 1st step:    iterate across the LIL to identify maximum
         //              row length
         post_ranks_ = post_ranks;
-        maxnzr_ = std::numeric_limits<IT>::min();
+        maxnzr_ = std::numeric_limits<IT>::lowest();
         for(auto pre_it = pre_ranks.begin(); pre_it != pre_ranks.end(); pre_it++) {
             if ( maxnzr_ < static_cast<IT>(pre_it->size()) ) {
                 maxnzr_ = pre_it->size();
@@ -411,7 +411,7 @@ class ELLMatrix {
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
         for(auto row = 0; row < num_rows_; row++) {
-            
+
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -498,7 +498,7 @@ class ELLMatrix {
                 }
             }
         }
-        return variable;        
+        return variable;
     }
 
     /**
@@ -568,7 +568,7 @@ class ELLMatrix {
             }
         }
     }
-   
+
     /**
      *  @brief      retrieve a LIL representation for a given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
@@ -743,7 +743,7 @@ class ELLMatrix {
      *  @brief      print the some information on the nonzeros to console.
      *  @details    The print-out will contain among others number rows, number columns, number nonzeros.
      *              Please note, that type casts are required to print-out the numbers encoded if IT or ST
-     *              is e.g. unsigned char. 
+     *              is e.g. unsigned char.
      */
     void print_matrix_statistics() {
         ST sum = 0;
@@ -766,7 +766,7 @@ class ELLMatrix {
                 for(int c = 0; c < maxnzr_; c++) {
                     if (col_idx_[c*num_rows+r] == std::numeric_limits<IT>::max()) // hit the end of line
                         break;
- 
+
                     nnz_curr_row++;
                 }
                 if (nnz_curr_row > 0) {
@@ -791,7 +791,7 @@ class ELLMatrix {
     /**
      *  @brief      print the matrix representation to console.
      *  @details    All important fields are printed. Please note, that type casts are
-     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char. 
+     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char.
      */
     virtual void print_data_representation() {
         std::cout << "ELLMatrix instance at " << this << std::endl;

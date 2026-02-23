@@ -612,7 +612,7 @@ class ProjectionGenerator(object):
 
         # The transpose projection contains no own synaptic parameters
         if isinstance(proj, Transpose):
-            return "", "" 
+            return "", ""
 
         # choose templates dependend on the paradigm
         decl_template = self._templates['attribute_decl']
@@ -741,7 +741,7 @@ class ProjectionGenerator(object):
                     'ctype': ctype,
                     'ctype_name': ctype.replace(" ", "_")
                 }
-            
+
             if global_attribute_get != "":
                 final_code += self._templates["accessor_template"]["global"] % {
                     'global_get' : global_attribute_get,
@@ -827,7 +827,7 @@ class ProjectionGenerator(object):
                         weight_code = tabify("w = w_dist_arg1;", 2)
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
-                    
+
                 elif var['locality'] == "local":
                     if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):   # Init weights in CPP
                         if proj.connector_weight_dist is None:
@@ -862,7 +862,7 @@ class ProjectionGenerator(object):
                                 else:
                                     init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
                             else:
-                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min is None else str(proj.connector_weight_dist.min)
+                                min_code = "std::numeric_limits<%(float_prec)s>::lowest()" if proj.connector_weight_dist.min is None else str(proj.connector_weight_dist.min)
                                 max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max is None else str(proj.connector_weight_dist.max)
                                 if single_spmv_matrix:
                                     init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0], "+min_code+", "+max_code+");"
@@ -1068,7 +1068,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
 
             if attr['name'] == "w" and proj._has_single_weight():
-                code += self._templates['attribute_cpp_delete']['global'] % ids    
+                code += self._templates['attribute_cpp_delete']['global'] % ids
             else:
                 code += self._templates['attribute_cpp_delete'][attr['locality']] % ids
 
@@ -1103,7 +1103,7 @@ def get_bounds(param):
       }
     return code
 
-#   TODO (HD): 
+#   TODO (HD):
 #       we should think about to allow any block size, even though it would lead to padding zeros
 def determine_bsr_blocksize(pre_size, post_size):
     """
@@ -1121,7 +1121,7 @@ def determine_bsr_blocksize(pre_size, post_size):
             if (val1%i==0) and (val2%i==0):
                 return i
             i+= 1
-        
+
         return 1
 
     # determine smallest common divisor
