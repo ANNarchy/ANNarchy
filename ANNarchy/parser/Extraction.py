@@ -16,7 +16,6 @@ from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import (
     split_equation,
     extract_name,
-    check_equation,
     extract_flags,
     prepare_string,
     process_equations,
