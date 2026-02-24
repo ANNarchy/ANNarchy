@@ -36,7 +36,7 @@ class Pooling(SpecificProjection):
     net = ann.Network()
     inp = net.create(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
     pop = net.create(geometry=(50, 50), neuron=ann.Neuron(equations="r = sum(exc)"))
-    
+
     proj = net.connect(Pooling(inp, pop, 'exc', operation='max')) # max-pooling
     proj.pooling() # extent=(2, 2) is implicit
     ```
@@ -62,8 +62,8 @@ class Pooling(SpecificProjection):
             post,
             target,
             synapse=SharedSynapse(
-                psp=psp, 
-                operation=operation, 
+                psp=psp,
+                operation=operation,
                 name="Pooling with '"+operation+"' operation",
                 description=operation+"-pooling operation over the pre-synaptic population."
             ),
@@ -266,7 +266,7 @@ class Pooling(SpecificProjection):
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+            sum_default = "std::numeric_limits<%(float_prec)s>::lowest()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         code = """
             sum = %(sum_default)s;
@@ -386,7 +386,7 @@ class Pooling(SpecificProjection):
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+            sum_default = "std::numeric_limits<%(float_prec)s>::lowest()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)

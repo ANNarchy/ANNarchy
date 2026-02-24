@@ -316,6 +316,114 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         rk_post += gridDim.y*blockDim.y;
     }
 }
+""",
+        'min':"""
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    %(idx_type)s rk_post = blockIdx.y*blockDim.y+threadIdx.y;
+    %(float_prec)s __shared__ sdata[16][32];
+    unsigned int tid = threadIdx.x;
+
+    while( rk_post < post_size ) {
+        sdata[threadIdx.y][threadIdx.x] = FLT_MAX;
+        %(size_type)s j = rk_post * pre_size + threadIdx.x;
+
+        %(idx_type)s rk_pre = threadIdx.x;
+        for (rk_pre=threadIdx.x; rk_pre < pre_size; rk_pre+=blockDim.x, j+= blockDim.x) {
+            %(float_prec)s tmp = %(psp)s;
+            if((tmp < sdata[threadIdx.y][threadIdx.x]) && (mask[j]))
+                sdata[threadIdx.y][threadIdx.x] = tmp;
+        }
+
+        __syncthreads();
+
+        // do reduction in shared mem within one warp
+        if (threadIdx.x < 16) {
+            volatile %(float_prec)s* smem = sdata[threadIdx.y];
+            if ( smem[tid] > smem[tid + 16] ) smem[tid] = smem[tid + 16];
+            if ( smem[tid] > smem[tid +  8] ) smem[tid] = smem[tid + 8];
+            if ( smem[tid] > smem[tid +  4] ) smem[tid] = smem[tid + 4];
+            if ( smem[tid] > smem[tid +  2] ) smem[tid] = smem[tid + 2];
+            if ( smem[tid] > smem[tid +  1] ) smem[tid] = smem[tid + 1];
+        }
+
+        if (threadIdx.x == 0) %(target_arg)s%(post_index)s += sdata[threadIdx.y][0];
+        __syncthreads();
+        rk_post += gridDim.y*blockDim.y;
+    }
+}
+""",
+        'max':"""
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    %(idx_type)s rk_post = blockIdx.y*blockDim.y+threadIdx.y;
+    %(float_prec)s __shared__ sdata[16][32];
+    unsigned int tid = threadIdx.x;
+
+    while( rk_post < post_size ) {
+        sdata[threadIdx.y][threadIdx.x] = FLT_MIN;
+        %(size_type)s j = rk_post * pre_size + threadIdx.x;
+
+        %(idx_type)s rk_pre = threadIdx.x;
+        for (rk_pre=threadIdx.x; rk_pre < pre_size; rk_pre+=blockDim.x, j+= blockDim.x) {
+            %(float_prec)s tmp = %(psp)s;
+            if ((tmp > sdata[threadIdx.y][threadIdx.x]) && (mask[j]))
+                sdata[threadIdx.y][threadIdx.x] = tmp;
+        }
+
+        __syncthreads();
+
+        // do reduction in shared mem within one warp
+        if (threadIdx.x < 16) {
+            volatile %(float_prec)s* smem = sdata[threadIdx.y];
+            if ( smem[tid] < smem[tid + 16] ) smem[tid] = smem[tid + 16];
+            if ( smem[tid] < smem[tid +  8] ) smem[tid] = smem[tid + 8];
+            if ( smem[tid] < smem[tid +  4] ) smem[tid] = smem[tid + 4];
+            if ( smem[tid] < smem[tid +  2] ) smem[tid] = smem[tid + 2];
+            if ( smem[tid] < smem[tid +  1] ) smem[tid] = smem[tid + 1];
+        }
+
+        if (threadIdx.x == 0) %(target_arg)s%(post_index)s += sdata[threadIdx.y][0];
+        __syncthreads();
+        rk_post += gridDim.y*blockDim.y;
+    }
+}
+""",
+        'mean':"""
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    %(idx_type)s rk_post = blockIdx.y*blockDim.y+threadIdx.y;
+    %(float_prec)s __shared__ sdata[16][32];
+    %(float_prec)s __shared__ syn_count[16];
+    unsigned int tid = threadIdx.x;
+
+    while( rk_post < post_size ) {
+        sdata[threadIdx.y][threadIdx.x] = 0.0;
+        syn_count[threadIdx.y] = 0;
+        __syncthreads();
+        %(size_type)s j = rk_post * pre_size + threadIdx.x;
+
+        for (%(idx_type)s rk_pre = threadIdx.x; rk_pre < pre_size; rk_pre+=blockDim.x, j+= blockDim.x) {
+            if (mask[j]) {
+                sdata[threadIdx.y][threadIdx.x] += %(psp)s
+                atomicAdd(&syn_count[threadIdx.y], 1.0);
+            }
+        }
+
+        __syncthreads();
+
+        // do reduction in shared mem within one warp
+        if (threadIdx.x < 16) {
+            volatile %(float_prec)s* data = sdata[threadIdx.y];
+            data[tid] += data[tid + 16];
+            data[tid] += data[tid +  8];
+            data[tid] += data[tid +  4];
+            data[tid] += data[tid +  2];
+            data[tid] += data[tid +  1];
+        }
+
+        if (threadIdx.x == 0) %(target_arg)s%(post_index)s += (sdata[threadIdx.y][0] / syn_count[threadIdx.y]);
+        __syncthreads();
+        rk_post += gridDim.y*blockDim.y;
+    }
+}
 """
     },
     'invoke_kernel': """

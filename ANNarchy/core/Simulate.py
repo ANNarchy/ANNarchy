@@ -200,6 +200,10 @@ def _check_monitor_memory(nb_steps:int, net_id: int, show_monitor_memory_estimat
 
     If the estimated amount of memory is exceeding a threshold, currently 10% of the free memory, then a warning is shown on the terminal.
     """
+    # If on macos, skip
+    import platform
+    if platform.system() == "Darwin":
+        return
     warn_threshold = 0.1   # TODO: maybe make adjustable through global config?
     rec_size_mib = NetworkManager().get_network(net_id=net_id).instance.estimate_record_size(nb_steps)
     meminfo = {}

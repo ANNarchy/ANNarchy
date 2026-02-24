@@ -24,17 +24,17 @@
 /**
  *  \brief              Connectivity representation using a full matrix.
  *  \details            Contrary to all other classes in this template library this matrix format is not a sparse matrix.
- * 
+ *
  *  \tparam     IT      data type to represent the ranks within the matrix. Generally unsigned data types should be chosen.
  *                      The data type determines the maximum size for the number of elements in a column respectively the number
  *                      of rows encoded in the matrix:
- * 
+ *
  *                      - unsigned char (1 byte):        [0 .. 255]
  *                      - unsigned short int (2 byte):   [0 .. 65.535]
  *                      - unsigned int (4 byte):         [0 .. 4.294.967.295]
  *
  *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and LILMatrix::num_columns_)
- * 
+ *
  *  \tparam     ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
  *  \tparam     MT      As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
@@ -689,7 +689,7 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
-        assert( (num_rows_ != variable.size()) );
+        assert( (num_rows_ == variable.size()) );
         assert( (lil_idx < post_ranks_.size()) );
 
         variable[post_ranks_[lil_idx]] = value;

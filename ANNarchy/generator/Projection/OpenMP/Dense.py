@@ -88,7 +88,7 @@ delay = {
     # An individual value for each synapse
     'nonuniform_rate_coded': None,
     # An individual value for each synapse and a
-    # buffer for spike events    
+    # buffer for spike events
     'nonuniform_spiking': None
 }
 
@@ -127,17 +127,102 @@ dense_summation_operation = {
 for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
     i = post_ranks_[_idx];
 
-    %(float_prec)s sum = 0.0;
+    sum = static_cast<%(float_prec)s>(0.0);
     for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
     target[i] += sum;
 }
+""",
+    'max': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s i, rk_pre;
+
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
+for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+    i = post_ranks_[_idx];
+    rk_pre = 0;
+    j=i*columns;
+
+    sum = std::numeric_limits<%(float_prec)s>::min();
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        if (!mask_[j])
+            continue;   // no existing synapse
+
+        if (%(psp)s > sum) {
+            sum = %(psp)s ;
+        }
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum;
+}
+""",
+    'min': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s i, rk_pre;
+
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
+for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+    i = post_ranks_[_idx];
+    sum = std::numeric_limits<%(float_prec)s>::max();
+    rk_pre = 0;
+    j=i*columns;
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        if (!mask_[j])
+            continue;   // no existing synapse
+
+        if(%(psp)s < sum){
+            sum = %(psp)s ;
+        }
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum;
+}
+""",
+    'mean': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s i, rk_pre;
+
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
+for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
+    i = post_ranks_[_idx];
+    %(idx_type)s _syn_count = 0;
+    sum = static_cast<%(float_prec)s>(0.0);
+    rk_pre = 0;
+    j=i*columns;
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        _syn_count += (mask_[j]) ? 1 : 0;
+        sum += %(psp)s ;
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum / static_cast<%(float_prec)s>(_syn_count);
+}
 """
 }
 
 ###############################################################################
-# Optimized kernel for default rate-coded continuous transmission using 
+# Optimized kernel for default rate-coded continuous transmission using
 # SIMD intrinsics (SEE4-1, AVX)
 ###############################################################################
 continuous_transmission_sse = {
@@ -234,7 +319,7 @@ continuous_transmission_sse = {
                 __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s+4]);
                 __m128 _tmp_w3 = _mm_loadu_ps(&_w[_s+8]);
                 __m128 _tmp_w4 = _mm_loadu_ps(&_w[_s+12]);
-                
+
                 _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r, _tmp_w));
                 _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r2, _tmp_w2));
                 _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r3, _tmp_w3));

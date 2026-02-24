@@ -58,8 +58,8 @@ def split_equation(definition):
         else:
             equation = definition.strip() # there are no constraints
             constraint = None
-    finally:
-        return equation, constraint
+    
+    return equation, constraint
 
 def prepare_string(stream):
     """ 

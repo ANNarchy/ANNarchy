@@ -25,12 +25,12 @@
 /**
  *  \brief      ELLPACK sparse matrix representation according to Kincaid et al. 1989 with some
  *              minor modifications as described below.
- * 
+ *
  *  \details    The ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices
  *              where one represent the column indices and another one for each variable.
  *
  *              Let's consider the following example matrix
- * 
+ *
  *                      | 0 1 0 |
  *                  A = | 2 0 3 |
  *                      | 0 0 0 |
@@ -38,33 +38,33 @@
  *
  *              First we need to determine the maximum number of column-entries per row (we
  *              call this *maxnzr*), in our example 2.
- * 
+ *
  *              Then we read out the column entries and fill the created dense matrix from
  *              left. Important is the encoding of non-existing entries some authors suggest -1
  *              but this would require every time a check if a contained index is valid. We
  *              fill non-existing places with 0.
- * 
+ *
  *                              | 1 0 |
  *                  col_idx_ =  | 0 2 |
  *                              | 2 0 |
- * 
+ *
  *              To allow learning on the matrix and encoding of 0 as existing value, we also
  *              introduce a row-length array (rl):
- * 
+ *
  *                  rl_ = [ 1, 2, 1 ]
- * 
+ *
  *              As for LILMatrix and others one need to highlight that rows with no nonzeros are
  *              compressed. This means, that we don't allocate empty rows instead we have a row rank
  *              array which encode which row in the stored matrix corresponds to the dense row index.
  *              For the above matrix this would be:
- * 
+ *
  *                  post_ranks_ = [0, 1, 3]
  *
  *  \tparam     IT          index type.
  *  \tparam     ST          size type, if IT would overflow.
  *  \tparam     row_major   determines the matrix storage for the dense sub matrices. If
  *                          set to true, the matrix will be stored as row major, otherwise
- *                          in column major. 
+ *                          in column major.
  *                          Please note that the original format stores in row-major to ensure a
  *                          partial caching of data on CPUs. The column-major ordering is only
  *                          intended for the usage on GPUs.
@@ -173,7 +173,7 @@ public:
      *  @details    get column indices
      *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
      */
-    std::vector<std::vector<IT>> get_pre_ranks() { 
+    std::vector<std::vector<IT>> get_pre_ranks() {
         auto pre_ranks = std::vector<std::vector<IT>>();
 
         for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++)
@@ -257,7 +257,6 @@ public:
         //
         // 1st step:    iterate across the LIL to identify maximum
         //              row length
-        maxnzr_ = std::numeric_limits<IT>::min();
         rl_ = std::vector<IT>(post_ranks_.size());
 
         auto pre_it = pre_ranks.begin();
@@ -467,7 +466,7 @@ public:
                 }
             }
         }
-        
+
         return new_variable;
     }
 
@@ -593,7 +592,7 @@ public:
             }
         }
     }
-   
+
     /**
      *  @brief      retrieve a LIL representation for a given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
@@ -613,7 +612,7 @@ public:
         } else {
             for(IT r = 0; r < post_ranks_.size(); r++) {
                 lil_variable.push_back(std::move(get_matrix_variable_row(variable, r)));
-            }            
+            }
         }
         return lil_variable;
     }
@@ -760,7 +759,7 @@ public:
             if (*it > 0) {
                 sum += *it;
             }
-        } 
+        }
         double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(post_ranks_.size());
 
         std::cout << "  #rows (dense): " << static_cast<unsigned long>(dense_num_rows_) << std::endl;
@@ -775,7 +774,7 @@ public:
     /**
      *  @brief      print the matrix representation to console.
      *  @details    All important fields are printed. Please note, that type casts are
-     *              required to print-out the numbers encoded in unsigned char as numbers. 
+     *              required to print-out the numbers encoded in unsigned char as numbers.
      */
     virtual void print_data_representation() {
         std::cout << "ELLRMatrix instance at " << this << std::endl;
