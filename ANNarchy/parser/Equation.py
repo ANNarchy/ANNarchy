@@ -3,13 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+from copy import deepcopy
+
+import sympy as sp
+
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from .ParserTemplate import create_local_dict, user_functions
-
-import sympy as sp
-import re
-from copy import deepcopy
 
 
 def transform_condition(expr):

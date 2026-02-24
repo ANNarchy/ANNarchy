@@ -3,15 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+import sympy as sp
+from sympy.parsing.sympy_parser import parse_expr, convert_xor, auto_number
+
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Equation import transform_condition
 from ANNarchy.parser.ParserTemplate import functions_dict, user_functions
-from ANNarchy.core import Global
-
-import re
-import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr, convert_xor, auto_number
 
 
 class FunctionParser(object):

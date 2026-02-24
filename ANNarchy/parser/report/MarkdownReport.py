@@ -9,7 +9,7 @@ from ANNarchy.core.PopulationView import PopulationView
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
-from ..Extraction import *
+from ..Extraction import extract_parameters, find_method
 
 import numpy as np
 import os

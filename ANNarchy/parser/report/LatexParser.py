@@ -10,7 +10,15 @@ import re
 
 from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
-from ..Extraction import *
+from ..Extraction import (
+    extract_parameters,
+    extract_variables,
+    get_attributes,
+    extract_prepost,
+    extract_pre_spike_variable,
+    extract_post_spike_variable,
+    extract_functions,
+)
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 

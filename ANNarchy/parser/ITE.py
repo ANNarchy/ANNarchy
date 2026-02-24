@@ -3,10 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
-from ANNarchy.parser.StringManipulation import *
 
 
 def translate_ITE(

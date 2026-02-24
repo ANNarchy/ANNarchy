@@ -4,6 +4,7 @@
 """
 
 from sympy import Symbol, Function
+
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 

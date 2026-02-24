@@ -3,10 +3,22 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+
 from ANNarchy.parser.Equation import Equation
-from ANNarchy.parser.StringManipulation import *
-from ANNarchy.parser.ITE import *
-from ANNarchy.parser.Extraction import *
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
+from ANNarchy.parser.Extraction import (
+    extract_parameters,
+    extract_variables,
+    extract_functions,
+    get_attributes,
+    extract_targets,
+    extract_randomdist,
+    extract_spike_variable,
+    extract_axon_spike_condition,
+    extract_globalops_neuron,
+    find_method,
+)
 from ANNarchy.parser.CoupledEquations import CoupledEquations
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
