@@ -4,6 +4,7 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 
 from conftest import TARGET_FOLDER
@@ -30,9 +31,9 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
             equations="""
                 tau * dv/dt = (Er - v) + (g_STP + g_STDP) * (Ee - v) : init = 0.0
             """,
-            spike = "v > T",
-            reset = "v = Er",
-            refractory = 5.0
+            spike="v > T",
+            reset="v = Er",
+            refractory=5.0,
         )
 
         cls._network = Network()
@@ -46,14 +47,16 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
         STP.all_to_all(
             weights=0.1,
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order
+            storage_order=cls.storage_order,
         )
 
-        STDP = cls._network.connect(cls._inp, cls._out, synapse=models.STDP, target="STDP")
+        STDP = cls._network.connect(
+            cls._inp, cls._out, synapse=models.STDP, target="STDP"
+        )
         STDP.all_to_all(
             weights=0.1,
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order
+            storage_order=cls.storage_order,
         )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)

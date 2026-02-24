@@ -77,13 +77,13 @@ proj_global_attr = """
 """
 
 proj_delays = {
-    'uniform': """
+    "uniform": """
         // Synaptic delays
         .def("get_delay", &ProjStruct%(id)s::get_delay)
         .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
         .def("set_delay", &ProjStruct%(id)s::set_delay)
 """,
-    'nonuniform_rate_coded': """
+    "nonuniform_rate_coded": """
         // Synaptic delays
         .def("get_delay", &ProjStruct%(id)s::get_delay)
         .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
@@ -92,7 +92,7 @@ proj_delays = {
         .def("get_max_delay", &ProjStruct%(id)s::get_max_delay)
         .def("set_max_delay", &ProjStruct%(id)s::set_max_delay)
 """,
-    'nonuniform_spiking': """
+    "nonuniform_spiking": """
         // Synaptic delays
         .def("get_delay", &ProjStruct%(id)s::get_delay)
         .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
@@ -103,5 +103,5 @@ proj_delays = {
 
         .def("update_max_delay", &ProjStruct%(id)s::update_max_delay)
         .def("reset_ring_buffer", &ProjStruct%(id)s::reset_ring_buffer)
-"""
+""",
 }

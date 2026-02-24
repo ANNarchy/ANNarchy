@@ -850,13 +850,11 @@ void setNumberThreads(const int threads, const std::vector<int> core_list)
 """
 
 omp_run_until_template = {
-    'default':
-"""
+    "default": """
     run(steps);
     return steps;
 """,
-    'body':
-"""
+    "body": """
     bool stop = false;
     bool cond_activated = false;
     int nb = 0;
@@ -875,14 +873,14 @@ omp_run_until_template = {
     return nb;
 
 """,
-    'single_pop': """
+    "single_pop": """
         cond_activated = std::find(populations.begin(), populations.end(), %(id)s) != populations.end();
         if (cond_activated)
             if(or_and)
                 stop = stop && pop%(id)s->stop_condition();
             else
                 stop = stop || pop%(id)s->stop_condition();
-    """
+    """,
 }
 
 omp_initialize_template = """
@@ -1181,7 +1179,7 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events) {
 %(postevent_invoke_kernel)s
 """
 
-cuda_device_invoke_header ="""#pragma once
+cuda_device_invoke_header = """#pragma once
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
@@ -1223,8 +1221,7 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
 
 """
 
-cuda_host_body_template =\
-"""// ANNarchy-related header
+cuda_host_body_template = """// ANNarchy-related header
 #include "ANNarchy.hpp"
 #include "ANNarchyKernel.cuh"
 
@@ -1527,7 +1524,7 @@ void setTime(const long int t_) { t=t_; }
 void setDt(const %(float_prec)s dt_) { dt=dt_;}
 """
 
-cuda_stream_setup="""
+cuda_stream_setup = """
 cudaStream_t streams[%(nbStreams)s];
 
 void stream_setup()
@@ -1590,7 +1587,7 @@ built_in_functions = """
 #define ite(a, b, c) (a?b:c)
 """
 
-integer_power_cpu="""
+integer_power_cpu = """
 // power function for integer exponent
 inline %(float_prec)s power(%(float_prec)s x, unsigned int a){
     %(float_prec)s res=x;
@@ -1601,7 +1598,7 @@ inline %(float_prec)s power(%(float_prec)s x, unsigned int a){
 };
 """
 
-integer_power_cuda="""
+integer_power_cuda = """
 // power function for integer exponent
 __device__ %(float_prec)s power(%(float_prec)s x, unsigned int a) {
     %(float_prec)s res=x;

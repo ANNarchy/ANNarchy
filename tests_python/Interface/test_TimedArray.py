@@ -4,16 +4,19 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, TimedArray
 
+
 class test_TimedArray(unittest.TestCase):
     """
     Test the correct evaluation of builtin functions
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -31,7 +34,7 @@ class test_TimedArray(unittest.TestCase):
                 [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             ]
         )
 
@@ -47,19 +50,21 @@ class test_TimedArray(unittest.TestCase):
         cls._network = Network()
 
         inp = cls._network.create(population=TimedArray(rates=inputs))
-        inp2 = cls._network.create(population=TimedArray(rates=inputs, schedule=10.))
-        inp3 = cls._network.create(population=TimedArray(rates=inputs, period=10.))
-        inp4 = cls._network.create(population=TimedArray(rates=inputs, schedule=2., period=20.))
+        inp2 = cls._network.create(population=TimedArray(rates=inputs, schedule=10.0))
+        inp3 = cls._network.create(population=TimedArray(rates=inputs, period=10.0))
+        inp4 = cls._network.create(
+            population=TimedArray(rates=inputs, schedule=2.0, period=20.0)
+        )
 
         cls.output = cls._network.create(10, neuron=SimpleNeuron)
 
-        proj = cls._network.connect(inp, cls.output, 'exc')
+        proj = cls._network.connect(inp, cls.output, "exc")
         proj.one_to_one(1.0)
-        proj2 = cls._network.connect(inp2, cls.output, 'exc2')
+        proj2 = cls._network.connect(inp2, cls.output, "exc2")
         proj2.one_to_one(1.0)
-        proj3 = cls._network.connect(inp3, cls.output, 'exc3')
+        proj3 = cls._network.connect(inp3, cls.output, "exc3")
         proj3.one_to_one(1.0)
-        proj4 = cls._network.connect(inp4, cls.output, 'exc4')
+        proj4 = cls._network.connect(inp4, cls.output, "exc4")
         proj4.one_to_one(1.0)
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
@@ -102,9 +107,9 @@ class test_TimedArray(unittest.TestCase):
         We provide 10 ms input data the 1st entry, after 11ms the 2nd element will be set. So the next 10
         iterations should return the 2nd element of the input array.
         """
-        self._network.simulate(11) # 1st entry
+        self._network.simulate(11)  # 1st entry
 
-        self._network.simulate(10) # 2nd entry
+        self._network.simulate(10)  # 2nd entry
         numpy.testing.assert_allclose(self.output.r2, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_run_one_period(self):
@@ -112,7 +117,7 @@ class test_TimedArray(unittest.TestCase):
         Period is set to 10, this means after 11 ms we have one cycle complete. This means the 12 step
         should return the 1st element in the output population.
         """
-        self._network.simulate(12) # 1st entry
+        self._network.simulate(12)  # 1st entry
 
         numpy.testing.assert_allclose(self.output.r3, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
@@ -125,10 +130,12 @@ class test_TimedArray(unittest.TestCase):
 
         numpy.testing.assert_allclose(self.output.r4, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 
+
 class test_TimedArrayLateInit(unittest.TestCase):
     """
     Test the correct implementation of late-initialized timed arrays.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -146,7 +153,7 @@ class test_TimedArrayLateInit(unittest.TestCase):
                 [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             ]
         )
 
@@ -169,20 +176,20 @@ class test_TimedArrayLateInit(unittest.TestCase):
 
         # Test later initialization
         inp.update(rates=inputs)
-        inp2.update(rates=inputs, schedule=10.)
-        inp3.update(rates=inputs, period=10.)
-        inp4.update(rates=inputs, schedule=2., period=20.)
+        inp2.update(rates=inputs, schedule=10.0)
+        inp3.update(rates=inputs, period=10.0)
+        inp4.update(rates=inputs, schedule=2.0, period=20.0)
 
         # The output signal will be tested
         cls.output = cls._network.create(10, neuron=SimpleNeuron)
 
-        proj = cls._network.connect(inp, cls.output, 'exc')
+        proj = cls._network.connect(inp, cls.output, "exc")
         proj.one_to_one(1.0)
-        proj2 = cls._network.connect(inp2, cls.output, 'exc2')
+        proj2 = cls._network.connect(inp2, cls.output, "exc2")
         proj2.one_to_one(1.0)
-        proj3 = cls._network.connect(inp3, cls.output, 'exc3')
+        proj3 = cls._network.connect(inp3, cls.output, "exc3")
         proj3.one_to_one(1.0)
-        proj4 = cls._network.connect(inp4, cls.output, 'exc4')
+        proj4 = cls._network.connect(inp4, cls.output, "exc4")
         proj4.one_to_one(1.0)
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
@@ -225,9 +232,9 @@ class test_TimedArrayLateInit(unittest.TestCase):
         We provide 10 ms input data the 1st entry, after 11ms the 2nd element will be set. So the next 10
         iterations should return the 2nd element of the input array.
         """
-        self._network.simulate(11) # 1st entry
+        self._network.simulate(11)  # 1st entry
 
-        self._network.simulate(10) # 2nd entry
+        self._network.simulate(10)  # 2nd entry
         numpy.testing.assert_allclose(self.output.r2, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_run_one_period(self):
@@ -235,7 +242,7 @@ class test_TimedArrayLateInit(unittest.TestCase):
         Period is set to 10, this means after 11 ms we have one cycle complete. This means the 12 step
         should return the 1st element in the output population.
         """
-        self._network.simulate(12) # 1st entry
+        self._network.simulate(12)  # 1st entry
 
         numpy.testing.assert_allclose(self.output.r3, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
@@ -247,6 +254,7 @@ class test_TimedArrayLateInit(unittest.TestCase):
         self._network.simulate(25)
 
         numpy.testing.assert_allclose(self.output.r4, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+
 
 class test_TimedArrayUpdate(unittest.TestCase):
     """
@@ -266,7 +274,7 @@ class test_TimedArrayUpdate(unittest.TestCase):
                 [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             ]
         )
 
@@ -281,7 +289,7 @@ class test_TimedArrayUpdate(unittest.TestCase):
                 [0, 0, 0, 2, 0, 0, 1, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 1, 0, 0],
                 [0, 2, 0, 0, 0, 0, 0, 0, 1, 0],
-                [2, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+                [2, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             ]
         )
 
@@ -294,14 +302,16 @@ class test_TimedArrayUpdate(unittest.TestCase):
         cls._network = Network()
 
         cls.input = cls._network.create(population=TimedArray(rates=cls.initial_inputs))
-        cls.input2 = cls._network.create(population=TimedArray(rates=cls.initial_inputs, schedule=2.))
+        cls.input2 = cls._network.create(
+            population=TimedArray(rates=cls.initial_inputs, schedule=2.0)
+        )
 
         cls.output = cls._network.create(geometry=10, neuron=SimpleNeuron)
 
-        proj1 = cls._network.connect(cls.input, cls.output, 'exc_1')
+        proj1 = cls._network.connect(cls.input, cls.output, "exc_1")
         proj1.one_to_one(1.0)
 
-        proj2 = cls._network.connect(cls.input2, cls.output, 'exc_2')
+        proj2 = cls._network.connect(cls.input2, cls.output, "exc_2")
         proj2.one_to_one(1.0)
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
@@ -334,7 +344,9 @@ class test_TimedArrayUpdate(unittest.TestCase):
         self._network.simulate(5)
         self.input.update(self.overwrite_inputs)
         self._network.simulate(6)
-        numpy.testing.assert_allclose(self.output.sum("exc_1"), [2, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_1"), [2, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        )
 
     def test_run_one_loop_and_schedule(self):
         """
@@ -377,38 +389,58 @@ class test_TimedArrayUpdate(unittest.TestCase):
         numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1])
         self.input2.update(self.overwrite_inputs, schedule=2.0)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1]) # in output pop still old input
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.initial_inputs[1]
+        )  # in output pop still old input
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
         # fourth input block
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[3]
+        )
         # fifth input block
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[4])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[3])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[3]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[4])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[4])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[4]
+        )
         # sixth input block
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[5])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[4])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[4]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[5])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[5])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[5]
+        )
         # 7th, 8th, 9th, 10th input blocks
         self._network.simulate(8)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[9]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[9]
+        )
 
     def test_run_one_loop_reset(self):
         """
@@ -421,7 +453,9 @@ class test_TimedArrayUpdate(unittest.TestCase):
         self.input.update(self.overwrite_inputs, reset=True)
         self._network.simulate(6)
         numpy.testing.assert_allclose(self.input.r, self.overwrite_inputs[5])
-        numpy.testing.assert_allclose(self.output.sum("exc_1"), self.overwrite_inputs[4])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_1"), self.overwrite_inputs[4]
+        )
 
     def test_run_one_loop_and_schedule_reset(self):
         """
@@ -437,13 +471,17 @@ class test_TimedArrayUpdate(unittest.TestCase):
         2 : 10-11 --> after simulate 11 ms there should be self.overwrite_inputs[2]
         """
         self._network.simulate(5)
-        self.input2.update(self.overwrite_inputs, reset=True) # schedule is still 2.
+        self.input2.update(self.overwrite_inputs, reset=True)  # schedule is still 2.
         self._network.simulate(6)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
 
     def test_run_one_loop_and_change_schedule_and_period_reset(self):
         """
@@ -469,16 +507,28 @@ class test_TimedArrayUpdate(unittest.TestCase):
         self.input2.update(self.overwrite_inputs, reset=True, schedule=4, period=40)
         self._network.simulate(12)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[3])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[2])
-        self._network.simulate(27) # after simulate total 40 ms we should be at the end of the input buffer and in following steps it should cycle
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[2]
+        )
+        self._network.simulate(
+            27
+        )  # after simulate total 40 ms we should be at the end of the input buffer and in following steps it should cycle
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[9])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[9]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[0])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[9])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[9]
+        )
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[0])
-        numpy.testing.assert_allclose(self.output.sum("exc_2"), self.overwrite_inputs[0])
+        numpy.testing.assert_allclose(
+            self.output.sum("exc_2"), self.overwrite_inputs[0]
+        )

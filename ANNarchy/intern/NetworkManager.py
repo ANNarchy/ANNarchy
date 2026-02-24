@@ -2,6 +2,7 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import os
 import shutil
 import time
@@ -14,6 +15,7 @@ class IDGenerator:
     """
     Returns random IDs that are guaranteed to be unique.
     """
+
     _instance = None
 
     def __new__(cls):
@@ -29,7 +31,7 @@ class IDGenerator:
         return new_id
 
 
-class NetworkManager :
+class NetworkManager:
     """
     This class implements the management of the different networks. The
     add/remove methods allow the 'random' removal of the network instances and later
@@ -39,7 +41,8 @@ class NetworkManager :
 
     Individual network are accessed by their id and allow the access to their components.
     """
-    _instance = None    # singleton instance
+
+    _instance = None  # singleton instance
 
     def __new__(cls):
         """
@@ -48,7 +51,7 @@ class NetworkManager :
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._initialize(cls._instance)
-        
+
         return cls._instance
 
     def _initialize(self) -> None:
@@ -61,6 +64,7 @@ class NetworkManager :
         # Initialize the list of networks woth the magic network
         self._networks = []
         from ANNarchy.core.Network import Network
+
         magic_network = Network()
 
     def get_id(self):
@@ -71,7 +75,6 @@ class NetworkManager :
         generator = IDGenerator()
         return generator.generate_ID()
 
-
     def add_network(self, net):
         """
         Adds an empty structure for a new network and returns the new network ID.
@@ -79,11 +82,16 @@ class NetworkManager :
         new_id = len(self._networks)
         self._networks.append(net)
 
-        Messages._debug("NetworkManager: added network " + str(net) + " and assigned ID = " + str(new_id))
+        Messages._debug(
+            "NetworkManager: added network "
+            + str(net)
+            + " and assigned ID = "
+            + str(new_id)
+        )
 
         return new_id
 
-    def get_network(self, net_id:int) -> "Network":
+    def get_network(self, net_id: int) -> "Network":
         "Returns the network with the corresponding id."
         if net_id < len(self._networks):
             return self._networks[net_id]
@@ -94,32 +102,39 @@ class NetworkManager :
         "Returns the list of networks."
         return self._networks
 
-    def __getitem__(self, net_id:int):
+    def __getitem__(self, net_id: int):
         return self._networks[net_id]
-    
+
     def magic_network(self) -> "Network":
         "Returns the magic network of id 0."
         return self._networks[0]
-    
+
     def __len__(self) -> int:
         """
-        Number of declared networks. 
+        Number of declared networks.
 
         Called if len() is applied on a NetworkManager class.
         """
         return len(self._networks)
-    
+
     def __repr__(self):
         """
         Instead of showing the object pointer, we present the information of
         registered networks.
         """
-        string = "<{}.{} object at {}>\n".format( self.__class__.__module__, self.__class__.__name__, hex(id(self)))
+        string = "<{}.{} object at {}>\n".format(
+            self.__class__.__module__, self.__class__.__name__, hex(id(self))
+        )
 
         string += "Number of registered networks = " + str(len(self)) + "\n"
 
         for net_id in range(len(self._networks)):
-            string += "Network " + str(net_id) + (" (MagicNetwork)" if net_id == 0 else " ") + "\n"
+            string += (
+                "Network "
+                + str(net_id)
+                + (" (MagicNetwork)" if net_id == 0 else " ")
+                + "\n"
+            )
             string += "  populations = ["
             for pop in self._networks[net_id].get_populations():
                 string += pop.__class__.__name__ + " at " + hex(id(pop)) + ", "
@@ -140,10 +155,15 @@ class NetworkManager :
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
-            string += "  cyInstance = " + str(self._networks[net_id].instance) + " at " + hex(id(self._networks[net_id].instance)) + "\n"
+            string += (
+                "  cyInstance = "
+                + str(self._networks[net_id].instance)
+                + " at "
+                + hex(id(self._networks[net_id].instance))
+                + "\n"
+            )
 
         return string
-        
 
     def remove_network(self, py_instance):
         """
@@ -175,20 +195,21 @@ class NetworkManager :
             mon._clear()
 
         # In some cases, we dont want to remove
-        disable_rm_directory = ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('disable_shared_library_time_offset')
+        disable_rm_directory = ConfigManagement.get_global_config(
+            "debug"
+        ) or ConfigManagement.get_global_config("disable_shared_library_time_offset")
         if disable_rm_directory:
             pass
 
         # Check whether the magic network has been compiled
         elif self._networks[0].compiled:
-
             network_directory = self._networks[0].directory
 
             # Removes the library used in last running instance
-            if os.path.isfile(network_directory+'/ANNarchyCore0.so'):
-                os.remove(network_directory+'/ANNarchyCore0.so')
-            if os.path.isfile(network_directory+'/ANNarchyCore0.dylib'):
-                os.remove(network_directory+'/ANNarchyCore0.dylib')
+            if os.path.isfile(network_directory + "/ANNarchyCore0.so"):
+                os.remove(network_directory + "/ANNarchyCore0.so")
+            if os.path.isfile(network_directory + "/ANNarchyCore0.dylib"):
+                os.remove(network_directory + "/ANNarchyCore0.dylib")
 
             try:
                 if os.path.isdir(network_directory):
@@ -196,8 +217,14 @@ class NetworkManager :
 
             except OSError as err:
                 # we notice a not empty directory error
-                if ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('verbose'):
-                    Messages._warning("Attempted to clear:", network_directory, "using os.rmdir failed ... retry with shutil")
+                if ConfigManagement.get_global_config(
+                    "debug"
+                ) or ConfigManagement.get_global_config("verbose"):
+                    Messages._warning(
+                        "Attempted to clear:",
+                        network_directory,
+                        "using os.rmdir failed ... retry with shutil",
+                    )
 
                 # wait a bit so that the OS has time to finish deleting the content of the directory.
                 # re-try it with shutil, if it again fails, we continue, the folder is empty ...
@@ -208,7 +235,7 @@ class NetworkManager :
 
         # This will trigger as last consequence
         # Network.__del__()
-        #del self._networks
+        # del self._networks
         self._initialize()
 
     ################################

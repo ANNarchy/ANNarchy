@@ -4,6 +4,7 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 import math
@@ -11,11 +12,13 @@ import math
 from conftest import TARGET_FOLDER
 from ANNarchy import CurrentInjection, Network, Neuron
 
+
 class test_CurrentInjection(unittest.TestCase):
     """
     Test the implementation of the specialized projection
     'CurrentInjection'. Based on the example in the documentation.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -23,11 +26,7 @@ class test_CurrentInjection(unittest.TestCase):
         from documentation.
         """
 
-        SimpleSpike = Neuron(
-            equations="mp=g_exc",
-            spike="mp >= 1.0",
-            reset=""
-        )
+        SimpleSpike = Neuron(equations="mp=g_exc", spike="mp >= 1.0", reset="")
 
         cls.test_net = Network()
 
@@ -35,7 +34,7 @@ class test_CurrentInjection(unittest.TestCase):
         cls.output = cls.test_net.create(geometry=1, neuron=SimpleSpike)
         cls.m = cls.test_net.monitor(cls.output, "mp")
 
-        proj = cls.test_net.connect(CurrentInjection(inp, cls.output, 'exc'))
+        proj = cls.test_net.connect(CurrentInjection(inp, cls.output, "exc"))
         proj.connect_current()
 
         cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
@@ -66,7 +65,7 @@ class test_CurrentInjection(unittest.TestCase):
         """
         self.test_net.simulate(11)
 
-        rec_data = self.m.get("mp")[:,0]
+        rec_data = self.m.get("mp")[:, 0]
         # there is 1 dt delay between the input and output
         target = [0] + [math.sin(x) for x in range(10)]
 

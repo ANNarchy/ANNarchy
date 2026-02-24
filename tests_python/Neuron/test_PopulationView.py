@@ -4,22 +4,22 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
-neuron = Neuron(
-    parameters = "tau = 10",
-    equations="r += 1/tau * t"
-)
+neuron = Neuron(parameters="tau = 10", equations="r += 1/tau * t")
+
 
 class test_PopulationView(unittest.TestCase):
     """
     This class tests the functionality of the *PopulationView* object, which
     hold references to different neurons of the same *Population*.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -62,14 +62,18 @@ class test_PopulationView(unittest.TestCase):
         Test the correct assignment of ranks of a sliced column
         """
         view = self._population[:, 4]
-        numpy.testing.assert_allclose(view.ranks, [4,12,20,28,36,44,52,60])   # row_rank * 8 + 4
+        numpy.testing.assert_allclose(
+            view.ranks, [4, 12, 20, 28, 36, 44, 52, 60]
+        )  # row_rank * 8 + 4
 
     def test_rank_assignment_row(self):
         """
         Test the correct assignment of ranks of a sliced row
         """
         view = self._population[2, :]
-        numpy.testing.assert_allclose(view.ranks, [16,17,18,19,20,21,22,23])   # 2 * 8 + column_rank
+        numpy.testing.assert_allclose(
+            view.ranks, [16, 17, 18, 19, 20, 21, 22, 23]
+        )  # 2 * 8 + column_rank
 
     def test_index_type(self):
         """

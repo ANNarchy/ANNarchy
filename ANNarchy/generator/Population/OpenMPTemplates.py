@@ -166,16 +166,14 @@ struct PopStruct%(id)s{
 #    attr_type: either 'variable' or 'parameter'
 #
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 # Initialization of parameters due to the init_population method.
@@ -185,58 +183,55 @@ attribute_decl = {
 #    name: name of the variable
 #    init: initial value
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_delayed = {
-    'local': {
-        'init': """
+    "local": {
+        "init": """
         _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, 0.0));""",
-
-        'update': """
+        "update": """
         #pragma omp single
         {
             _delayed_%(name)s.push_front(%(name)s);
             _delayed_%(name)s.pop_back();
         }
 """,
-        'reset' : """
+        "reset": """
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
             _delayed_%(name)s[i] = %(name)s;
         }
 """,
-        'resize' : """
+        "resize": """
     _delayed_%(name)s.resize(max_delay, std::vector< %(type)s >(size, 0.0));
-"""
+""",
     },
-    'global':{
-        'init': """
+    "global": {
+        "init": """
         _delayed_%(name)s = std::deque< %(type)s >(max_delay, 0.0);""",
-        'update': """
+        "update": """
         #pragma omp single
         {
             _delayed_%(name)s.push_front(%(name)s);
             _delayed_%(name)s.pop_back();
         }
 """,
-        'reset' : """
+        "reset": """
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
             _delayed_%(name)s[i] = %(name)s;
         }
 """,
-        'resize' : """
+        "resize": """
     _delayed_%(name)s.resize(max_delay, 0.0);
-"""
-    }
+""",
+    },
 }
 
 # Definition for the usage of C++11 STL template random
@@ -247,20 +242,20 @@ attribute_delayed = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
-    'dist_decl': "auto dist_%(rd_name)s = %(rd_init)s;",
-    'local': {
-        'decl': "std::vector<%(type)s> %(rd_name)s ;",
-        'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
-        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);",
-        'clear': "%(rd_name)s.clear();\n%(rd_name)s.shrink_to_fit();"
+    "dist_decl": "auto dist_%(rd_name)s = %(rd_init)s;",
+    "local": {
+        "decl": "std::vector<%(type)s> %(rd_name)s ;",
+        "init": "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
+        "update": "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);",
+        "clear": "%(rd_name)s.clear();\n%(rd_name)s.shrink_to_fit();",
     },
-    'global': {
-        'decl': "%(type)s %(rd_name)s;",
-        'init': "%(rd_name)s = 0.0;",
-        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);",
-        'clear': ""
+    "global": {
+        "decl": "%(type)s %(rd_name)s;",
+        "init": "%(rd_name)s = 0.0;",
+        "update": "%(rd_name)s = dist_%(rd_name)s(rng[0]);",
+        "clear": "",
     },
-    'omp_code_seq': """
+    "omp_code_seq": """
         if (_active){
 
             #pragma omp single
@@ -271,118 +266,113 @@ cpp_11_rng = {
             }
         }
     """,
-    'omp_code_par': """
+    "omp_code_par": """
         if (_active){
 %(rng_dist)s
 %(update_rng_global)s
 %(update_rng_local)s
         }
-    """
+    """,
 }
 
 rate_psp = {
-    'decl': """
+    "decl": """
     std::vector<%(float_prec)s> _sum_%(target)s;""",
-    'init': """
+    "init": """
         // Post-synaptic potential
         _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);""",
-    'reset': """
+    "reset": """
     // pop%(id)s: %(name)s
     #pragma omp single nowait
     {
         if (pop%(id)s->_active)
             std::fill(pop%(id)s->_sum_%(target)s.begin(), pop%(id)s->_sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0));
     }
-"""
+""",
 }
 
 spike_specific = {
-    'spike': {
-        'declare': """
+    "spike": {
+        "declare": """
     // Structures for managing spikes
     std::vector<long int> last_spike;
     std::vector<int> spiked;
     std::vector<int> local_spiked_sizes;
 """,
-        'init': """
+        "init": """
         // Spiking variables
         spiked = std::vector<int>();
         local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
         last_spike = std::vector<long int>(size, -10000L);
 """,
-        'reset': """
+        "reset": """
         spiked.clear();
         spiked.shrink_to_fit();
         local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
 """,
-        'clear': """
+        "clear": """
 // Spike events
 spiked.clear();
 spiked.shrink_to_fit();
 
 last_spike.clear();
 last_spike.shrink_to_fit();
-"""
+""",
     },
-    'axon_spike': {
-        'declare': """
+    "axon_spike": {
+        "declare": """
     // Structures for managing axonal spikes
     std::vector<int> axonal;
 """,
-        'init': """
+        "init": """
         // Axonal spike containter
         axonal = std::vector<int>();
 """,
-        'reset': """
+        "reset": """
         axonal.clear();
         axonal.shrink_to_fit();
 """,
-        'pyx_wrapper': """
+        "pyx_wrapper": """
     # Axonal spike events
-"""
+""",
     },
-    'refractory': {
-
-        'declare': """
+    "refractory": {
+        "declare": """
     // Refractory period
     std::vector<int> refractory;
     std::vector<int> refractory_remaining;
     std::vector<short int> in_ref;
 """,
-
-        'init': """
+        "init": """
         // Refractory period
         refractory = std::vector<int>(size, 0);
         refractory_remaining = std::vector<int>(size, 0);
         in_ref = std::vector<short int>(size, 0);
 """,
-
         # If the refractory variable is defined by the user
-        'init_extern': """
+        "init_extern": """
         // Refractory period
         refractory_remaining = std::vector<int>(size, 0);
         in_ref = std::vector<short int>(size, 0);
 """,
-
-        'reset': """
+        "reset": """
         // Refractory period
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
-"""
-    }
+""",
+    },
 }
 
 #
 # Final dictionary
 openmp_templates = {
-    'population_header': population_header,
-    'attr_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_delayed': attribute_delayed,
-    'rng': cpp_11_rng,
-
-    'rate_psp': rate_psp,
-    'spike_specific': spike_specific
+    "population_header": population_header,
+    "attr_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_delayed": attribute_delayed,
+    "rng": cpp_11_rng,
+    "rate_psp": rate_psp,
+    "spike_specific": spike_specific,
 }

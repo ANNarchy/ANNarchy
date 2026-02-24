@@ -4,59 +4,53 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector<%(type)s> %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         w = init_matrix_variable<%(type)s>(%(init)s);
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
 """,
-    'global': ""
+    "global": "",
 }
 
 #############################################
@@ -64,19 +58,19 @@ attribute_cpp_delete = {
 #############################################
 delay = {
     # A single value for all synapses
-    'uniform': None,
+    "uniform": None,
     # An individual value for each synapse
-    'nonuniform_rate_coded': None,
+    "nonuniform_rate_coded": None,
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': None
+    "nonuniform_spiking": None,
 }
 
 ###############################################################
 # Rate-coded continuous transmission (default implementation)
 ###############################################################
 continuous_transmission = {
-    'sum' : """
+    "sum": """
     %(idx_type)s row_ptr_size = block_row_size();
     %(idx_type)s row_nr_off = 0;
     %(idx_type)s row_max = this->num_rows();
@@ -121,7 +115,7 @@ continuous_transmission = {
 
 # The inner dense SpMV is partially unrolled (2x2 kernel)
 continuous_transmission_unroll_2x2 = {
-    'sum' : """
+    "sum": """
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
         %(idx_type)s row_max = this->num_rows();
@@ -165,7 +159,7 @@ continuous_transmission_unroll_2x2 = {
 
 # The inner dense SpMV is partially unrolled (3x3 kernel)
 continuous_transmission_unroll_3x3 = {
-    'sum' : """
+    "sum": """
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
         %(idx_type)s row_max = this->num_rows();
@@ -215,8 +209,8 @@ continuous_transmission_unroll_3x3 = {
 # The inner dense SpMV is partially unrolled (2x2 kernel)
 # and the resulting code is vectorized.
 continuous_transmission_unroll_2x2_avx512 = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX512F__
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
@@ -295,7 +289,7 @@ continuous_transmission_unroll_2x2_avx512 = {
          std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
 """,
-    'float': """
+        "float": """
     #ifdef __AVX512F__
         %(idx_type)s row_ptr_size = block_row_size();
         %(idx_type)s row_nr_off = 0;
@@ -388,16 +382,14 @@ continuous_transmission_unroll_2x2_avx512 = {
     #else
          std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
-"""
+""",
     }
 }
 
 ###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################
-update_variables = {
-    'local': ""
-}
+update_variables = {"local": ""}
 
 ###############################################################
 # Event-driven updates
@@ -436,38 +428,33 @@ if (_transmission && %(post_prefix)s_active) {
 
 conn_templates = {
     # accessors
-    'delay': delay,
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-
-    'rate_coded_sum': continuous_transmission,
+    "delay": delay,
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "rate_coded_sum": continuous_transmission,
     # optimized kernels sorted by block size and SIMD
-    'unrolled_default_psp': {
+    "unrolled_default_psp": {
         2: {
-            'none': {
-                'multi_w': continuous_transmission_unroll_2x2
-            },
+            "none": {"multi_w": continuous_transmission_unroll_2x2},
             #'sse',
             #'avx',
-            'avx512': {
-                'multi_w': continuous_transmission_unroll_2x2_avx512
-            }
+            "avx512": {"multi_w": continuous_transmission_unroll_2x2_avx512},
         },
         3: {
-            'none': {
-                'multi_w': continuous_transmission_unroll_3x3,
+            "none": {
+                "multi_w": continuous_transmission_unroll_3x3,
             }
             #'sse','avx'
-        }
+        },
     },
-    'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_sum_fixed_delay
+    "update_variables": update_variables,
+    "spiking_sum_fixed_delay": spiking_sum_fixed_delay,
 }
 
 conn_ids = {
-    'local_index': '',
-    'pre_index': '',
-    'post_index': '',
+    "local_index": "",
+    "pre_index": "",
+    "post_index": "",
 }

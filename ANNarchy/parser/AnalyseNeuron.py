@@ -11,6 +11,7 @@ from ANNarchy.parser.CoupledEquations import CoupledEquations
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
+
 def analyse_neuron(neuron, net_id):
     """
     Parses the structure and generates code snippets for the neuron type.
@@ -78,128 +79,144 @@ def analyse_neuron(neuron, net_id):
 
     # Store basic information
     description = {
-        'object': 'neuron',
-        'type': neuron.type,
-        'raw_parameters': neuron.parameters,
-        'raw_equations': neuron.equations,
-        'raw_functions': neuron.functions,
+        "object": "neuron",
+        "type": neuron.type,
+        "raw_parameters": neuron.parameters,
+        "raw_equations": neuron.equations,
+        "raw_functions": neuron.functions,
     }
 
     # Spiking neurons additionally store the spike condition, the reset statements and a refractory period
-    if neuron.type == 'spike':
-        description['raw_reset'] = neuron.reset
-        description['raw_spike'] = neuron.spike
-        description['raw_axon_spike'] = neuron.axon_spike
-        description['raw_axon_reset'] = neuron.axon_reset
-        description['refractory'] = neuron.refractory
+    if neuron.type == "spike":
+        description["raw_reset"] = neuron.reset
+        description["raw_spike"] = neuron.spike
+        description["raw_axon_spike"] = neuron.axon_spike
+        description["raw_axon_reset"] = neuron.axon_reset
+        description["refractory"] = neuron.refractory
 
     # Extract parameters and variables names
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=net_id)
-    variables = extract_variables(neuron.equations, 'neuron', net_id=net_id)
-    description['parameters'] = parameters
-    description['variables'] = variables
+    parameters = extract_parameters(
+        neuron.parameters, neuron.extra_values, "neuron", net_id=net_id
+    )
+    variables = extract_variables(neuron.equations, "neuron", net_id=net_id)
+    description["parameters"] = parameters
+    description["variables"] = variables
 
     # Make sure r is defined for rate-coded networks
     from ANNarchy.extensions.bold.BoldModel import BoldModel
+
     if isinstance(neuron, BoldModel):
         found = False
-        for var in description['parameters'] + description['variables']:
-            if var['name'] == 'r':
+        for var in description["parameters"] + description["variables"]:
+            if var["name"] == "r":
                 found = True
         if not found:
-            description['variables'].append(
+            description["variables"].append(
                 {
-                    'name': 'r', 
-                    'locality': 'local', 
-                    'bounds': {}, 
-                    'ctype': ConfigManager().get('precision', net_id),
-                    'init': 0.0, 
-                    'flags': [], 
-                    'eq': '', 
-                    'cpp': ""
+                    "name": "r",
+                    "locality": "local",
+                    "bounds": {},
+                    "ctype": ConfigManager().get("precision", net_id),
+                    "init": 0.0,
+                    "flags": [],
+                    "eq": "",
+                    "cpp": "",
                 }
             )
-    elif neuron.type == 'rate':
-        for var in description['parameters'] + description['variables']:
-            if var['name'] == 'r':
+    elif neuron.type == "rate":
+        for var in description["parameters"] + description["variables"]:
+            if var["name"] == "r":
                 break
         else:
             Messages._error('Rate-coded neurons must define the variable "r".')
 
-    else: # spiking neurons define r by default, it contains the average FR if enabled
-        for var in description['parameters'] + description['variables']:
-            if var['name'] == 'r':
-                Messages._error('Spiking neurons use the variable "r" for the average FR, use another name.')
+    else:  # spiking neurons define r by default, it contains the average FR if enabled
+        for var in description["parameters"] + description["variables"]:
+            if var["name"] == "r":
+                Messages._error(
+                    'Spiking neurons use the variable "r" for the average FR, use another name.'
+                )
 
-        description['variables'].append(
+        description["variables"].append(
             {
-                'name': 'r', 
-                'locality': 'local', 
-                'bounds': {}, 
-                'ctype': ConfigManager().get('precision', net_id),
-                'init': 0.0, 
-                'flags': [], 
-                'eq': '', 
-                'cpp': ""
+                "name": "r",
+                "locality": "local",
+                "bounds": {},
+                "ctype": ConfigManager().get("precision", net_id),
+                "init": 0.0,
+                "flags": [],
+                "eq": "",
+                "cpp": "",
             }
         )
 
     # Extract functions
-    functions = extract_functions(description=neuron.functions, local_global=False, net_id=net_id)
-    description['functions'] = functions
+    functions = extract_functions(
+        description=neuron.functions, local_global=False, net_id=net_id
+    )
+    description["functions"] = functions
 
     # Build lists of all attributes (param + var), which are local or global
-    attributes, local_var, global_var, _ = get_attributes(parameters, variables, neuron=True)
+    attributes, local_var, global_var, _ = get_attributes(
+        parameters, variables, neuron=True
+    )
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        Messages._error('Attributes must be declared only once.', attributes)
+        Messages._error("Attributes must be declared only once.", attributes)
 
     # Store the attributes
-    description['attributes'] = attributes
-    description['local'] = local_var
-    description['semiglobal'] = [] # only for projections
-    description['global'] = global_var
+    description["attributes"] = attributes
+    description["local"] = local_var
+    description["semiglobal"] = []  # only for projections
+    description["global"] = global_var
 
     # Extract all targets
     targets = sorted(list(set(extract_targets(variables))))
-    description['targets'] = targets
-    if neuron.type == 'spike': # Add a default reset behaviour for conductances
+    description["targets"] = targets
+    if neuron.type == "spike":  # Add a default reset behaviour for conductances
         for target in targets:
             found = False
-            for var in description['variables']:
-                if var['name'] == 'g_' + target:
+            for var in description["variables"]:
+                if var["name"] == "g_" + target:
                     found = True
                     break
             if not found:
-                description['variables'].append(
+                description["variables"].append(
                     {
-                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': ConfigManager().get('precision', net_id),
-                        'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'
+                        "name": "g_" + target,
+                        "locality": "local",
+                        "bounds": {},
+                        "ctype": ConfigManager().get("precision", net_id),
+                        "init": 0.0,
+                        "flags": [],
+                        "eq": "g_" + target + " = 0.0",
                     }
                 )
-                description['attributes'].append('g_'+target)
-                description['local'].append('g_'+target)
+                description["attributes"].append("g_" + target)
+                description["local"].append("g_" + target)
 
     # Extract RandomDistribution objects
     random_distributions = extract_randomdist(description, net_id=net_id)
-    description['random_distributions'] = random_distributions
+    description["random_distributions"] = random_distributions
 
     # Extract the spike condition if any
-    if neuron.type == 'spike':
-        description['spike'] = extract_spike_variable(description, net_id=net_id)
-        description['axon_spike'] = extract_axon_spike_condition(description, net_id=net_id)
+    if neuron.type == "spike":
+        description["spike"] = extract_spike_variable(description, net_id=net_id)
+        description["axon_spike"] = extract_axon_spike_condition(
+            description, net_id=net_id
+        )
 
     # Global operation TODO
-    description['global_operations'] = []
+    description["global_operations"] = []
 
     # The ODEs may be interdependent (implicit, midpoint), so they need to be passed explicitely to CoupledEquations
     concurrent_odes = []
 
     # Translate the equations to C++
-    for variable in description['variables']:
+    for variable in description["variables"]:
         # Get the equation
-        eq = variable['transformed_eq']
+        eq = variable["transformed_eq"]
         if eq.strip() == "":
             continue
 
@@ -213,15 +230,17 @@ def analyse_neuron(neuron, net_id):
         dependencies = []
 
         # Replace sum(target) with _sum_exc__[i]
-        for target in description['targets']:
+        for target in description["targets"]:
             # sum() is valid for all targets
-            eq = re.sub(r'(?P<pre>[^\w.])sum\(\)', r'\1sum(__all__)', eq)
+            eq = re.sub(r"(?P<pre>[^\w.])sum\(\)", r"\1sum(__all__)", eq)
             # Replace sum(target) with __sum_target__
-            eq = re.sub(r'sum\(\s*'+target+r'\s*\)', r'__sum_'+target+'__', eq)
-            untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
+            eq = re.sub(r"sum\(\s*" + target + r"\s*\)", r"__sum_" + target + "__", eq)
+            untouched["__sum_" + target + "__"] = "_sum_" + target + "%(local_index)s"
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, net_id=net_id)
+        eq, untouched_globs, global_ops = extract_globalops_neuron(
+            variable["name"], eq, description, net_id=net_id
+        )
 
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
@@ -231,67 +250,67 @@ def analyse_neuron(neuron, net_id):
         for tmp in global_ops:
             # Prevent doublons
             doubled = False
-            for tmp2 in description['global_operations']:
-                if tmp['function'] == tmp2['function'] and tmp['variable'] == tmp2['variable']:
+            for tmp2 in description["global_operations"]:
+                if (
+                    tmp["function"] == tmp2["function"]
+                    and tmp["variable"] == tmp2["variable"]
+                ):
                     doubled = True
                     break
             if not doubled:
-                description['global_operations'] += [tmp]
+                description["global_operations"] += [tmp]
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(variable['name'], eq, description)
+        eq, condition = extract_ite(variable["name"], eq, description)
 
         # Find the numerical method if any
         method = find_method(variable)
 
         # Process the bounds
-        if 'min' in variable['bounds'].keys():
-            if isinstance(variable['bounds']['min'], str):
+        if "min" in variable["bounds"].keys():
+            if isinstance(variable["bounds"]["min"], str):
                 translator = Equation(
-                    variable['name'],
-                    variable['bounds']['min'],
+                    variable["name"],
+                    variable["bounds"]["min"],
                     description,
-                    type = 'return',
-                    untouched = untouched,
-                    net_id=net_id
+                    type="return",
+                    untouched=untouched,
+                    net_id=net_id,
                 )
-                variable['bounds']['min'] = translator.parse().replace(';', '')
+                variable["bounds"]["min"] = translator.parse().replace(";", "")
                 dependencies += translator.dependencies()
 
-        if 'max' in variable['bounds'].keys():
-            if isinstance(variable['bounds']['max'], str):
+        if "max" in variable["bounds"].keys():
+            if isinstance(variable["bounds"]["max"], str):
                 translator = Equation(
-                    variable['name'],
-                    variable['bounds']['max'],
+                    variable["name"],
+                    variable["bounds"]["max"],
                     description,
-                    type = 'return',
-                    untouched = untouched,
-                    net_id=net_id
+                    type="return",
+                    untouched=untouched,
+                    net_id=net_id,
                 )
-                variable['bounds']['max'] = translator.parse().replace(';', '')
+                variable["bounds"]["max"] = translator.parse().replace(";", "")
                 dependencies += translator.dependencies()
 
         # Analyse the equation
-        if condition == []:# No if-then-else
+        if condition == []:  # No if-then-else
             translator = Equation(
-                variable['name'],
+                variable["name"],
                 eq,
                 description,
-                method = method,
-                untouched = untouched,
-                    net_id=net_id
+                method=method,
+                untouched=untouched,
+                net_id=net_id,
             )
             code = translator.parse()
             dependencies += translator.dependencies()
             num_flops = translator.num_flops
-        
-        else: # An if-then-else statement
+
+        else:  # An if-then-else statement
             code, deps = translate_ITE(
-                        variable['name'],
-                        eq,
-                        condition,
-                        description,
-                        untouched )
+                variable["name"], eq, condition, description, untouched
+            )
             dependencies += deps
 
         # ODEs have a switch statement:
@@ -303,52 +322,59 @@ def analyse_neuron(neuron, net_id):
             pre_loop = {}
             cpp_eq = code
             switch = None
-        else: # ODE
+        else:  # ODE
             pre_loop = code[0]
             cpp_eq = code[1]
             switch = code[2]
 
         # Replace untouched variables with their original name
-        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
-            if prev.startswith('g_'):
-                cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' ' + cpp_eq).strip()
+        for prev, new in sorted(
+            list(untouched.items()), key=lambda key: len(key[0]), reverse=True
+        ):
+            if prev.startswith("g_"):
+                cpp_eq = re.sub(r"([^_]+)" + prev, r"\1" + new, " " + cpp_eq).strip()
                 if len(pre_loop) > 0:
-                    pre_loop['value'] = re.sub(r'([^_]+)'+prev, new, ' ' + pre_loop['value']).strip()
+                    pre_loop["value"] = re.sub(
+                        r"([^_]+)" + prev, new, " " + pre_loop["value"]
+                    ).strip()
                 if switch:
-                    switch = re.sub(r'([^_]+)'+prev, new, ' ' + switch).strip()
+                    switch = re.sub(r"([^_]+)" + prev, new, " " + switch).strip()
             else:
                 cpp_eq = re.sub(prev, new, cpp_eq)
                 if len(pre_loop) > 0:
-                    pre_loop['value'] = re.sub(prev, new, pre_loop['value'])
+                    pre_loop["value"] = re.sub(prev, new, pre_loop["value"])
                 if switch:
                     switch = re.sub(prev, new, switch)
 
         # Replace local functions
-        for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+r'\(',
-                            r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
+        for f in description["functions"]:
+            cpp_eq = re.sub(
+                r"([^\w]*)" + f["name"] + r"\(", r"\1" + f["name"] + "(", " " + cpp_eq
+            ).strip()
 
         # Store the result
-        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
-        variable['cpp'] = cpp_eq # the C++ equation
-        variable['switch'] = switch # switch value of ODE
-        variable['transformed_eq'] = eq # the equation with untouched terms
-        variable['untouched'] = untouched # untouched vocabulary
-        variable['method'] = method # numerical method
-        variable['dependencies'] = list(set(dependencies)) # list of dependencies
-        variable['num_flops'] = num_flops
+        variable["pre_loop"] = (
+            pre_loop  # Things to be declared before the for loop (eg. dt)
+        )
+        variable["cpp"] = cpp_eq  # the C++ equation
+        variable["switch"] = switch  # switch value of ODE
+        variable["transformed_eq"] = eq  # the equation with untouched terms
+        variable["untouched"] = untouched  # untouched vocabulary
+        variable["method"] = method  # numerical method
+        variable["dependencies"] = list(set(dependencies))  # list of dependencies
+        variable["num_flops"] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
-        if method in ['implicit', 'midpoint', 'rk4'] and switch is not None:
+        if method in ["implicit", "midpoint", "rk4"] and switch is not None:
             concurrent_odes.append(variable)
 
     # After all variables are processed, do it again if they are concurrent
-    if len(concurrent_odes) > 1 :
+    if len(concurrent_odes) > 1:
         solver = CoupledEquations(description, concurrent_odes, net_id)
         new_eqs = solver.parse()
-        for idx, variable in enumerate(description['variables']):
+        for idx, variable in enumerate(description["variables"]):
             for new_eq in new_eqs:
-                if variable['name'] == new_eq['name']:
-                    description['variables'][idx] = new_eq
+                if variable["name"] == new_eq["name"]:
+                    description["variables"][idx] = new_eq
 
     return description

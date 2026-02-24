@@ -16,7 +16,9 @@ import pickle
 import numpy as np
 
 
-def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net_id:int=0) -> dict:
+def load_parameters(
+    filename: str, global_only: bool = True, verbose: bool = False, net_id: int = 0
+) -> dict:
     """
     Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
@@ -41,24 +43,25 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
 
     """
     import json
+
     try:
-        with open(filename, 'r') as rfile:
+        with open(filename, "r") as rfile:
             desc = json.load(rfile)
     except IOError as error:
         print(error)
         Messages._error("load_parameters(): the json file does not exist")
 
     if verbose:
-        Messages._print('Loading parameters from file', filename)
-        Messages._print('-'*40)
+        Messages._print("Loading parameters from file", filename)
+        Messages._print("-" * 40)
 
     # Populations
     try:
-        populations = desc['populations']
+        populations = desc["populations"]
     except:
         populations = {}
         if verbose:
-            Messages._print('load_parameters(): no population parameters.')
+            Messages._print("load_parameters(): no population parameters.")
     for name, parameters in populations.items():
         # Get the population
         for pop in NetworkManager().get_network(net_id=net_id).get_populations():
@@ -66,33 +69,51 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
                 population = pop
                 break
         else:
-            Messages._warning('The population', name, 'defined in the file', filename, 'does not exist in the current network.')
+            Messages._warning(
+                "The population",
+                name,
+                "defined in the file",
+                filename,
+                "does not exist in the current network.",
+            )
 
         if verbose:
-            Messages._print('Population', name)
+            Messages._print("Population", name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in population.parameters:
-                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print(
+                    "  ",
+                    name,
+                    "is not a global parameter of",
+                    population.name,
+                    ", skipping.",
+                )
                 continue
-            if global_only and not name in population.neuron_type.description['global']:
-                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+            if global_only and not name in population.neuron_type.description["global"]:
+                Messages._print(
+                    "  ",
+                    name,
+                    "is not a global parameter of",
+                    population.name,
+                    ", skipping.",
+                )
                 continue
 
             if verbose:
-                Messages._print('  ', name, ':', population.get(name), '->', val)
+                Messages._print("  ", name, ":", population.get(name), "->", val)
 
             population.set({name: val})
 
     # Projections
     try:
-        projections = desc['projections']
+        projections = desc["projections"]
     except:
         projections = {}
         if verbose:
-            Messages._print('load_parameters(): no projection parameters.')
+            Messages._print("load_parameters(): no projection parameters.")
     for name, parameters in projections.items():
         # Get the projection
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
@@ -100,33 +121,54 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
                 projection = proj
                 break
         else:
-            Messages._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
+            Messages._warning(
+                "The projection",
+                name,
+                "defined in the file",
+                filename,
+                "does not exist in the current network.",
+            )
 
         if verbose:
-            Messages._print('Projection', name)
+            Messages._print("Projection", name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in projection.parameters:
-                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print(
+                    "  ",
+                    name,
+                    "is not a global parameter of",
+                    population.name,
+                    ", skipping.",
+                )
                 continue
-            if global_only and not name in projection.synapse_type.description['global']:
-                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+            if (
+                global_only
+                and not name in projection.synapse_type.description["global"]
+            ):
+                Messages._print(
+                    "  ",
+                    name,
+                    "is not a global parameter of",
+                    population.name,
+                    ", skipping.",
+                )
                 continue
 
             if verbose:
-                Messages._print('  ', name, ':', projection.get(name), '->', val)
+                Messages._print("  ", name, ":", projection.get(name), "->", val)
 
             projection.set({name: float(val)})
 
     # Constants
     try:
-        constants = desc['constants']
+        constants = desc["constants"]
     except:
         constants = {}
         if verbose:
-            Messages._print('load_parameters(): no constants.')
+            Messages._print("load_parameters(): no constants.")
     for name, value in constants.items():
         # Get the constant
         for constant in NetworkManager().get_network(net_id=net_id).get_constants():
@@ -134,19 +176,26 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
                 constant.set(value)
                 break
         else:
-            Messages._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
+            Messages._warning(
+                "The projection",
+                name,
+                "defined in the file",
+                filename,
+                "does not exist in the current network.",
+            )
 
     # Global user-defined parameters
     try:
         network_parameters = {}
-        for name, val in desc['network'].items():
+        for name, val in desc["network"].items():
             network_parameters[name] = float(val)
     except:
         network_parameters = {}
 
     return network_parameters
 
-def save_parameters(filename:str, net_id=0):
+
+def save_parameters(filename: str, net_id=0):
     """
     Saves the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) to a JSON file.
 
@@ -159,54 +208,57 @@ def save_parameters(filename:str, net_id=0):
 
     # Dictionary of parameters
     description = {
-        'populations' : {},
-        'projections' : {},
-        'network' : {},
-        'constants' : {},
+        "populations": {},
+        "projections": {},
+        "network": {},
+        "constants": {},
     }
 
     # Constants
     for constant in network.get_constants():
-        description['constants'][constant.name] = constant.value
+        description["constants"][constant.name] = constant.value
 
     # Populations
     for pop in network.get_populations():
-
         # Get the neuron description
         neuron = pop.neuron_type
 
         pop_description = {}
 
-        for param in neuron.description['global']:
+        for param in neuron.description["global"]:
             pop_description[param] = pop.init[param]
 
-        description['populations'][pop.name] = pop_description
+        description["populations"][pop.name] = pop_description
 
     # Projections
     for proj in network.get_projections():
-
         # Get the synapse description
         synapse = proj.synapse_type
 
         proj_description = {}
 
-        for param in synapse.description['global']:
+        for param in synapse.description["global"]:
             proj_description[param] = proj.init[param]
 
-        description['projections'][proj.name] = proj_description
+        description["projections"][proj.name] = proj_description
 
     # Save the description in a json file
     try:
-        with open(filename, 'w') as wfile:
+        with open(filename, "w") as wfile:
             json.dump(description, wfile, indent=4)
     except IOError as error:
-        Messages._error("save_parameters(): cannot write the json file. Make sure the subfolders already exist.")
+        Messages._error(
+            "save_parameters(): cannot write the json file. Make sure the subfolders already exist."
+        )
 
 
 # Backwards compatibility with XML
 def load_parameter(in_file):
-    Messages._warning('load_parameter() is deprecated. Use load_parameters() and JSON files instead.')
+    Messages._warning(
+        "load_parameter() is deprecated. Use load_parameters() and JSON files instead."
+    )
     return _load_parameters_from_xml(in_file)
+
 
 def _load_parameters_from_xml(in_file):
     """
@@ -219,13 +271,13 @@ def _load_parameters_from_xml(in_file):
     try:
         from lxml import etree
     except:
-        Messages._print('lxml is not installed. Unable to load in xml format.')
+        Messages._print("lxml is not installed. Unable to load in xml format.")
         return
     par = {}
-    damaged_pars = []   # for printout
+    damaged_pars = []  # for printout
 
     files = []
-    if isinstance(in_file,str):
+    if isinstance(in_file, str):
         files.append(in_file)
     else:
         files = in_file
@@ -235,29 +287,28 @@ def _load_parameters_from_xml(in_file):
             doc = etree.parse(file)
 
         except IOError:
-            Messages._print('Error: file \'', file, '\' not found.')
+            Messages._print("Error: file '", file, "' not found.")
             continue
 
-        matches = doc.findall('parameter')
+        matches = doc.findall("parameter")
 
         for parameter in matches:
             childs = parameter.getchildren()
 
-            #TODO: allways correct ???
+            # TODO: allways correct ???
             if len(childs) != 2:
-                Messages._print('Error: to much tags in parameter')
+                Messages._print("Error: to much tags in parameter")
 
-            name=None
-            value=None
+            name = None
+            value = None
             for child in childs:
-
-                if child.tag == 'name':
+                if child.tag == "name":
                     name = child.text
-                elif child.tag == 'value':
+                elif child.tag == "value":
                     value = child.text
 
                     if value is None:
-                        Messages._print('Error: no value defined for',name)
+                        Messages._print("Error: no value defined for", name)
                         damaged_pars.append(name)
                         value = 0
                     else:
@@ -270,20 +321,21 @@ def _load_parameters_from_xml(in_file):
                                 value = value
 
                 else:
-                    Messages._print('Error: unexpected xml-tag', child.tag)
+                    Messages._print("Error: unexpected xml-tag", child.tag)
 
             if name is None:
-                Messages._print('Error: no name in parameter set.')
+                Messages._print("Error: no name in parameter set.")
             elif value is None:
-                Messages._print('Error: no value in parameter set.')
+                Messages._print("Error: no value in parameter set.")
                 damaged_pars.append(name)
             elif name in par.keys():
-                Messages._print("Error: parameter",name,"already exists.")
+                Messages._print("Error: parameter", name, "already exists.")
                 damaged_pars.append(name)
             else:
                 par[name] = value
 
     return par
+
 
 def _save_data(filename, data):
     """
@@ -293,55 +345,59 @@ def _save_data(filename, data):
     # Check if the repertory exist
     (path, fname) = os.path.split(filename)
 
-    if not path == '':
+    if not path == "":
         if not os.path.isdir(path):
-            Messages._print('Creating folder', path)
+            Messages._print("Creating folder", path)
             os.mkdir(path)
 
     extension = os.path.splitext(fname)[1]
 
-    if extension == '.mat':
+    if extension == ".mat":
         Messages._print("Saving network in Matlab format...")
         try:
             import scipy.io as sio
+
             sio.savemat(filename, data)
         except Exception as e:
-            Messages._error('Error while saving in Matlab format.')
+            Messages._error("Error while saving in Matlab format.")
             Messages._print(e)
             return
 
-    elif extension == '.gz':
+    elif extension == ".gz":
         Messages._print("Saving network in gunzipped binary format...")
         try:
             import gzip
         except:
-            Messages._error('gzip is not installed.')
+            Messages._error("gzip is not installed.")
             return
-        with gzip.open(filename, mode = 'wb') as w_file:
+        with gzip.open(filename, mode="wb") as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Messages._print('Error while saving in gzipped binary format.')
+                Messages._print("Error while saving in gzipped binary format.")
                 Messages._print(e)
                 return
 
-    elif extension == '.npz':
+    elif extension == ".npz":
         Messages._print("Saving network in Numpy format...")
-        np.savez_compressed(filename, allow_pickle=True, **data )
+        np.savez_compressed(filename, allow_pickle=True, **data)
 
     else:
         Messages._print("Saving network in text format...")
         # save in Pythons pickle format
-        with open(filename, mode = 'wb') as w_file:
+        with open(filename, mode="wb") as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Messages._print('Error while saving in text format.')
+                Messages._print("Error while saving in text format.")
                 Messages._print(e)
                 return
         return
 
-def save(filename:str, populations:bool=True, projections:bool=True, net_id=0) -> None :
+
+def save(
+    filename: str, populations: bool = True, projections: bool = True, net_id=0
+) -> None:
     """
     Save the current network state (parameters and variables) to a file.
 
@@ -374,6 +430,7 @@ def save(filename:str, populations:bool=True, projections:bool=True, net_id=0) -
     data = _net_description(populations, projections, net_id)
     _save_data(filename, data)
 
+
 def _load_data(filename, pickle_encoding):
     """
     Internally loads data contained in a given file.
@@ -386,29 +443,29 @@ def _load_data(filename, pickle_encoding):
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
 
-    if extension == '.mat':
-        Messages._error('Unable to load Matlab format.')
+    if extension == ".mat":
+        Messages._error("Unable to load Matlab format.")
         return None
 
-    elif extension == '.gz':
+    elif extension == ".gz":
         try:
             import gzip
         except:
-            Messages._error('gzip is not installed.')
+            Messages._error("gzip is not installed.")
             return None
         try:
-            with gzip.open(filename, mode = 'rb') as r_file:
+            with gzip.open(filename, mode="rb") as r_file:
                 if pickle_encoding is None:
                     desc = pickle.load(r_file)
                 else:
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
 
-    elif extension == '.npz':
+    elif extension == ".npz":
         try:
             if pickle_encoding is None:
                 data = np.load(filename, allow_pickle=True)
@@ -420,7 +477,7 @@ def _load_data(filename, pickle_encoding):
                 # or 2) single pop/proj. The first case leads to a dictionary
                 # of several objects. The latter to a dictionary containing all
                 # values.
-                if data[attribute].dtype == np.dtype('O'):
+                if data[attribute].dtype == np.dtype("O"):
                     # attribute is a collection of multiple objects
                     desc[attribute] = data[attribute].item(0)
                 else:
@@ -429,22 +486,23 @@ def _load_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
 
     else:
         try:
-            with open(filename, mode = 'rb') as r_file:
+            with open(filename, mode="rb") as r_file:
                 if pickle_encoding is None:
                     desc = pickle.load(r_file)
                 else:
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
+
 
 def _load_connectivity_data(filename, pickle_encoding):
     """
@@ -458,29 +516,29 @@ def _load_connectivity_data(filename, pickle_encoding):
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
 
-    if extension == '.mat':
-        Messages._error('Unable to load Matlab format.')
+    if extension == ".mat":
+        Messages._error("Unable to load Matlab format.")
         return None
 
-    elif extension == '.gz':
+    elif extension == ".gz":
         try:
             import gzip
         except:
-            Messages._error('gzip is not installed.')
+            Messages._error("gzip is not installed.")
             return None
         try:
-            with gzip.open(filename, mode = 'rb') as r_file:
+            with gzip.open(filename, mode="rb") as r_file:
                 if pickle_encoding is None:
                     desc = pickle.load(r_file)
                 else:
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
 
-    elif extension == '.npz':
+    elif extension == ".npz":
         try:
             if pickle_encoding is None:
                 data = np.load(filename, allow_pickle=True)
@@ -496,24 +554,31 @@ def _load_connectivity_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
 
     else:
         try:
-            with open(filename, mode = 'rb') as r_file:
+            with open(filename, mode="rb") as r_file:
                 if pickle_encoding is None:
                     desc = pickle.load(r_file)
                 else:
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print('Unable to read the file ' + filename)
+            Messages._print("Unable to read the file " + filename)
             Messages._print(e)
             return None
 
-def load(filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None, net_id=0):
+
+def load(
+    filename: str,
+    populations: bool = True,
+    projections: bool = True,
+    pickle_encoding: str = None,
+    net_id=0,
+):
     """
     Loads a saved state of the network.
 
@@ -535,8 +600,8 @@ def load(filename:str, populations:bool=True, projections:bool=True, pickle_enco
     if desc is None:
         return
 
-    if 'time_step' in desc.keys():
-        Global.set_current_step(desc['time_step'], net_id)
+    if "time_step" in desc.keys():
+        Global.set_current_step(desc["time_step"], net_id)
 
     if populations:
         # Over all populations
@@ -559,8 +624,8 @@ def _net_description(populations, projections, net_id=0):
     :param projections: if True, the projection data will be saved.
     """
     network_desc = {}
-    network_desc['time_step'] = Global.get_current_step(net_id)
-    network_desc['net_id'] = net_id
+    network_desc["time_step"] = Global.get_current_step(net_id)
+    network_desc["net_id"] = net_id
 
     pop_names = []
     proj_names = []
@@ -578,9 +643,9 @@ def _net_description(populations, projections, net_id=0):
             network_desc[proj.name] = proj._data()
             proj_names.append(proj.name)
 
-    network_desc['obj_names'] = {
-        'populations': pop_names,
-        'projections': proj_names,
+    network_desc["obj_names"] = {
+        "populations": pop_names,
+        "projections": proj_names,
     }
 
     return network_desc
@@ -601,7 +666,14 @@ class MonitorList(list):
     monitors.save_all("monitors.hdf5")
     ```
     """
-    def save_all(self, filename: str, keep: bool = False, reshape: bool = False, flat_keys: bool = False) -> None:
+
+    def save_all(
+        self,
+        filename: str,
+        keep: bool = False,
+        reshape: bool = False,
+        flat_keys: bool = False,
+    ) -> None:
         """
         Saves all the recorded variables as a h5py file of numpy arrays.
 
@@ -616,30 +688,33 @@ class MonitorList(list):
         """
         # Define the separator for the keys
         if not filename.endswith(".hdf5"):
-            Messages._error('MonitorList: File type must be .hdf5-File.')
+            Messages._error("MonitorList: File type must be .hdf5-File.")
 
         try:
             import h5py
         except Exception as e:
-            Messages._error('MonitorList: h5py is required to save the monitors, please install it.')
-
+            Messages._error(
+                "MonitorList: h5py is required to save the monitors, please install it."
+            )
 
         if flat_keys:
             sep = "_"
         else:
             sep = "/"
 
-        with h5py.File(filename, 'w') as data:
+        with h5py.File(filename, "w") as data:
             for mon in self:
                 for var in mon.variables:
                     name = var
                     # Sums of inputs for rate-coded populations
-                    if var.startswith('sum('):
+                    if var.startswith("sum("):
                         target = re.findall(r"\(([\w]+)\)", var)[0]
-                        name = '_sum_' + target
+                        name = "_sum_" + target
 
                     # Retrieve the data
-                    data[f"/{mon.object.name}{sep}{var}"] = mon._return_variable(name, keep, reshape)
+                    data[f"/{mon.object.name}{sep}{var}"] = mon._return_variable(
+                        name, keep, reshape
+                    )
 
                     # Update stopping time
                     mon._update_stopping_time(var, keep)

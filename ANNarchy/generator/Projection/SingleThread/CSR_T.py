@@ -4,76 +4,70 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable< %(type)s >(%(init)s);
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable< %(type)s >(%(init)s);
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 delay = {
     # A single value for all synapses
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay;
 
@@ -81,31 +75,31 @@ delay = {
     int get_dendrite_delay(int idx) { return delay; }
     void set_delay(int delay) { this->delay = delay; }
 """,
-        'init': """
+        "init": """
     delay = delays[0][0];
-"""
-    },    
+""",
+    },
     # An individual value for each synapse
     # HD (30th Jan. 2025): rate-coded models are not
     #                      applicable for CSRC_T
-    'nonuniform_rate_coded': None,
+    "nonuniform_rate_coded": None,
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': {
-        'declare': """
+    "nonuniform_spiking": {
+        "declare": """
     std::vector<int> delay;
     int max_delay;
     int idx_delay;
     std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
-        'init': """
+        "init": """
     delay = init_variable<int>(1);
     update_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = %(pre_prefix)smax_delay;
 """,
-        'reset': """
+        "reset": """
         while(!_delayed_spikes.empty()) {
             auto elem = _delayed_spikes.back();
             elem.clear();
@@ -116,17 +110,15 @@ delay = {
         max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
 """,
-        'pyx_struct':
-"""
+        "pyx_struct": """
         # Non-uniform delay
         vector[vector[int]] delay
         int max_delay
         void update_max_delay(int)
         void reset_ring_buffer()
 """,
-        'pyx_wrapper_init': "",
-        'pyx_wrapper_accessor':
-"""
+        "pyx_wrapper_init": "",
+        "pyx_wrapper_accessor": """
     # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
@@ -142,25 +134,25 @@ delay = {
         proj%(id_proj)s.update_max_delay(value)
     def reset_ring_buffer(self):
         proj%(id_proj)s.reset_ring_buffer()
-"""
+""",
     },
 }
 
 event_driven = {
-    'declare': """
+    "declare": """
     std::vector<long> _last_event;
 """,
-    'cpp_init': """
+    "cpp_init": """
         // Event-driven
         _last_event = init_matrix_variable<long>(-10000);
 """,
-    'pyx_struct': """
+    "pyx_struct": """
         vector[vector[long]] _last_event
 """,
 }
 
 csr_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 for(int i = 0; i < row_ptr_.size()-1; i++) {
@@ -174,7 +166,7 @@ for(int i = 0; i < row_ptr_.size()-1; i++) {
 }
 
 update_variables = {
-    'local': """
+    "local": """
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
 
@@ -197,7 +189,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+    "global": """
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
 
@@ -207,7 +199,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     %(semiglobal)s
     }
 }
-"""
+""",
 }
 
 spiking_summation_fixed_delay = """// Event-based summation
@@ -235,7 +227,7 @@ if (_transmission && %(post_prefix)s_active){
 } // active
 """
 
-spiking_post_event =  """
+spiking_post_event = """
 if(_transmission && %(post_prefix)s_active){
     int rk_post, beg, end;
 
@@ -258,25 +250,24 @@ if(_transmission && %(post_prefix)s_active){
 
 conn_templates = {
     # accessors
-    'delay': delay,
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'event_driven': event_driven,
-
-    #operations
-    'update_variables': update_variables,
-    'rate_coded_sum': csr_summation_operation,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'spiking_sum_variable_delay': None,
-    'post_event': spiking_post_event
+    "delay": delay,
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "event_driven": event_driven,
+    # operations
+    "update_variables": update_variables,
+    "rate_coded_sum": csr_summation_operation,
+    "spiking_sum_fixed_delay": spiking_summation_fixed_delay,
+    "spiking_sum_variable_delay": None,
+    "post_event": spiking_post_event,
 }
 
 conn_ids = {
-    'local_index': '[inv_idx_[j]]',
-    'semiglobal_index': '[rk_post]',
-    'global_index': '',
-    'pre_index': '[row_idx_[j]]',
-    'post_index': '[rk_post]',
+    "local_index": "[inv_idx_[j]]",
+    "semiglobal_index": "[rk_post]",
+    "global_index": "",
+    "pre_index": "[row_idx_[j]]",
+    "post_index": "[rk_post]",
 }

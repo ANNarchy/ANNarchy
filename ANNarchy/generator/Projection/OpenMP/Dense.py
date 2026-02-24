@@ -4,76 +4,70 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 delay = {
     # A single value for all synapses
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay;
 
@@ -81,26 +75,26 @@ delay = {
     int get_dendrite_delay(int idx) { return delay; }
     void set_delay(int delay) { this->delay = delay; }
 """,
-        'init': """
+        "init": """
     delay = delays[0][0];
 """,
     },
     # An individual value for each synapse
-    'nonuniform_rate_coded': None,
+    "nonuniform_rate_coded": None,
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': None
+    "nonuniform_spiking": None,
 }
 
 event_driven = {
-    'declare': """
+    "declare": """
     std::vector<long> _last_event;
 """,
-    'cpp_init': """
+    "cpp_init": """
         // Event-driven
         _last_event = init_matrix_variable<long>(-10000);
 """,
-    'pyx_struct': """
+    "pyx_struct": """
         vector[vector[long]] _last_event
 """,
 }
@@ -109,7 +103,7 @@ event_driven = {
 ### Dense Matrix templates
 ######################################
 dense_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 // matrix dimensions
@@ -134,7 +128,7 @@ for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
     target[i] += sum;
 }
 """,
-    'max': """
+    "max": """
 %(pre_copy)s
 
 // matrix dimensions
@@ -164,7 +158,7 @@ for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
     %(post_prefix)s_sum_%(target)s[i] += sum;
 }
 """,
-    'min': """
+    "min": """
 %(pre_copy)s
 
 // matrix dimensions
@@ -193,7 +187,7 @@ for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
     %(post_prefix)s_sum_%(target)s[i] += sum;
 }
 """,
-    'mean': """
+    "mean": """
 %(pre_copy)s
 
 // matrix dimensions
@@ -218,7 +212,7 @@ for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
     }
     %(post_prefix)s_sum_%(target)s[i] += sum / static_cast<%(float_prec)s>(_syn_count);
 }
-"""
+""",
 }
 
 ###############################################################################
@@ -226,8 +220,8 @@ for(%(idx_type)s _idx = 0; _idx < post_ranks_.size(); _idx++) {
 # SIMD intrinsics (SEE4-1, AVX)
 ###############################################################################
 continuous_transmission_sse = {
-    'sum': {
-        'double': """
+    "sum": {
+        "double": """
 #ifdef __SSE4_1__
     if (_transmission && pop%(id_post)s->_active) {
         double _tmp_sum[2];
@@ -284,7 +278,7 @@ continuous_transmission_sse = {
     std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
 #endif
 """,
-        'float': """
+        "float": """
 #ifdef __SSE4_1__
     if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[4];
@@ -340,13 +334,13 @@ continuous_transmission_sse = {
 #else
     std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
 #endif
-"""
+""",
     }
 }
 
 continuous_transmission_avx = {
-    'sum': {
-        'double': """
+    "sum": {
+        "double": """
 #ifdef __AVX__
     if (_transmission && %(post_prefix)s_active) {
         double _tmp_sum[4];
@@ -397,7 +391,7 @@ continuous_transmission_avx = {
     std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
 #endif
 """,
-    'float': """
+        "float": """
     #ifdef __AVX__
     if (_transmission && %(post_prefix)s_active) {
         float _tmp_sum[8];
@@ -448,7 +442,7 @@ continuous_transmission_avx = {
     std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
 #endif
 """,
-        'float': """
+        "float": """
 #ifdef __AVX__
     if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[8];
@@ -499,13 +493,13 @@ continuous_transmission_avx = {
 #else
     std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
 #endif
-"""
+""",
     }
 }
 
 continuous_transmission_avx512 = {
-    'sum': {
-        'double': """
+    "sum": {
+        "double": """
 #ifdef __AVX512F__
     if (_transmission && pop%(id_post)s->_active) {
         double _tmp_sum[8];
@@ -554,7 +548,7 @@ continuous_transmission_avx512 = {
     std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
 #endif
 """,
-        'float': """
+        "float": """
 #ifdef __AVX512F__
     if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[16];
@@ -602,7 +596,7 @@ continuous_transmission_avx512 = {
 #else
     std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
 #endif
-"""
+""",
     }
 }
 
@@ -676,7 +670,7 @@ if (_transmission && %(post_prefix)s_active){
 """
 
 dense_update_variables = {
-    'local': """
+    "local": """
 // Check periodicity
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
@@ -699,7 +693,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+    "global": """
 // Check periodicity
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
@@ -712,7 +706,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     %(semiglobal)s
     }
 }
-"""
+""",
 }
 
 spiking_post_event = """
@@ -740,43 +734,36 @@ if (_transmission && %(post_prefix)s_active) {
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': delay,
-    'event_driven': event_driven,
-
-    #operations
-    'rate_coded_sum': dense_summation_operation,
-    'vectorized_default_psp': {
-        'sse': {
-            'multi_w': continuous_transmission_sse
-        },
-        'avx': {
-            'multi_w': continuous_transmission_avx
-        },
-        'avx512': {
-            'multi_w': continuous_transmission_avx512
-        }
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "delay": delay,
+    "event_driven": event_driven,
+    # operations
+    "rate_coded_sum": dense_summation_operation,
+    "vectorized_default_psp": {
+        "sse": {"multi_w": continuous_transmission_sse},
+        "avx": {"multi_w": continuous_transmission_avx},
+        "avx512": {"multi_w": continuous_transmission_avx512},
     },
-    'spiking_sum_fixed_delay': {
-        'inner_loop': spiking_summation_fixed_delay_inner_loop,
-        'outer_loop': spiking_summation_fixed_delay_outer_loop,
+    "spiking_sum_fixed_delay": {
+        "inner_loop": spiking_summation_fixed_delay_inner_loop,
+        "outer_loop": spiking_summation_fixed_delay_outer_loop,
     },
-    'spiking_sum_fixed_delay_only_psp': {
-        'inner_loop': spiking_summation_fixed_delay_only_psp_inner_loop,
-        'outer_loop': None
+    "spiking_sum_fixed_delay_only_psp": {
+        "inner_loop": spiking_summation_fixed_delay_only_psp_inner_loop,
+        "outer_loop": None,
     },
-    'update_variables': dense_update_variables,
-    'post_event': spiking_post_event
+    "update_variables": dense_update_variables,
+    "post_event": spiking_post_event,
 }
 
 conn_ids = {
-    'local_index': '[j]',
-    'semiglobal_index': '[i]',
-    'global_index': '',
-    'post_index': '[rk_post]',
-    'pre_index': '[rk_pre]',
-    'delay_u' : '[delay-1]' # uniform delay
+    "local_index": "[j]",
+    "semiglobal_index": "[i]",
+    "global_index": "",
+    "post_index": "[rk_post]",
+    "pre_index": "[rk_pre]",
+    "delay_u": "[delay-1]",  # uniform delay
 }

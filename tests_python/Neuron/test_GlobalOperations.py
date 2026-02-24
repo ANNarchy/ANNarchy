@@ -4,11 +4,13 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
+
 
 class test_GlobalOps_1D(unittest.TestCase):
     """
@@ -41,7 +43,7 @@ class test_GlobalOps_1D(unittest.TestCase):
                 min_r = min(r)
                 l1 = norm1(r)
                 l2 = norm2(r)
-            """
+            """,
         )
 
         cls._network = Network()
@@ -110,6 +112,7 @@ class test_GlobalOps_1D(unittest.TestCase):
         # test
         numpy.testing.assert_allclose(self._population.l2, l2norm)
 
+
 class test_GlobalOps_1D_Large(unittest.TestCase):
     """
     ANNarchy support several global operations, there are always applied on
@@ -124,7 +127,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
 
     They are used in the equations of our neuron definition. This particular
     test focuses on a large one-dimensional *Population* instances. Contrary
-    to *test_GlobalOps_1D* this object contains enough elements that a 
+    to *test_GlobalOps_1D* this object contains enough elements that a
     parallelization will be applied.
     """
 
@@ -143,7 +146,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
                 min_r = min(r)
                 l1 = norm1(r)
                 l2 = norm2(r)
-            """
+            """,
         )
 
         cls._network = Network()
@@ -164,8 +167,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         self._network.reset()
 
     def test_mean_r(self):
-        """
-        """
+        """ """
         rand_val = numpy.random.random(500)
         self._population.r = rand_val
         self._network.simulate(2)
@@ -173,8 +175,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         numpy.testing.assert_allclose(self._population.mean_r, numpy.mean(rand_val))
 
     def test_min_r(self):
-        """
-        """
+        """ """
         rand_val = numpy.random.random(500)
         self._population.r = rand_val
         self._network.simulate(2)
@@ -182,13 +183,13 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         numpy.testing.assert_allclose(self._population.min_r, numpy.amin(rand_val))
 
     def test_max_r(self):
-        """
-        """
+        """ """
         rand_val = numpy.random.random(500)
         self._population.r = rand_val
         self._network.simulate(2)
 
         numpy.testing.assert_allclose(self._population.max_r, numpy.amax(rand_val))
+
 
 class test_GlobalOps_2D(unittest.TestCase):
     """
@@ -221,7 +222,7 @@ class test_GlobalOps_2D(unittest.TestCase):
                 min_r = min(r)
                 l1 = norm1(r)
                 l2 = norm2(r)
-            """
+            """,
         )
 
         cls._network = Network()
@@ -244,10 +245,7 @@ class test_GlobalOps_2D(unittest.TestCase):
         # reset() set all variables to init value (default 0), which is
         # unfortunately meaningless for mean/max/min. So we set here some
         # better values
-        self._population.r = numpy.array(
-            [[ 2.0,  1.0,  0.0],
-             [-5.0, -3.0, -1.0]]
-        )
+        self._population.r = numpy.array([[2.0, 1.0, 0.0], [-5.0, -3.0, -1.0]])
 
         # 1st step: calculate mean/max/min and store in intermediate
         #           variables
@@ -284,6 +282,7 @@ class test_GlobalOps_2D(unittest.TestCase):
         """
         numpy.testing.assert_allclose(self._population.l1, 12.0)
 
+
 class test_GlobalOps_MultiUse(unittest.TestCase):
     """
     ANNarchy support several global operations, there are always applied on
@@ -309,7 +308,7 @@ class test_GlobalOps_MultiUse(unittest.TestCase):
                 tmp = max(r)
                 tmp2 = max(r)
                 tmp3 = mean(r) + mean(r)
-            """
+            """,
         )
 
         cls._network = Network()
@@ -346,4 +345,6 @@ class test_GlobalOps_MultiUse(unittest.TestCase):
 
     def test_compile(self):
         # fake test, the real test if the network can be compiled succesfully ...
-        numpy.testing.assert_allclose(self._population.r, [2.0, 1.0, 0.0, -5.0, -3.0, -1.0])
+        numpy.testing.assert_allclose(
+            self._population.r, [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
+        )

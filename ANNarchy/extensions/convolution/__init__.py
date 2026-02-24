@@ -14,10 +14,11 @@ Implementation note:
 
 * the implementation code was formerly in weightsharing.SharedProjection.
 """
+
 from .Pooling import Pooling
 from .Convolve import Convolution
 from .Copy import Copy
 from .Transpose import Transpose
 
 # Export only the instantiable classes
-__all__ = ['Pooling', 'Convolution', 'Copy', 'Transpose']
+__all__ = ["Pooling", "Convolution", "Copy", "Transpose"]

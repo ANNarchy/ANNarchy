@@ -4,8 +4,10 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 from ANNarchy import clear
+
 
 class Base:
     class baseTestCase(unittest.TestCase):
@@ -13,8 +15,8 @@ class Base:
             print("parametrize called")
             suite = []
             # return run_with(type(self), ['lil', 'csr', 'ell'], ['pre_to_post', 'post_to_pre'])
-            for s_frmt in ['lil', 'csr', 'ell']:
-                for s_ord in ['pre_to_post', 'post_to_pre']:
+            for s_frmt in ["lil", "csr", "ell"]:
+                for s_ord in ["pre_to_post", "post_to_pre"]:
                     test_name = f"{self.__name__}_{s_ord}_{s_frmt}"
                     new_test = type(test_name, (self, Base.TestCase), {})
                     new_test.storage_order = s_ord
@@ -26,7 +28,9 @@ class Base:
     class TestCase(unittest.TestCase):
         @classmethod
         def setUpClass(cls):
-            raise NotImplementedError("baseTestCase function setUpClass must be overloaded")
+            raise NotImplementedError(
+                "baseTestCase function setUpClass must be overloaded"
+            )
 
         @classmethod
         def tearDownClass(cls):
@@ -56,7 +60,6 @@ def run_with(c, formats, orders):
             if s_order == "pre_to_post" and s_format not in ["lil", "csr"]:
                 continue
             cls_name = c.__name__ + "_" + str(s_format) + "_" + str(s_order)
-            glob = {"storage_format":s_format, "storage_order":s_order}
+            glob = {"storage_format": s_format, "storage_order": s_order}
             classes[cls_name] = type(cls_name, (c, unittest.TestCase), glob)
     return classes
-

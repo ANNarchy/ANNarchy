@@ -16,6 +16,7 @@ from .AccProjection import AccProjection
 
 import inspect
 
+
 class BoldMonitor(object):
     """
     Monitors the BOLD signal for several populations using a computational model.
@@ -24,18 +25,19 @@ class BoldMonitor(object):
 
     The monitor can be started and stopped with `start()` and `stop()`. The recorded data is retrieved with `get()`.
     """
-    def __init__(self,
-            populations: list=None,
-            bold_model: BoldModel = None,
-            mapping: dict={'I_CBF': 'r'},
-            scale_factor: list[float]=None,
-            normalize_input: list[int]=None,
-            recorded_variables: list[str]=None,
-            start:bool=False,
-            copied:bool=False,
-            net_id:int=0,
-        ):
-        
+
+    def __init__(
+        self,
+        populations: list = None,
+        bold_model: BoldModel = None,
+        mapping: dict = {"I_CBF": "r"},
+        scale_factor: list[float] = None,
+        normalize_input: list[int] = None,
+        recorded_variables: list[str] = None,
+        start: bool = False,
+        copied: bool = False,
+        net_id: int = 0,
+    ):
         self.net_id = net_id
 
         if bold_model is None:
@@ -51,7 +53,9 @@ class BoldMonitor(object):
         # The usage of [] as default arguments in the __init__ call lead to strange side effects.
         # We decided therefore to use None as default and create the lists locally.
         if populations is None:
-            Messages._error("Either a population or a list of populations must be provided to the BOLD monitor (populations=...)")
+            Messages._error(
+                "Either a population or a list of populations must be provided to the BOLD monitor (populations=...)"
+            )
         if scale_factor is None:
             scale_factor = []
         if normalize_input is None:
@@ -60,27 +64,35 @@ class BoldMonitor(object):
             recorded_variables = []
 
         # argument check
-        if not(isinstance(populations, list)):
+        if not (isinstance(populations, list)):
             populations = [populations]
-        if not(isinstance(scale_factor, list)):
-            scale_factor = [scale_factor]*len(populations)
-        if not(isinstance(normalize_input, list)):
-            normalize_input = [normalize_input]*len(populations)
+        if not (isinstance(scale_factor, list)):
+            scale_factor = [scale_factor] * len(populations)
+        if not (isinstance(normalize_input, list)):
+            normalize_input = [normalize_input] * len(populations)
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
 
         if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
-                Messages._error("BoldMonitor: Length of scale_factor must be equal to number of populations")
+                Messages._error(
+                    "BoldMonitor: Length of scale_factor must be equal to number of populations"
+                )
 
         if len(normalize_input) > 0:
             if len(populations) != len(normalize_input):
-                Messages._error("BoldMonitor: Length of normalize_input must be equal to number of populations")
+                Messages._error(
+                    "BoldMonitor: Length of normalize_input must be equal to number of populations"
+                )
 
         # Check mapping
         for target, input_var in mapping.items():
             if not target in bold_model._inputs:
-                Messages._error("BoldMonitor: the key " + target + " of mapping is not part of the BOLD model.")
+                Messages._error(
+                    "BoldMonitor: the key "
+                    + target
+                    + " of mapping is not part of the BOLD model."
+                )
 
         # Check recorded variables
         if len(recorded_variables) == 0:
@@ -88,10 +100,13 @@ class BoldMonitor(object):
         else:
             # Add the output variables (and remove doublons)
             l1 = bold_model._output
-            l2 = [recorded_variables] if isinstance(recorded_variables, str) else recorded_variables
-            recorded_variables = list(set(l2+l1))
+            l2 = (
+                [recorded_variables]
+                if isinstance(recorded_variables, str)
+                else recorded_variables
+            )
+            recorded_variables = list(set(l2 + l1))
             recorded_variables.sort()
-
 
         # Get the corresponding network
         self._net = NetworkManager().get_network(net_id=net_id)
@@ -99,15 +114,17 @@ class BoldMonitor(object):
         # Add the container to the object management
         self.id = self._net._add_extension(extension=self)
 
-
         if not copied:
-
             # create the population
-            self._bold_pop = self._net.create(1, neuron=bold_model, name=bold_model.name )
+            self._bold_pop = self._net.create(
+                1, neuron=bold_model, name=bold_model.name
+            )
             self._bold_pop.enabled = start
 
             # create the monitor
-            self._monitor = self._net.monitor(self._bold_pop, recorded_variables, start=start)
+            self._monitor = self._net.monitor(
+                self._bold_pop, recorded_variables, start=start
+            )
 
             # create the projection(s)
             self._acc_proj = []
@@ -120,7 +137,7 @@ class BoldMonitor(object):
                 # the conductance is normalized between [0 .. 1]. This scale factor
                 # should balance different population sizes
                 for _, pop in enumerate(populations):
-                    scale_factor_conductance = float(pop.size)/float(pop_overall_size)
+                    scale_factor_conductance = float(pop.size) / float(pop_overall_size)
                     scale_factor.append(scale_factor_conductance)
 
             if len(normalize_input) == 0:
@@ -128,23 +145,26 @@ class BoldMonitor(object):
                 # TODO: can we check if users used NormProjections? If not, this will crash ...
 
             for target, input_var in mapping.items():
-                for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
-                    Messages._debug("Creating ACCProjection between", pop.name, self._bold_pop.name)
-                    tmp_proj = AccProjection(
-                        pre = pop, 
-                        post=self._bold_pop, 
-                        target=target, 
-                        variable=input_var, 
-                        scale_factor=scale, 
-                        normalize_input=normalize,
-                        net_id = net_id
+                for pop, scale, normalize in zip(
+                    populations, scale_factor, normalize_input
+                ):
+                    Messages._debug(
+                        "Creating ACCProjection between", pop.name, self._bold_pop.name
                     )
-                    tmp_proj.all_to_all(weights= 1.0)
+                    tmp_proj = AccProjection(
+                        pre=pop,
+                        post=self._bold_pop,
+                        target=target,
+                        variable=input_var,
+                        scale_factor=scale,
+                        normalize_input=normalize,
+                        net_id=net_id,
+                    )
+                    tmp_proj.all_to_all(weights=1.0)
 
                     self._acc_proj.append(tmp_proj)
 
-        else: # TODO check
-
+        else:  # TODO check
             # instances are assigned by the copying instance
             self._bold_pop = None
             self._monitor = None
@@ -179,7 +199,9 @@ class BoldMonitor(object):
         # check if we have projections with baseline
         for proj in self._acc_proj:
             if proj._normalize_input > 0:
-                proj.cyInstance.start(int(proj._normalize_input/ConfigManager().get('dt', self.net_id)))
+                proj.cyInstance.start(
+                    int(proj._normalize_input / ConfigManager().get("dt", self.net_id))
+                )
 
     def stop(self):
         """
@@ -196,7 +218,6 @@ class BoldMonitor(object):
         """
         return self._monitor.get(variable)
 
-
     #
     #   POPULATION functions i. e. access to model parameter
     #
@@ -204,13 +225,16 @@ class BoldMonitor(object):
     # Method called when accessing an attribute.
     # We overload the default to allow access to monitor variables.
     def __getattr__(self, name):
-
-        if name == '_initialized' or not hasattr(self, '_initialized'): # Before the end of the constructor
+        if name == "_initialized" or not hasattr(
+            self, "_initialized"
+        ):  # Before the end of the constructor
             return object.__getattribute__(self, name)
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Messages._error("BoldMonitor: attributes can not modified before compile()")
+                Messages._error(
+                    "BoldMonitor: attributes can not modified before compile()"
+                )
 
             if name in self._bold_pop.attributes:
                 return getattr(self._bold_pop, name)
@@ -220,18 +244,25 @@ class BoldMonitor(object):
     # Method called when accessing an attribute.
     # We overload the default to allow access to monitor variables.
     def __setattr__(self, name, value):
-
-        if name == '_initialized' or not hasattr(self, '_initialized'): # Before the end of the constructor
+        if name == "_initialized" or not hasattr(
+            self, "_initialized"
+        ):  # Before the end of the constructor
             return object.__setattr__(self, name, value)
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Messages._error("BoldMonitor: attributes can not modified before compile()")
+                Messages._error(
+                    "BoldMonitor: attributes can not modified before compile()"
+                )
 
             if name in self._bold_pop.attributes:
                 setattr(self._bold_pop, name, value)
             else:
-                raise AttributeError("the variable '"+str(name)+ "' is not an attribute of the bold model.")
+                raise AttributeError(
+                    "the variable '"
+                    + str(name)
+                    + "' is not an attribute of the bold model."
+                )
 
         else:
             object.__setattr__(self, name, value)

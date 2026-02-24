@@ -5,32 +5,28 @@
 
 convolve_template_omp = {
     # Declare the connectivity matrix
-    'declare_connectivity_matrix': """
+    "declare_connectivity_matrix": """
     // Connectivity data
     std::vector< std::vector<int> > pre_coords;
     """,
-
     # Accessors for the connectivity matrix
-    'access_connectivity_matrix': """
+    "access_connectivity_matrix": """
     // Accessor to connectivity data
     std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
     }
-""" ,
-
+""",
     # Export the connectivity matrix
-    'export_connectivity': "",
-
+    "export_connectivity": "",
     # Variables for the psp code
-    'psp_prefix': """
+    "psp_prefix": """
         int rk_pre;
         %(float_prec)s sum=0.0;
 """,
-
     # Nanobind
-    'wrapper': """
+    "wrapper": """
     // Convolution ProjStruct%(id_proj)s
     nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
         // Constructor
@@ -52,10 +48,8 @@ convolve_template_omp = {
         .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
-
-
     # Memory Management
-    'clear': """
+    "clear": """
         // pre-coords
         for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             it->clear();
@@ -64,49 +58,43 @@ convolve_template_omp = {
         pre_coords.clear();
         pre_coords.shrink_to_fit();
 """,
-
-    'size_in_bytes': """
+    "size_in_bytes": """
         // pre-coords
         size_in_bytes += sizeof(std::vector<std::vector<int>>);
         size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
         for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             size_in_bytes += it->capacity() * sizeof(int);
         }
-"""
+""",
 }
 
 convolve_template_cuda = {
-    'include_additional': '#include "VecTransformation.hpp"',
-
+    "include_additional": '#include "VecTransformation.hpp"',
     # Declare the connectivity matrix
-    'declare_connectivity_matrix': """
+    "declare_connectivity_matrix": """
     // Connectivity data
     std::vector< std::vector<int> > pre_coords;
     int* gpu_pre_coords = nullptr;
     bool pre_coords_dirty = false;
     """,
-
     # Accessors for the connectivity matrix
-    'access_connectivity_matrix': """
+    "access_connectivity_matrix": """
     // Accessor to connectivity data
     std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
         std::iota (std::begin(v), std::end(v), 0);
         return v;
     }
-""" ,
-
+""",
     # Export the connectivity matrix
-    'export_connectivity': "",
-
+    "export_connectivity": "",
     # Variables for the psp code
-    'psp_prefix': """
+    "psp_prefix": """
         int rk_pre;
         %(float_prec)s sum=0.0;
 """,
-
     # Nanobind
-    'wrapper': """
+    "wrapper": """
     // Convolution ProjStruct%(id_proj)s
     nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
         // Constructor
@@ -129,9 +117,8 @@ convolve_template_cuda = {
         .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
-
     # Memory Management
-    'clear': """
+    "clear": """
         // pre-coords
         for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             it->clear();
@@ -142,8 +129,7 @@ convolve_template_cuda = {
 
         cudaFree(gpu_pre_coords);
 """,
-
-    'size_in_bytes': """
+    "size_in_bytes": """
         // pre-coords
         size_in_bytes += sizeof(std::vector<std::vector<int>>);
         size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
@@ -151,7 +137,6 @@ convolve_template_cuda = {
             size_in_bytes += it->capacity() * sizeof(int);
         }
 """,
-
     # This template concerns only the connectivity where
     # no read-back is required
     "host_device_transfer": """
@@ -167,11 +152,9 @@ convolve_template_cuda = {
         }
 """,
     "device_host_transfer": "",
-
 }
 
 conv_filter_template = {
-
     # Single-thread/OpenMP
     "openmp": {
         "access": """
@@ -180,7 +163,6 @@ conv_filter_template = {
     void set_w(%(type_w)s value) { w = value; }
 """,
     },
-
     # CUDA
     "cuda": {
         "declare": """\t// Filter definition
@@ -199,7 +181,7 @@ conv_filter_template = {
         host_w_dirty = true;
     }
 """,
-    'host_device_transfer': """
+        "host_device_transfer": """
         if ( host_w_dirty ) {
         #ifdef _DEBUG
             std::cout << "ProjStruct%(id_proj)s (convolution): update device filter." << std::endl;
@@ -222,9 +204,9 @@ conv_filter_template = {
             host_w_dirty = false;
         }
 """,
-    # No read-back needed, as weights are not changed during simulation
-    'device_host_transfer': ""
-    }
+        # No read-back needed, as weights are not changed during simulation
+        "device_host_transfer": "",
+    },
 }
 
 cuda_convolution_single_filter = {
@@ -259,7 +241,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp
         }
     #endif
     }
-"""
+""",
 }
 
 cuda_convolution_bank_of_filter = {
@@ -294,7 +276,7 @@ cuda_convolution_bank_of_filter = {
         }
     #endif
     }
-"""
+""",
 }
 
 # Specialized code template: 3D filter bank, 2D pre-population
@@ -344,7 +326,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
         }
     #endif
     }
-"""
+""",
 }
 
 cuda_convolution_bank_of_filter_4d = {
@@ -404,6 +386,5 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
         }
     #endif
     }
-"""
+""",
 }
-

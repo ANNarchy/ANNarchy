@@ -8,22 +8,36 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 
 from ANNarchy.intern import Messages
 
+
 class AccProjection(SpecificProjection):
     """
     Accumulates the values of a given variable.
     """
-    def __init__(self, pre, post, target, variable, name=None, normalize_input=0, scale_factor=1.0, copied=False, net_id=0):
-        
+
+    def __init__(
+        self,
+        pre,
+        post,
+        target,
+        variable,
+        name=None,
+        normalize_input=0,
+        scale_factor=1.0,
+        copied=False,
+        net_id=0,
+    ):
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
-        
+
         self._variable = variable
         self._scale_factor = scale_factor
         self._normalize_input = normalize_input
 
         # Check population type of the receiving population
-        if not self.post.neuron_type.type == 'rate':
-            Messages._error('The post-synaptic population of an AccProjection must be rate-coded.')
+        if not self.post.neuron_type.type == "rate":
+            Messages._error(
+                "The post-synaptic population of an AccProjection must be rate-coded."
+            )
 
         # Prevent automatic split of matrices
         self._no_split_matrix = True
@@ -31,32 +45,35 @@ class AccProjection(SpecificProjection):
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
         return AccProjection(
-            pre=pre, post=post, target=self.target, 
-            variable=self._variable, 
-            name=self.name, normalize_input=self._normalize_input, 
-            scale_factor=self._scale_factor, 
-            copied=True, 
-            net_id=self.net_id if net_id is None else net_id)
+            pre=pre,
+            post=post,
+            target=self.target,
+            variable=self._variable,
+            name=self.name,
+            normalize_input=self._normalize_input,
+            scale_factor=self._scale_factor,
+            copied=True,
+            net_id=self.net_id if net_id is None else net_id,
+        )
 
     def _generate_st(self):
-        """
-        """
+        """ """
         # Sanity Check
         found = False
-        for var in self.pre.neuron_type.description['variables']:
-            if var['name'] == self._variable:
+        for var in self.pre.neuron_type.description["variables"]:
+            if var["name"] == self._variable:
                 found = True
                 break
 
         if not found:
             Messages._warning("Variable might be invalid ...")
 
-        single_ids = {'id_pre': self.pre.id,'var': self._variable}
+        single_ids = {"id_pre": self.pre.id, "var": self._variable}
 
         if self._normalize_input == 0:
             # Generate Code Template
-            self._specific_template['psp_prefix'] = ""
-            self._specific_template['psp_code'] = """
+            self._specific_template["psp_prefix"] = ""
+            self._specific_template["psp_code"] = """
         for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
         %(float_prec)s lsum = 0.0;
 
@@ -67,17 +84,17 @@ class AccProjection(SpecificProjection):
             pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
-    'id_post': self.post.id,
-    'id_pre': self.pre.id,
-    'var': self._variable,
-    'target': self.target,
-    'scale_factor': self._scale_factor,
-    'float_prec': ConfigManager().get('precision', self.net_id)
-}
+                "id_post": self.post.id,
+                "id_pre": self.pre.id,
+                "var": self._variable,
+                "target": self.target,
+                "scale_factor": self._scale_factor,
+                "float_prec": ConfigManager().get("precision", self.net_id),
+            }
 
         else:
             # Generate Code Template
-            self._specific_template['declare_additional'] = """
+            self._specific_template["declare_additional"] = """
     std::vector<std::vector<%(float_prec)s>> baseline;
     std::vector<%(float_prec)s> baseline_mean;
     std::vector<%(float_prec)s> baseline_std;
@@ -90,20 +107,20 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {'id_proj': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
-            self._specific_template['export_additional'] = """
+""" % {"id_proj": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+            self._specific_template["export_additional"] = """
         void start(int)
 """
 
-            self._specific_template['init_additional'] = """
+            self._specific_template["init_additional"] = """
         time_for_init_baseline = -1;
         init_baseline_period=1;
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
-            
-            self._specific_template['clear_additional'] = """
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+
+            self._specific_template["clear_additional"] = """
         for(auto it = baseline.begin(); it != baseline.end(); it++) {
             it->clear();
             it->shrink_to_fit();
@@ -117,8 +134,8 @@ class AccProjection(SpecificProjection):
         baseline_std.clear();
         baseline_std.shrink_to_fit();
 """
-            self._specific_template['psp_prefix'] = ""
-            self._specific_template['psp_code'] = """
+            self._specific_template["psp_prefix"] = ""
+            self._specific_template["psp_code"] = """
         bool compute_baseline = (t < time_for_init_baseline) ? true : false;
         bool compute_average = (t == time_for_init_baseline) ? true : false;
 
@@ -166,15 +183,15 @@ class AccProjection(SpecificProjection):
             }
         }
 """ % {
-    'id_post': self.post.id,
-    'id_pre': self.pre.id,
-    'var': self._variable,
-    'target': self.target,
-    'scale_factor': self._scale_factor,
-    'float_prec': ConfigManager().get('precision', self.net_id)
-}
-            
-            self._specific_template['wrapper'] = f"""
+                "id_post": self.post.id,
+                "id_pre": self.pre.id,
+                "var": self._variable,
+                "target": self.target,
+                "scale_factor": self._scale_factor,
+                "float_prec": ConfigManager().get("precision", self.net_id),
+            }
+
+            self._specific_template["wrapper"] = f"""
     // AccProjection ProjStruct{self.id}
     nanobind::class_<ProjStruct{self.id}>(m, "proj{self.id}_wrapper")
         // Constructor
@@ -197,8 +214,8 @@ class AccProjection(SpecificProjection):
         .def("start", &ProjStruct{self.id}::start)
 
         // Attributes
-        .def("get_global_attribute_{ConfigManager().get('precision', self.net_id)}", &ProjStruct{self.id}::get_global_attribute_{ConfigManager().get('precision', self.net_id)})
-        .def("set_global_attribute_{ConfigManager().get('precision', self.net_id)}", &ProjStruct{self.id}::set_global_attribute_{ConfigManager().get('precision', self.net_id)})
+        .def("get_global_attribute_{ConfigManager().get("precision", self.net_id)}", &ProjStruct{self.id}::get_global_attribute_{ConfigManager().get("precision", self.net_id)})
+        .def("set_global_attribute_{ConfigManager().get("precision", self.net_id)}", &ProjStruct{self.id}::set_global_attribute_{ConfigManager().get("precision", self.net_id)})
 
 
         // Other methods
@@ -206,24 +223,23 @@ class AccProjection(SpecificProjection):
         """
 
     def _generate_omp(self):
-        """
-        """
+        """ """
         # Sanity Check
         found = False
-        for var in self.pre.neuron_type.description['variables']:
-            if var['name'] == self._variable:
+        for var in self.pre.neuron_type.description["variables"]:
+            if var["name"] == self._variable:
                 found = True
                 break
 
         if not found:
             Messages._warning("Variable might be invalid ...")
 
-        single_ids = {'id_pre': self.pre.id,'var': self._variable}
+        single_ids = {"id_pre": self.pre.id, "var": self._variable}
 
         if self._normalize_input == 0:
             # Generate Code Template
-            self._specific_template['psp_prefix'] = ""
-            self._specific_template['psp_code'] = """
+            self._specific_template["psp_prefix"] = ""
+            self._specific_template["psp_code"] = """
         #pragma omp for
         for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
             %(float_prec)s lsum = 0.0;
@@ -235,17 +251,17 @@ class AccProjection(SpecificProjection):
             pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
-    'id_post': self.post.id,
-    'id_pre': self.pre.id,
-    'var': self._variable,
-    'target': self.target,
-    'scale_factor': self._scale_factor,
-    'float_prec': ConfigManager().get('precision', self.net_id)
-}
+                "id_post": self.post.id,
+                "id_pre": self.pre.id,
+                "var": self._variable,
+                "target": self.target,
+                "scale_factor": self._scale_factor,
+                "float_prec": ConfigManager().get("precision", self.net_id),
+            }
 
         else:
             # Generate Code Template
-            self._specific_template['declare_additional'] = """
+            self._specific_template["declare_additional"] = """
     std::vector<std::vector<%(float_prec)s>> baseline;
     std::vector<%(float_prec)s> baseline_mean;
     std::vector<%(float_prec)s> baseline_std;
@@ -258,21 +274,21 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {'id_proj': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
-            self._specific_template['export_additional'] = """
+""" % {"id_proj": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+            self._specific_template["export_additional"] = """
         void start(int)
 """
 
-            self._specific_template['init_additional'] = """
+            self._specific_template["init_additional"] = """
         time_for_init_baseline = -1;
         init_baseline_period=1;
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-            self._specific_template['psp_prefix'] = ""
-            self._specific_template['psp_code'] = """
+            self._specific_template["psp_prefix"] = ""
+            self._specific_template["psp_code"] = """
         bool compute_baseline = (t < time_for_init_baseline) ? true : false;
         bool compute_average = (t == time_for_init_baseline) ? true : false;
 
@@ -321,13 +337,15 @@ class AccProjection(SpecificProjection):
             }
         }
 """ % {
-    'id_post': self.post.id,
-    'id_pre': self.pre.id,
-    'var': self._variable,
-    'target': self.target,
-    'scale_factor': self._scale_factor,
-    'float_prec': ConfigManager().get('precision', self.net_id)
-}
+                "id_post": self.post.id,
+                "id_pre": self.pre.id,
+                "var": self._variable,
+                "target": self.target,
+                "scale_factor": self._scale_factor,
+                "float_prec": ConfigManager().get("precision", self.net_id),
+            }
 
     def _generate_cuda(self):
-        raise NotImplementedError("The AccProjection (part of the BOLD monitor) is not available for CUDA devices yet.")
+        raise NotImplementedError(
+            "The AccProjection (part of the BOLD monitor) is not available for CUDA devices yet."
+        )

@@ -8,29 +8,30 @@ import numpy as np
 from ANNarchy.intern import Messages
 
 distributions_arguments = {
-    'Uniform' : 2,
-    'DiscreteUniform': 2,
-    'Normal' : 2,
-    'LogNormal': 2,
-    'Exponential': 1,
-    'Gamma': 2,
-    'Binomial' : 2
+    "Uniform": 2,
+    "DiscreteUniform": 2,
+    "Normal": 2,
+    "LogNormal": 2,
+    "Exponential": 1,
+    "Gamma": 2,
+    "Binomial": 2,
 }
 
 distributions_equivalents = {
-    'Uniform' : 'std::uniform_real_distribution< %(float_prec)s >',
-    'DiscreteUniform': 'std::uniform_int_distribution<int>',
-    'Normal' : 'std::normal_distribution< %(float_prec)s >',
-    'LogNormal': 'std::lognormal_distribution< %(float_prec)s >',
-    'Exponential': 'std::exponential_distribution< %(float_prec)s >',
-    'Gamma': 'std::gamma_distribution< %(float_prec)s >',
-    'Binomial': 'std::binomial_distribution<int>'
+    "Uniform": "std::uniform_real_distribution< %(float_prec)s >",
+    "DiscreteUniform": "std::uniform_int_distribution<int>",
+    "Normal": "std::normal_distribution< %(float_prec)s >",
+    "LogNormal": "std::lognormal_distribution< %(float_prec)s >",
+    "Exponential": "std::exponential_distribution< %(float_prec)s >",
+    "Gamma": "std::gamma_distribution< %(float_prec)s >",
+    "Binomial": "std::binomial_distribution<int>",
 }
 
 # List of available distributions
 available_distributions = list(distributions_arguments.keys())
 
-class RandomDistribution :
+
+class RandomDistribution:
     """
     BaseClass for random distributions.
     """
@@ -39,7 +40,7 @@ class RandomDistribution :
         """
         Returns a np.ndarray with the given shape
         """
-        Messages._error('instantiated base class RandomDistribution is not allowed.')
+        Messages._error("instantiated base class RandomDistribution is not allowed.")
         return np.array([0.0])
 
     def get_list_values(self, size):
@@ -64,13 +65,14 @@ class RandomDistribution :
         """
         Returns the LaTeX string representation for a given distribution.
         """
-        return '?'
+        return "?"
 
     def get_cpp_args(self) -> str:
         """
         Returns a string containing the arguments used for C++ code generation.
         """
         raise NotImplementedError
+
 
 class Uniform(RandomDistribution):
     """
@@ -82,20 +84,22 @@ class Uniform(RandomDistribution):
     :param max: maximum value.
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, min: float, max: float, rng: np.random.Generator=None):
 
+    def __init__(self, min: float, max: float, rng: np.random.Generator = None):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
 
         if min >= max:
-            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
+            Messages._error(
+                f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max})."
+            )
 
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
@@ -104,10 +108,11 @@ class Uniform(RandomDistribution):
         return self.rng.uniform(self.min, self.max, shape)
 
     def latex(self):
-        return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
+        return "$\\mathcal{U}$(" + str(self.min) + ", " + str(self.max) + ")"
 
     def get_cpp_args(self):
         return self.min, self.max
+
 
 class DiscreteUniform(RandomDistribution):
     """
@@ -119,30 +124,32 @@ class DiscreteUniform(RandomDistribution):
     :param max: maximum value.
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, min: int, max: int, rng: np.random.Generator=None):
 
+    def __init__(self, min: int, max: int, rng: np.random.Generator = None):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
 
         if min >= max:
-            Messages._error(f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max}).")
+            Messages._error(
+                f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max})."
+            )
 
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
         :param shape: shape of the array.
         """
         # randint draws from half-open interval [min, max)
-        return self.rng.integers(self.min, self.max+1, shape)
+        return self.rng.integers(self.min, self.max + 1, shape)
 
     def latex(self):
-        return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
+        return "$\\mathcal{U}$(" + str(self.min) + ", " + str(self.max) + ")"
 
 
 class Normal(RandomDistribution):
@@ -155,8 +162,15 @@ class Normal(RandomDistribution):
     :param max: Maximum value (default: unlimited).
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, mu:float, sigma: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
+    def __init__(
+        self,
+        mu: float,
+        sigma: float,
+        min: float = None,
+        max: float = None,
+        rng: np.random.Generator = None,
+    ):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
@@ -170,7 +184,7 @@ class Normal(RandomDistribution):
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
@@ -179,16 +193,17 @@ class Normal(RandomDistribution):
         data = self.rng.normal(self.mu, self.sigma, shape)
 
         if self.min is not None:
-            data[data<self.min] = self.min
+            data[data < self.min] = self.min
         if self.max is not None:
-            data[data>self.max] = self.max
+            data[data > self.max] = self.max
         return data
 
     def latex(self):
-        return "$\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
+        return "$\\mathcal{N}$(" + str(self.mu) + ", " + str(self.sigma) + ")"
 
     def get_cpp_args(self):
         return self.mu, self.sigma
+
 
 class LogNormal(RandomDistribution):
     """
@@ -200,22 +215,31 @@ class LogNormal(RandomDistribution):
     :param max: Maximum value (default: unlimited).
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, mu: float, sigma: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
+    def __init__(
+        self,
+        mu: float,
+        sigma: float,
+        min: float = None,
+        max: float = None,
+        rng: np.random.Generator = None,
+    ):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
 
         if sigma < 0.0:
-            Messages._error("LogNormal: the standard deviation sigma should be positive.")
+            Messages._error(
+                "LogNormal: the standard deviation sigma should be positive."
+            )
 
         self.mu = mu
         self.sigma = sigma
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
@@ -224,16 +248,17 @@ class LogNormal(RandomDistribution):
         data = self.rng.lognormal(self.mu, self.sigma, shape)
 
         if self.min is not None:
-            data[data<self.min] = self.min
+            data[data < self.min] = self.min
         if self.max is not None:
-            data[data>self.max] = self.max
+            data[data > self.max] = self.max
         return data
 
     def latex(self):
-        return "$\\ln\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
+        return "$\\ln\\mathcal{N}$(" + str(self.mu) + ", " + str(self.sigma) + ")"
 
     def get_cpp_args(self):
         return self.mu, self.sigma
+
 
 class Exponential(RandomDistribution):
     """
@@ -248,21 +273,29 @@ class Exponential(RandomDistribution):
     :param max: maximum value (default: unlimited).
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, Lambda: float, min: float=None, max: float=None, rng: np.random.Generator=None):
 
+    def __init__(
+        self,
+        Lambda: float,
+        min: float = None,
+        max: float = None,
+        rng: np.random.Generator = None,
+    ):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
             self.rng = rng
 
         if Lambda < 0.0:
-            Messages._error("Exponential: the rate parameter Lambda should be positive.")
+            Messages._error(
+                "Exponential: the rate parameter Lambda should be positive."
+            )
 
         self.Lambda = Lambda
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
@@ -271,13 +304,14 @@ class Exponential(RandomDistribution):
         data = self.rng.exponential(self.Lambda, shape)
 
         if self.min is not None:
-            data[data<self.min] = self.min
+            data[data < self.min] = self.min
         if self.max is not None:
-            data[data>self.max] = self.max
+            data[data > self.max] = self.max
         return data
 
     def latex(self):
-        return "$\\exp$(" + str(self.Lambda) + ')'
+        return "$\\exp$(" + str(self.Lambda) + ")"
+
 
 class Gamma(RandomDistribution):
     """
@@ -289,8 +323,15 @@ class Gamma(RandomDistribution):
     :param max: Maximum value returned (default: unlimited).
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
-    def __init__(self, alpha: float, beta: float=1.0, min: float=None, max: float=None, rng: np.random.Generator=None):
 
+    def __init__(
+        self,
+        alpha: float,
+        beta: float = 1.0,
+        min: float = None,
+        max: float = None,
+        rng: np.random.Generator = None,
+    ):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
@@ -301,7 +342,7 @@ class Gamma(RandomDistribution):
         self.min = min
         self.max = max
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 
@@ -310,13 +351,14 @@ class Gamma(RandomDistribution):
         data = self.rng.gamma(self.alpha, self.beta, shape)
 
         if self.min is not None:
-            data[data<self.min] = self.min
+            data[data < self.min] = self.min
         if self.max is not None:
-            data[data>self.max] = self.max
+            data[data > self.max] = self.max
         return data
 
     def latex(self):
-        return "$\\Gamma$(" + str(self.alpha) + ', ' + str(self.beta) + ')'
+        return "$\\Gamma$(" + str(self.alpha) + ", " + str(self.beta) + ")"
+
 
 class Binomial(RandomDistribution):
     """
@@ -331,8 +373,7 @@ class Binomial(RandomDistribution):
     :param rng: (optional) random number generator. If left None, a newly created instance provided by `np.random.default_rng()` is used.
     """
 
-    def __init__(self, n: int, p: float, rng: np.random.Generator=None):
-
+    def __init__(self, n: int, p: float, rng: np.random.Generator = None):
         if rng is None:
             self.rng = np.random.default_rng()
         else:
@@ -341,7 +382,7 @@ class Binomial(RandomDistribution):
         self.n = n
         self.p = p
 
-    def get_values(self, shape:tuple) -> np.ndarray:
+    def get_values(self, shape: tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
 

@@ -4,11 +4,17 @@ from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 # Basic object accessors
 from .test_SpikingDefaultSynapses import test_SpikingDefaultSynapses
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike, test_TimeDependentUpdate
-from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay
-from .test_SpikingContinuousUpdate import test_SpikingContinuousUpdate, test_ContinuousTransmission
+from .test_SpikingTransmission import (
+    test_SpikeTransmissionNoDelay,
+    test_SpikeTransmissionUniformDelay,
+)
+from .test_SpikingContinuousUpdate import (
+    test_SpikingContinuousUpdate,
+    test_ContinuousTransmission,
+)
 
 # Some features and accordingly Unittests are only allowed on specific platforms
-if _check_paradigm('openmp'):
+if _check_paradigm("openmp"):
     from .test_SpikingTransmission import test_SpikeTransmissionNonUniformDelay
 
 # Contains mapping which formats are allowed for which operation
@@ -45,8 +51,8 @@ def run_with(c, formats):
 
 # Set the mode variable from one of three dictionaries for the current tests,
 # as the data_formats are different with different paradigms.
-if _check_paradigm('openmp'):
-    if get_global_config('num_threads') == 1:
+if _check_paradigm("openmp"):
+    if get_global_config("num_threads") == 1:
         mode = single_thread
     else:
         mode = open_mp

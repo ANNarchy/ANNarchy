@@ -15,30 +15,31 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 __all__ = [
-    'clear',
-    'reset',
-    'magic_network',
-    'get_population',
-    'get_projection',
-    'populations',
-    'projections',
-    'monitors',
-    'add_function',
-    'functions',
-    'enable_learning',
-    'disable_learning',
-    'get_time',
-    'set_time',
-    'get_current_step',
-    'set_current_step',
-    'dt',
-    'set_seed',
+    "clear",
+    "reset",
+    "magic_network",
+    "get_population",
+    "get_projection",
+    "populations",
+    "projections",
+    "monitors",
+    "add_function",
+    "functions",
+    "enable_learning",
+    "disable_learning",
+    "get_time",
+    "set_time",
+    "get_current_step",
+    "set_current_step",
+    "dt",
+    "set_seed",
 ]
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
-def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
+
+def clear(functions: bool = True, neurons: bool = True, synapses: bool = True):
     """
     Clears all variables (erasing already defined populations, projections, monitors), as if you had just imported ANNarchy.
 
@@ -63,7 +64,15 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
     # Reinitialize initial state
     NetworkManager().clear()
 
-def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, reseed_rng:bool=True, net_id:int=0):
+
+def reset(
+    populations: bool = True,
+    projections: bool = False,
+    synapses: bool = False,
+    monitors: bool = True,
+    reseed_rng: bool = True,
+    net_id: int = 0,
+):
     """
     Reinitialises the network to its state before the call to `compile()`. The network time will be set to 0ms.
 
@@ -75,7 +84,14 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
     :param monitors: if True, the monitors will be emptied and reset (default=True).
     ;param reseed_rng: if True, RNG generators will be reset using the stored seed (default=True).
     """
-    NetworkManager().get_network(net_id=net_id).reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, reseed_rng=reseed_rng)
+    NetworkManager().get_network(net_id=net_id).reset(
+        populations=populations,
+        projections=projections,
+        synapses=synapses,
+        monitors=monitors,
+        reseed_rng=reseed_rng,
+    )
+
 
 ################################
 ## Accessing shadow network
@@ -96,7 +112,8 @@ def magic_network() -> "Network":
     """
     return NetworkManager().get_network(net_id=0)
 
-def get_population(name:str, net_id:int=0) -> "Population":
+
+def get_population(name: str, net_id: int = 0) -> "Population":
     """
     Returns the population with the given name.
 
@@ -109,7 +126,8 @@ def get_population(name:str, net_id:int=0) -> "Population":
     Messages._warning("get_population(): the population", name, "does not exist.")
     return None
 
-def get_projection(name:str, net_id:int=0) -> "Projection":
+
+def get_projection(name: str, net_id: int = 0) -> "Projection":
     """
     Returns the projection with the given name.
 
@@ -122,7 +140,8 @@ def get_projection(name:str, net_id:int=0) -> "Projection":
     Messages._warning("get_projection(): the projection", name, "does not exist.")
     return None
 
-def populations(net_id:int=0) -> list["Population"]:
+
+def populations(net_id: int = 0) -> list["Population"]:
     """
     Returns a list of all declared populations.
 
@@ -130,18 +149,27 @@ def populations(net_id:int=0) -> list["Population"]:
     """
     return NetworkManager().get_network(net_id=net_id).get_populations()
 
+
 def projections(
-        net_id:int=0,
-        post:"Population"=None,
-        pre:"Population"=None,
-        target:str=None,
-        suppress_error:bool=False) -> list["Projection"]:
+    net_id: int = 0,
+    post: "Population" = None,
+    pre: "Population" = None,
+    target: str = None,
+    suppress_error: bool = False,
+) -> list["Projection"]:
     """
     Returns a list of all declared populations.
     """
-    return NetworkManager().get_network(net_id=net_id).get_projections(post=post, pre=pre, target=target, suppress_error=suppress_error)
+    return (
+        NetworkManager()
+        .get_network(net_id=net_id)
+        .get_projections(
+            post=post, pre=pre, target=target, suppress_error=suppress_error
+        )
+    )
 
-def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
+
+def monitors(net_id: int = 0, obj: Any = None) -> list["Monitor"]:
     """
     Returns a list of declared monitors.
 
@@ -160,10 +188,11 @@ def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
 
         return mon_list
 
+
 ################################
 ## Functions
 ################################
-def add_function(function:str):
+def add_function(function: str):
     """
     Defines a global function which can be used by all neurons and synapses.
 
@@ -191,7 +220,8 @@ def add_function(function:str):
     """
     GlobalObjectManager().add_function(function)
 
-def functions(name:str, network=None):
+
+def functions(name: str, network=None):
     """
     Allows to access a global function declared with ``add_function()`` and use it from Python using arrays **after compilation of the magic network**.
 
@@ -213,19 +243,21 @@ def functions(name:str, network=None):
     """
     return GlobalObjectManager().functions(name, network)
 
+
 ################################
 ## Memory management
 ################################
 def _bytes_human_readable(size_in_bytes):
-    """ Transforms given size in GB/MB/KB or bytes dependent on the value. """
-    if size_in_bytes > (1024*1024*1024):
-        return "{:.2f} GB".format(float(size_in_bytes)/(1024.0*1024.0*1024.0))
-    elif size_in_bytes > (1024*1024):
-        return "{:.2f} MB".format(float(size_in_bytes)/(1024.0*1024.0))
+    """Transforms given size in GB/MB/KB or bytes dependent on the value."""
+    if size_in_bytes > (1024 * 1024 * 1024):
+        return "{:.2f} GB".format(float(size_in_bytes) / (1024.0 * 1024.0 * 1024.0))
+    elif size_in_bytes > (1024 * 1024):
+        return "{:.2f} MB".format(float(size_in_bytes) / (1024.0 * 1024.0))
     elif size_in_bytes > (1024):
-        return "{:.2f} KB".format(float(size_in_bytes)/(1024.0))
+        return "{:.2f} KB".format(float(size_in_bytes) / (1024.0))
     else:
         return str(size_in_bytes) + " bytes"
+
 
 def _cpp_memory_footprint(net_id=0):
     """
@@ -235,18 +267,23 @@ def _cpp_memory_footprint(net_id=0):
     """
     NetworkManager().get_network(net_id=net_id)._cpp_memory_footprint()
 
+
 def _python_current_max_rusage():
     """
     Prints the current max residen size for the current process and the children.
     """
     import resource
+
     size_kilobytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    print(_bytes_human_readable(size_kilobytes*1024))
+    print(_bytes_human_readable(size_kilobytes * 1024))
+
 
 ################################
 ## Learning flags
 ################################
-def enable_learning(projections:list=None, period:list=None, offset:float=None, net_id:int=0):
+def enable_learning(
+    projections: list = None, period: list = None, offset: float = None, net_id: int = 0
+):
     """
     Enables learning for all projections. Optionally *period* and *offset* can be changed for all projections.
 
@@ -260,6 +297,7 @@ def enable_learning(projections:list=None, period:list=None, offset:float=None, 
     for proj in projections:
         proj.enable_learning(period, offset)
 
+
 def disable_learning(projections=None, net_id=0):
     """
     Disables learning for all projections.
@@ -271,27 +309,34 @@ def disable_learning(projections=None, net_id=0):
     for proj in projections:
         proj.disable_learning()
 
+
 ################################
 ## Time
 ################################
 def get_time(net_id=0) -> float:
     "Returns the current time in ms."
     try:
-        t = NetworkManager().get_network(net_id=net_id).instance.get_time() * ConfigManager().get('dt', net_id)
+        t = NetworkManager().get_network(
+            net_id=net_id
+        ).instance.get_time() * ConfigManager().get("dt", net_id)
     except:
         t = 0.0
     return t
 
-def set_time(t:float, net_id=0):
+
+def set_time(t: float, net_id=0):
     """
     Sets the current time in ms.
 
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().get_network(net_id=net_id).instance.set_time(int(t / ConfigManager().get('dt', net_id)))
+        NetworkManager().get_network(net_id=net_id).instance.set_time(
+            int(t / ConfigManager().get("dt", net_id))
+        )
     except:
-        Messages._warning('Time can only be set when the network is compiled.')
+        Messages._warning("Time can only be set when the network is compiled.")
+
 
 def get_current_step(net_id=0) -> int:
     "Returns the current simulation step."
@@ -301,7 +346,8 @@ def get_current_step(net_id=0) -> int:
         t = 0
     return t
 
-def set_current_step(t:int, net_id=0):
+
+def set_current_step(t: int, net_id=0):
     """
     Sets the current simulation step (integer).
 
@@ -310,16 +356,18 @@ def set_current_step(t:int, net_id=0):
     try:
         NetworkManager().get_network(net_id=net_id).instance.set_time(int(t))
     except:
-        Messages._warning('Time can only be set when the network is compiled.')
+        Messages._warning("Time can only be set when the network is compiled.")
 
-def dt(net_id:int=0) -> float:
+
+def dt(net_id: int = 0) -> float:
     "Returns the simulation step size `dt` used in the simulation."
-    return ConfigManager().get('dt', net_id)
+    return ConfigManager().get("dt", net_id)
+
 
 ################################
 ## Seed
 ################################
-def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
+def set_seed(seed: int, use_seed_seq: bool = True, net_id: int = 0):
     """
     Sets the seed of the random number generators, both in ANNarchy.RandomDistributions and in the C++ library when it is created.
 
@@ -336,13 +384,19 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     """
 
     if net_id == 0:
-        _update_global_config('seed', seed)
-        _update_global_config('use_seed_seq', use_seed_seq)
+        _update_global_config("seed", seed)
+        _update_global_config("use_seed_seq", use_seed_seq)
 
     try:
-        if ConfigManager().get('disable_parallel_rng', net_id):
-            NetworkManager().get_network(net_id=net_id).instance.set_seed(seed, 1, use_seed_seq)
+        if ConfigManager().get("disable_parallel_rng", net_id):
+            NetworkManager().get_network(net_id=net_id).instance.set_seed(
+                seed, 1, use_seed_seq
+            )
         else:
-            NetworkManager().get_network(net_id=net_id).instance.set_seed(seed, ConfigManager().get('num_threads', net_id), use_seed_seq)
+            NetworkManager().get_network(net_id=net_id).instance.set_seed(
+                seed, ConfigManager().get("num_threads", net_id), use_seed_seq
+            )
     except:
-        Messages._warning('The seed will only be set in the simulated network when it is compiled.')
+        Messages._warning(
+            "The seed will only be set in the simulated network when it is compiled."
+        )

@@ -5,24 +5,21 @@
 
 copy_proj_template = {
     # Declare the connectivity matrix
-    'declare_connectivity_matrix': "",
+    "declare_connectivity_matrix": "",
     # Accessors for the connectivity matrix
-    'access_connectivity_matrix': "",
+    "access_connectivity_matrix": "",
     # No initiaization of the connectivity matrix
-    'init_connectivity_matrix': "",
+    "init_connectivity_matrix": "",
     # No need for exporting access
-    'declare_parameters_variables': "",
-
+    "declare_parameters_variables": "",
     # Variables for the psp code
-    'psp_prefix': """
+    "psp_prefix": """
         int rk_pre;
         %(float_prec)s sum=0.0;""",
-
     # Export the connectivity matrix
-    'export_connectivity': "",
-
+    "export_connectivity": "",
     # Initialize the wrapper connectivity matrix
-    'wrapper': """
+    "wrapper": """
     // Copy ProjStruct%(id_proj)s
     nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
         // Constructor
@@ -42,7 +39,7 @@ copy_proj_template = {
 }
 
 copy_sum_template = {
-    'sum': """
+    "sum": """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
@@ -55,7 +52,7 @@ copy_sum_template = {
         }
     }
 """,
-    'max': """
+    "max": """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
@@ -70,7 +67,7 @@ copy_sum_template = {
         }
     }
 """,
-    'min': """
+    "min": """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
@@ -85,7 +82,7 @@ copy_sum_template = {
         }
     }
 """,
-    'mean': """
+    "mean": """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
@@ -97,5 +94,5 @@ copy_sum_template = {
             pop%(id_post)s->_sum_%(target)s[proj%(id)s->post_rank[i]] += sum/ (%(float_prec)s)(proj%(id)s->pre_rank[i].size());
         }
     }
-"""
+""",
 }

@@ -4,93 +4,83 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 #############################################
 ##  Synaptic delay
 #############################################
 delay = {
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay ;""",
-
-        'pyx_struct':
-"""
+        "pyx_struct": """
         # Uniform delay
         int delay""",
-        'init': """
+        "init": """
     delay = delays[0][0];
 """,
-        'pyx_wrapper_init':
-"""
+        "pyx_wrapper_init": """
         proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor':
-"""
+        "pyx_wrapper_accessor": """
     # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
@@ -98,17 +88,17 @@ delay = {
         return proj%(id_proj)s.delay
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
-"""
+""",
     },
-    'nonuniform_rate_coded': None,
-    'nonuniform_spiking': None
+    "nonuniform_rate_coded": None,
+    "nonuniform_spiking": None,
 }
 
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
 continuous_transmission = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 // iterate across all blocks
@@ -137,30 +127,29 @@ for (%(idx_type)s i = 0; i < num_blocks_; i++) {
     }
 }
 """,
-    'max': "",
-    'min': "",
-    'mean': "",
+    "max": "",
+    "min": "",
+    "mean": "",
 }
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': delay,
-    
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "delay": delay,
     # operations
-    'rate_coded_sum': continuous_transmission,
-    'vectorized_default_psp': {},
-    'update_variables': None
+    "rate_coded_sum": continuous_transmission,
+    "vectorized_default_psp": {},
+    "update_variables": None,
 }
 
 conn_ids = {
-    'local_index': '[pos+k]',
-    'semiglobal_index': '[i]',
-    'global_index': '',
-    'post_index': '[rk_post]',
-    'pre_index': '[rk_pre]',
-    'delay_u' : '[delay-1]' # uniform delay
+    "local_index": "[pos+k]",
+    "semiglobal_index": "[i]",
+    "global_index": "",
+    "post_index": "[rk_post]",
+    "pre_index": "[rk_pre]",
+    "delay_u": "[delay-1]",  # uniform delay
 }

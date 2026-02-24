@@ -4,11 +4,13 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, Uniform
+
 
 class test_StructuralPlasticityEnvironment(unittest.TestCase):
     """
@@ -21,15 +23,13 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
     These functions are called from Python environment code.
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Compile the network for this test
         """
-        neuron = Neuron(
-            parameters="tau = 10",
-            equations="r += 1/tau * t"
-        )
+        neuron = Neuron(parameters="tau = 10", equations="r += 1/tau * t")
 
         synapse = Synapse(
             parameters="""
@@ -58,13 +58,10 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         cls.test_proj2.one_to_one(weights=1.0)
 
         cls.test_proj3 = cls.test_net.connect(
-            pre=pop1,
-            post=pop1,
-            target="exc",
-            synapse=synapse
+            pre=pop1, post=pop1, target="exc", synapse=synapse
         )
         cls.test_proj3.one_to_one(weights=1.0)
-        cls.test_proj3.alpha = Uniform(0.1,1)
+        cls.test_proj3.alpha = Uniform(0.1, 1)
 
         cls.test_net.compile(silent=True, directory=TARGET_FOLDER)
 
@@ -90,21 +87,26 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         Please note, as we use an all2all on same population, rank 3 is omited.
         """
         # check all-to-all pattern
-        self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0,1,2,4,5,6,7,8,9])
-        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w, [1.0] * (self.test_proj.pre.size-1))
+        self.assertEqual(
+            self.test_proj.dendrite(3).pre_ranks, [0, 1, 2, 4, 5, 6, 7, 8, 9]
+        )
+        numpy.testing.assert_allclose(
+            self.test_proj.dendrite(3).w, [1.0] * (self.test_proj.pre.size - 1)
+        )
 
         # Remove some synapses
         self.test_proj.dendrite(3).prune_synapse(2)
         self.test_proj.dendrite(3).prune_synapse(4)
-        
+
         # Rank-order is not important
         self.test_proj.dendrite(3).prune_synapse(8)
         self.test_proj.dendrite(3).prune_synapse(6)
 
         # Check correctness
         self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 5, 7, 9])
-        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w,
-                                      [1.0, 1.0, 1.0, 1.0, 1.0])
+        numpy.testing.assert_allclose(
+            self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0]
+        )
 
     def test_prune_multiple_synapses(self):
         """
@@ -121,17 +123,20 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         Please note, as we use an all2all on same population, rank 3 is omited.
         """
-        self.assertEqual(self.test_proj.dendrite(3).pre_ranks,
-                         [0, 1, 2, 4, 5, 6, 7, 8, 9])
-        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w,
-                                      [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        self.assertEqual(
+            self.test_proj.dendrite(3).pre_ranks, [0, 1, 2, 4, 5, 6, 7, 8, 9]
+        )
+        numpy.testing.assert_allclose(
+            self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        )
 
         self.test_proj.dendrite(3).prune_synapses([2, 4, 6])
         self.test_proj.dendrite(3).prune_synapses([8, 9])
 
         self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 5, 7])
-        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w,
-                                      [1.0, 1.0, 1.0, 1.0])
+        numpy.testing.assert_allclose(
+            self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0]
+        )
 
     def test_create_single_synapse(self):
         """
@@ -156,8 +161,9 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         self.test_proj2.dendrite(3).create_synapse(6, 2.0)
 
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
-        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
-                                      [2.0, 1.0, 2.0, 2.0])
+        numpy.testing.assert_allclose(
+            self.test_proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]
+        )
 
     def test_create_single_synapse(self):
         """
@@ -182,8 +188,9 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         self.test_proj2.dendrite(3).create_synapse(6, 2.0)
 
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
-        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
-                                      [2.0, 1.0, 2.0, 2.0])
+        numpy.testing.assert_allclose(
+            self.test_proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]
+        )
 
     def test_create_multiple_default_synapses(self):
         """
@@ -206,8 +213,9 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         self.test_proj2.dendrite(3).create_synapses([2, 4, 6], [2.0, 3.0, 4.0])
 
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
-        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
-                                      [2.0, 1.0, 3.0, 4.0])
+        numpy.testing.assert_allclose(
+            self.test_proj2.dendrite(3).w, [2.0, 1.0, 3.0, 4.0]
+        )
 
     def test_create_multiple_default_synapses_2(self):
         """
@@ -218,11 +226,10 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         # First Check
         self.assertEqual(self.test_proj2.dendrite(4).pre_ranks, [2, 4, 6])
-        numpy.testing.assert_allclose(self.test_proj2.dendrite(4).w,
-                                      [2.0, 1.0, 4.0])
-        
+        numpy.testing.assert_allclose(self.test_proj2.dendrite(4).w, [2.0, 1.0, 4.0])
+
         # Fill some gaps
-        self.test_proj2.dendrite(4).create_synapses([3,5,7], [3.0, 5.0, 7.0])
+        self.test_proj2.dendrite(4).create_synapses([3, 5, 7], [3.0, 5.0, 7.0])
 
         # Check again
         self.assertEqual(self.test_proj2.dendrite(4).pre_ranks, [2, 3, 4, 5, 6, 7])
@@ -243,8 +250,8 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         # Check if alpha defined as Uniform [0.1, 1) is drawn correctly
         rand_val = numpy.array(self.test_proj3.dendrite(3).alpha)
-        self.assertTrue( (rand_val >= 0.1).all() )
-        self.assertTrue( (rand_val < 1.0).all() )
+        self.assertTrue((rand_val >= 0.1).all())
+        self.assertTrue((rand_val < 1.0).all())
 
     def test_prune_complete_dendrite(self):
         """

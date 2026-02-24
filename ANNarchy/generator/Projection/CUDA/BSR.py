@@ -8,7 +8,7 @@
 additional_global_functions = ""
 
 launch_config = {
-    'init': """
+    "init": """
         _nb_blocks = std::min<unsigned int>(block_row_size(), 65535);
 
         // must be multiple of tile_size^2
@@ -23,41 +23,41 @@ launch_config = {
     #endif
 
 """,
-    'update': """
+    "update": """
         std::cout << "Adjustment of launch configuration for BSR is not supported yet." << std::endl;
 
     #ifdef _DEBUG
         std::cout << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
-"""
+""",
 }
 
 attribute_decl = {
-    'local': """
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'semiglobal': """
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'global': """
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(%(init)s);
         if (%(name)s.empty())
@@ -69,57 +69,57 @@ attribute_cpp_init = {
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_dirty = true;
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
         %(name)s_dirty = true;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         cudaFree(gpu_%(name)s);
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         cudaFree(gpu_%(name)s);
 """,
-    'global': ""
+    "global": "",
 }
 
 attribute_host_to_device = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_host_to_device )
         {
@@ -135,7 +135,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_host_to_device )
         {
@@ -151,7 +151,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'global': """
+    "global": """
         // %(name)s: global
         if ( %(name)s_host_to_device )
         {
@@ -166,11 +166,11 @@ attribute_host_to_device = {
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
-"""
+""",
 }
 
 attribute_device_to_host = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -185,7 +185,7 @@ attribute_device_to_host = {
             %(name)s_device_to_host = t;
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -200,7 +200,7 @@ attribute_device_to_host = {
             %(name)s_device_to_host = t;
         }
 """,
-    'global': """
+    "global": """
         // %(name)s: global
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -214,7 +214,7 @@ attribute_device_to_host = {
         #endif
             %(name)s_device_to_host = t;
         }
-"""
+""",
 }
 
 # BSR implementation following Eberhardt & Hoemmen (2016) - row-per-thread
@@ -224,8 +224,8 @@ attribute_device_to_host = {
 # squared dense blocks. Last but not least, each CUDA block computes at least one blocked row in the BSR.
 #
 rate_psp_kernel_rpt = {
-    'device_kernel': {
-        'sum': """
+    "device_kernel": {
+        "sum": """
 __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     const %(idx_type)s idx = threadIdx.x;
     const %(idx_type)s block_row = blockIdx.x;
@@ -253,9 +253,9 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 }
 """
     },
-    'device_header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    "device_header": """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'host_call': """
+    "host_call": """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
@@ -276,20 +276,10 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
     #endif
     }
 """,
-    'thread_init': {
-        'float': {
-            'sum': "0.0f",
-            'min': "FLT_MAX",
-            'max': "FLT_MIN",
-            'mean': "0.0f"
-        },
-        'double': {
-            'sum': "0.0",
-            'min': "DBL_MAX",
-            'max': "DBL_MIN",
-            'mean': "0.0"
-        }
-    }
+    "thread_init": {
+        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
+        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
+    },
 }
 
 # BSR implementation following Eberhardt & Hoemmen (2016) - column-by-column
@@ -304,8 +294,8 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 # * host_call
 # * thread_init
 rate_psp_kernel_cbc = {
-    'device_kernel': {
-        'sum': """
+    "device_kernel": {
+        "sum": """
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tIdx = threadIdx.x;
     unsigned int bIdx = blockIdx.x;
@@ -349,8 +339,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 """,
-},
-    'invoke_kernel': """
+    },
+    "invoke_kernel": """
 void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     // kernel launch
     cu_proj%(id_proj)s_psp<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
@@ -362,9 +352,9 @@ void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_
     );
 }
 """,
-    'kernel_decl': """void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    "kernel_decl": """void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'host_call': """
+    "host_call": """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         // kernel configuration
@@ -395,50 +385,37 @@ void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_
     }
 
 """,
-    'thread_init': {
-        'float': {
-            'sum': "0.0f",
-            'min': "FLT_MAX",
-            'max': "FLT_MIN",
-            'mean': "0.0f"
-        },
-        'double': {
-            'sum': "0.0",
-            'min': "DBL_MAX",
-            'max': "DBL_MIN",
-            'mean': "0.0"
-        }
-    }
+    "thread_init": {
+        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
+        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
+    },
 }
 
 conn_templates = {
     # connectivity representation
-    'conn_header': "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size",
-    'conn_call': "proj%(id_proj)s->gpu_block_row_pointer(), proj%(id_proj)s->gpu_block_column_index(), proj%(id_proj)s->block_row_size(), proj%(id_proj)s->get_tile_size()",
-    'conn_kernel': "row_ptr, col_ids, n_block_rows, tile_size",
-
+    "conn_header": "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size",
+    "conn_call": "proj%(id_proj)s->gpu_block_row_pointer(), proj%(id_proj)s->gpu_block_column_index(), proj%(id_proj)s->block_row_size(), proj%(id_proj)s->get_tile_size()",
+    "conn_kernel": "row_ptr, col_ids, n_block_rows, tile_size",
     # launch config
-    'launch_config': launch_config,
-
+    "launch_config": launch_config,
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'host_to_device': attribute_host_to_device,
-    'device_to_host': attribute_device_to_host,
-
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "host_to_device": attribute_host_to_device,
+    "device_to_host": attribute_device_to_host,
     # operations
-    'rate_psp': rate_psp_kernel_cbc,
+    "rate_psp": rate_psp_kernel_cbc,
     #'rate_psp': rate_psp_kernel_rpt,
 }
 
 conn_ids = {
-    'local_index': "[tile_off + col * tile_size + idx]",
-    'semiglobal_index': '[i]',
-    'global_index': '[0]',
-    'pre_index': '[first_col_x + col]',
-    'post_index': '[row_indices[j]]',
-    'pre_prefix': 'pre_',
-    'post_prefix': 'post_',
+    "local_index": "[tile_off + col * tile_size + idx]",
+    "semiglobal_index": "[i]",
+    "global_index": "[0]",
+    "pre_index": "[first_col_x + col]",
+    "post_index": "[row_indices[j]]",
+    "pre_prefix": "pre_",
+    "post_prefix": "post_",
 }
