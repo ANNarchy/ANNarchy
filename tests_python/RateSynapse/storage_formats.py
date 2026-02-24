@@ -11,76 +11,76 @@ This file is part of ANNarchy.
 
 single_thread = {
     # test_RateTransmission.py
-    "test_RateTransmission":                    ["lil", "csr", "ellr", "sell", "dense"],
+    "test_RateTransmission":                    ["lil", "auto", "csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
-    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell", "dense"],
-    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell", "dense"],
-    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
+    "test_CustomConnectivityNoDelay":           ["lil", "auto", "csr", "ell", "dense"],
+    "test_CustomConnectivityUniformDelay":      ["lil", "auto", "csr", "ell", "dense"],
+    "test_CustomConnectivityNonUniformDelay":   ["lil", "auto", "csr", "ell"],
     # test_RateContinuousUpdate.py
-    "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
+    "test_RateCodedContinuousUpdate":           ["lil", "auto", "csr", "dense"],
     # test_RateDefaultSynapseModels.py
-    "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
+    "test_RateDefaultSynapseModels":            ["lil", "auto", "csr", "dense"],
     # from test_Projection.py
-    "test_DefaultProjection":                   ["lil", "csr", "dense", "bsr"],
-    "test_ModifiedProjection":                  ["lil", "csr", "dense"],
-    "test_SliceProjections":                    ["lil", "csr"],
+    "test_DefaultProjection":                   ["lil", "auto", "csr", "dense", "bsr"],
+    "test_ModifiedProjection":                  ["lil", "auto", "csr", "dense"],
+    "test_SliceProjections":                    ["lil", "auto", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
-    "test_DendriteModifiedSynapse":             ["lil", "csr"],
+    "test_DendriteDefaultSynapse":              ["lil", "auto", "csr", "ell", "dense"],
+    "test_DendriteModifiedSynapse":             ["lil", "auto", "csr"],
     # from test_RateSynapse.py
-    "test_Locality":                            ["lil", "csr", "dense"],
-    "test_AccessPSP":                           ["lil", "csr", "dense"],
-    "test_ModifiedPSP":                         ["lil", "csr", "dense"],
+    "test_Locality":                            ["lil", "auto", "csr", "dense"],
+    "test_AccessPSP":                           ["lil", "auto", "csr", "dense"],
+    "test_ModifiedPSP":                         ["lil", "auto", "csr", "dense"],
     # from test_RateDelays
-    "test_NoDelay":                             ["lil", "csr", "ell", "dense"],
-    "test_UniformDelay":                        ["lil", "csr", "ell", "dense"],
-    "test_NonUniformDelay":                     ["lil", "csr"],
-    "test_SynapseOperations":                   ["lil"],
-    "test_SynapticAccess":                      ["lil", "csr"],
+    "test_NoDelay":                             ["lil", "auto", "csr", "ell", "dense"],
+    "test_UniformDelay":                        ["lil", "auto", "csr", "ell", "dense"],
+    "test_NonUniformDelay":                     ["lil", "auto", "csr"],
+    "test_SynapseOperations":                   ["lil", "auto"],
+    "test_SynapticAccess":                      ["lil", "auto", "csr"],
     # test_Monitor
-    "test_MonitorRatePSP":                      ["lil"],
-    "test_MonitorLocalVariable":                ["lil"],
+    "test_MonitorRatePSP":                      ["lil", "auto"],
+    "test_MonitorLocalVariable":                ["lil", "auto"],
     # SpecificProjections
-    "test_Convolution":                         ["lil"],
-    "test_Pooling":                             ["lil"],
-    "test_CurrentInjection":                    ["lil"],
+    "test_Convolution":                         ["lil", "auto"],
+    "test_Pooling":                             ["lil", "auto"],
+    "test_CurrentInjection":                    ["lil", "auto"],
 }
 
 open_mp = {
     # test_RateTransmission.py
-    "test_RateTransmission":                    ["lil", "csr", "ellr", "sell", "dense"],
+    "test_RateTransmission":                    ["lil", "auto", "csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
-    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell", "dense"],
-    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell", "dense"],
-    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
+    "test_CustomConnectivityNoDelay":           ["lil", "auto", "csr", "ell", "dense"],
+    "test_CustomConnectivityUniformDelay":      ["lil", "auto", "csr", "ell", "dense"],
+    "test_CustomConnectivityNonUniformDelay":   ["lil", "auto", "csr", "ell"],
     # test_RateContinuousUpdate.py
-    "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
+    "test_RateCodedContinuousUpdate":           ["lil", "auto", "csr", "dense"],
     # test_RateDefaultSynapseModels.py
-    "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
+    "test_RateDefaultSynapseModels":            ["lil", "auto", "csr", "dense"],
     # from test_Projection.py
-    "test_DefaultProjection":                   ["lil", "csr", "dense", "bsr"],
-    "test_ModifiedProjection":                  ["lil", "csr", "dense"],    
-    "test_SliceProjections":                    ["lil", "csr"],
+    "test_DefaultProjection":                   ["lil", "auto", "csr", "dense", "bsr"],
+    "test_ModifiedProjection":                  ["lil", "auto", "csr", "dense"],
+    "test_SliceProjections":                    ["lil", "auto", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
-    "test_DendriteModifiedSynapse":             ["lil", "csr"],
+    "test_DendriteDefaultSynapse":              ["lil", "auto", "csr", "ell", "dense"],
+    "test_DendriteModifiedSynapse":             ["lil", "auto", "csr"],
     # from test_RateSynapse.py
-    "test_Locality":                            ["lil", "csr", "dense"],
-    "test_AccessPSP":                           ["lil", "csr", "dense"],
-    "test_ModifiedPSP":                         ["lil", "csr", "dense"],
+    "test_Locality":                            ["lil", "auto", "csr", "dense"],
+    "test_AccessPSP":                           ["lil", "auto", "csr", "dense"],
+    "test_ModifiedPSP":                         ["lil", "auto", "csr", "dense"],
     # from test_RateDelays
-    "test_NoDelay":                             ["lil", "csr", "ell", "dense"],
-    "test_UniformDelay":                        ["lil", "csr", "ell", "dense"],
-    "test_NonUniformDelay":                     ["lil", "csr"],
-    "test_SynapseOperations":                   ["lil"],
-    "test_SynapticAccess":                      ["lil", "csr"],
+    "test_NoDelay":                             ["lil", "auto", "csr", "ell", "dense"],
+    "test_UniformDelay":                        ["lil", "auto", "csr", "ell", "dense"],
+    "test_NonUniformDelay":                     ["lil", "auto", "csr"],
+    "test_SynapseOperations":                   ["lil", "auto"],
+    "test_SynapticAccess":                      ["lil", "auto", "csr"],
     # test_Monitor
-    "test_MonitorRatePSP":                      ["lil"],
-    "test_MonitorLocalVariable":                ["lil"],
+    "test_MonitorRatePSP":                      ["lil", "auto"],
+    "test_MonitorLocalVariable":                ["lil", "auto"],
     # SpecificProjections
-    "test_Convolution":                         ["lil"],
-    "test_Pooling":                             ["lil"],
-    "test_CurrentInjection":                    ["lil"],
+    "test_Convolution":                         ["lil", "auto"],
+    "test_Pooling":                             ["lil", "auto"],
+    "test_CurrentInjection":                    ["lil", "auto"]
 }
 
 cuda = {
@@ -107,7 +107,7 @@ cuda = {
     # from test_RateDelays
     "test_NoDelay":                         ["csr", "ellr", "dense"],
     "test_UniformDelay":                    ["csr", "ellr", "dense"],
-    "test_SynapseOperations":               ["csr", ],
+    "test_SynapseOperations":               ["csr", "dense" ],
     "test_SynapticAccess":                  ["csr", "ellr"],
     # test_Monitor
     "test_MonitorRatePSP":                  ["csr"],

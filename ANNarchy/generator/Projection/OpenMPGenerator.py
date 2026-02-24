@@ -490,7 +490,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
     def _computesum_rate(self, proj, single_matrix):
         """
-        Create the c++ code for post-synaptic potential computation. 
+        Create the c++ code for post-synaptic potential computation.
 
         Parameters:
 
@@ -728,6 +728,9 @@ class OpenMPGenerator(ProjectionGenerator):
             psp_prefix = """
         %(idx_type)s rk_post, rk_pre;
         %(float_prec)s sum;""" % ids
+        elif proj._storage_format == "dense":
+            # Default variables needed in psp_code
+            psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
         else:
             psp_prefix = ""
 
@@ -1088,7 +1091,7 @@ if (%(condition)s) {
         if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
             _, psp_code = self._computesum_rate(proj, single_matrix)
-            
+
             psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)

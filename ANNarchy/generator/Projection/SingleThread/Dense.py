@@ -131,6 +131,85 @@ for (const %(idx_type)s i : post_ranks_) {
     }
     %(post_prefix)s_sum_%(target)s[i] += sum;
 }
+""",
+    'max': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s rk_pre;
+
+for (const %(idx_type)s i : post_ranks_) {
+    rk_pre = 0;
+    j=i*columns;
+
+    sum = std::numeric_limits<%(float_prec)s>::min();
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        if (!mask_[j])
+            continue;   // no existing synapse
+
+        if (%(psp)s > sum) {
+            sum = %(psp)s ;
+        }
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum;
+}
+""",
+    'min': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s rk_pre;
+
+for (const %(idx_type)s i : post_ranks_) {
+    sum = std::numeric_limits<%(float_prec)s>::max();
+    rk_pre = 0;
+    j=i*columns;
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        if (!mask_[j])
+            continue;   // no existing synapse
+
+        if(%(psp)s < sum){
+            sum = %(psp)s ;
+        }
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum;
+}
+""",
+    'mean': """
+%(pre_copy)s
+
+// matrix dimensions
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
+
+// running indices
+%(size_type)s j;
+%(idx_type)s rk_pre;
+
+for (const %(idx_type)s i : post_ranks_) {
+    %(idx_type)s _syn_count = 0;
+    sum = 0.0;
+    rk_pre = 0;
+    j=i*columns;
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
+        _syn_count += (mask_[j]) ? 1 : 0;
+        sum += %(psp)s ;
+    }
+    %(post_prefix)s_sum_%(target)s[i] += sum / static_cast<%(float_prec)s>(_syn_count);
+}
 """
 }
 
