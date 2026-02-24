@@ -3,20 +3,31 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Random import *
+import re
+
+from ANNarchy.core.Random import (
+    available_distributions,
+    distributions_arguments,
+    distributions_equivalents,
+)
 from ANNarchy.core.Parameters import Parameter, Variable, Creating, Pruning
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
-from ANNarchy.parser.StringManipulation import *
-from ANNarchy.parser.ITE import *
+from ANNarchy.parser.StringManipulation import (
+    split_equation,
+    extract_name,
+    check_equation,
+    extract_flags,
+    prepare_string,
+    process_equations,
+)
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
 from ANNarchy.intern.ConfigManagement import (
     ConfigManager,
     _check_paradigm,
     get_global_config,
 )
 from ANNarchy.intern import Messages
-
-import re
 
 
 def extract_randomdist(description, net_id):
