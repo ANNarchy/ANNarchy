@@ -22,15 +22,17 @@ __all__ = [
     "disable_callbacks",
     "enable_callbacks",
     "clear_all_callbacks",
-    "every"
+    "every",
 ]
 
+
 def simulate(
-        duration:float,
-        measure_time:bool=False,
-        callbacks:bool=True,
-        show_monitor_memory_estimate:bool=False,
-        net_id:int=0) -> None:
+    duration: float,
+    measure_time: bool = False,
+    callbacks: bool = True,
+    show_monitor_memory_estimate: bool = False,
+    net_id: int = 0,
+) -> None:
     """
     Simulates the network for the given duration in milliseconds.
 
@@ -53,9 +55,9 @@ def simulate(
 
     # Sanity checks
     if not network.compiled:
-        Messages._error('simulate(): the network is not compiled yet.')
+        Messages._error("simulate(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error('simulate(): the network is not initialized yet.')
+        Messages._error("simulate(): the network is not initialized yet.")
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / ConfigManager().get("dt", net_id))
@@ -64,18 +66,22 @@ def simulate(
         tstart = time.time()
 
     # Sanity check: potential memory consumption of recordings
-    _check_monitor_memory(nb_steps, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+    _check_monitor_memory(
+        nb_steps,
+        net_id=net_id,
+        show_monitor_memory_estimate=show_monitor_memory_estimate,
+    )
 
     if callbacks and network._callbacks_enabled and len(network._callbacks) > 0:
         _simulate_with_callbacks(duration, net_id)
     else:
         # Perform the simulation
         # The split in batches is necessary to allow interrupt of simulation with ctrl+c etc.
-        batch = 1000 # someday find a better solution...
+        batch = 1000  # someday find a better solution...
         if nb_steps < batch:
             network.instance.run(nb_steps)
         else:
-            nb = int(nb_steps/batch)
+            nb = int(nb_steps / batch)
             rest = nb_steps % batch
 
             for i in range(nb):
@@ -86,42 +92,93 @@ def simulate(
 
     if measure_time:
         if net_id > 0:
-            Messages._print('Simulating', duration/1000.0, 'seconds of the network', net_id, 'took', time.time() - tstart, 'seconds.')
+            Messages._print(
+                "Simulating",
+                duration / 1000.0,
+                "seconds of the network",
+                net_id,
+                "took",
+                time.time() - tstart,
+                "seconds.",
+            )
         else:
-            Messages._print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+            Messages._print(
+                "Simulating",
+                duration / 1000.0,
+                "seconds of the network took",
+                time.time() - tstart,
+                "seconds.",
+            )
 
     # Store the Python and C++ timings. Please note, that the C++ core
     # measures in ms and Python measures in s
     if NetworkManager().get_network(net_id=net_id)._profiler is not None:
         t1 = time.time()
-        NetworkManager().get_network(net_id=net_id)._profiler.add_entry( t0, t1, "simulate", "simulate")
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(
+            t0, t1, "simulate", "simulate"
+        )
 
         # network single step
-        overall_avg = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time("network", "step")
-        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
+        overall_avg = (
+            NetworkManager()
+            .get_network(net_id=net_id)
+            ._profiler._cpp_profiler.get_avg_time("network", "step")
+        )
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(
+            overall_avg * nb_steps, 100.0, "overall", "cpp core"
+        )
 
         # single operations for populations
         for pop in network.get_populations():
             for func in ["step", "rng", "delay", "spike"]:
-                avg_time = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time(pop.name, func)
-                NetworkManager().get_network(net_id=net_id)._profiler.add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
+                avg_time = (
+                    NetworkManager()
+                    .get_network(net_id=net_id)
+                    ._profiler._cpp_profiler.get_avg_time(pop.name, func)
+                )
+                NetworkManager().get_network(net_id=net_id)._profiler.add_entry(
+                    avg_time * nb_steps,
+                    (avg_time / overall_avg) * 100.0,
+                    pop.name + "_" + func,
+                    "cpp core",
+                )
 
         # single operations for projections
         for proj in network.get_projections():
             for func in ["psp", "step", "post_event"]:
-                avg_time = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time(proj.name, func)
-                NetworkManager().get_network(net_id=net_id)._profiler.add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
+                avg_time = (
+                    NetworkManager()
+                    .get_network(net_id=net_id)
+                    ._profiler._cpp_profiler.get_avg_time(proj.name, func)
+                )
+                NetworkManager().get_network(net_id=net_id)._profiler.add_entry(
+                    avg_time * nb_steps,
+                    (avg_time / overall_avg) * 100.0,
+                    proj.name + "_" + func,
+                    "cpp core",
+                )
 
-        monitor_avg = NetworkManager().get_network(net_id=net_id)._profiler._cpp_profiler.get_avg_time("network", "record")
-        NetworkManager().get_network(net_id=net_id)._profiler.add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
+        monitor_avg = (
+            NetworkManager()
+            .get_network(net_id=net_id)
+            ._profiler._cpp_profiler.get_avg_time("network", "record")
+        )
+        NetworkManager().get_network(net_id=net_id)._profiler.add_entry(
+            monitor_avg * nb_steps,
+            (monitor_avg / overall_avg) * 100.0,
+            "record",
+            "cpp core",
+        )
+
 
 def simulate_until(
-        max_duration:float,
-        population: Population | list[Population],
-        operator='and',
-        measure_time:bool = False,
-        show_monitor_memory_estimate:bool=False,
-        net_id:int=0):
+    max_duration: float,
+    population: Population | list[Population],
+    operator="and",
+    measure_time: bool = False,
+    show_monitor_memory_estimate: bool = False,
+    net_id: int = 0,
+):
     """
     Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
@@ -148,9 +205,9 @@ def simulate_until(
 
     # Sanity checks
     if not network.compiled:
-        Messages._error('simulate_until(): the network is not compiled yet.')
+        Messages._error("simulate_until(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error('simulate_until(): the network is not initialized yet.')
+        Messages._error("simulate_until(): the network is not initialized yet.")
 
     # Compute maximum number of steps
     nb_steps = ceil(float(max_duration) / ConfigManager().get("dt", net_id))
@@ -159,20 +216,33 @@ def simulate_until(
         population = [population]
 
     # Sanity check: potential memory consumption of recordings
-    _check_monitor_memory(nb_steps, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+    _check_monitor_memory(
+        nb_steps,
+        net_id=net_id,
+        show_monitor_memory_estimate=show_monitor_memory_estimate,
+    )
 
     # Perform the simulation until max_duration is reached or the conditio is fulfilled.
     if measure_time:
         tstart = time.time()
 
-    nb = network.instance.run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+    nb = network.instance.run_until(
+        nb_steps, [pop.id for pop in population], True if operator == "and" else False
+    )
 
     sim_time = float(nb) / ConfigManager().get("dt", net_id)
     if measure_time:
-        Messages._print('Simulating', nb/ConfigManager().get("dt", net_id)/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        Messages._print(
+            "Simulating",
+            nb / ConfigManager().get("dt", net_id) / 1000.0,
+            "seconds of the network took",
+            time.time() - tstart,
+            "seconds.",
+        )
     return sim_time
 
-def step(net_id:int=0, show_monitor_memory_estimate:bool=False):
+
+def step(net_id: int = 0, show_monitor_memory_estimate: bool = False):
     """
     Performs a single simulation step (duration = `dt`).
 
@@ -183,17 +253,22 @@ def step(net_id:int=0, show_monitor_memory_estimate:bool=False):
 
     # Sanity check
     if not network.compiled:
-        Messages._error('step(): the network is not compiled yet.')
+        Messages._error("step(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error('step(): the network is not initialized yet.')
+        Messages._error("step(): the network is not initialized yet.")
 
     # Sanity check: potential memory consumption of recordings
-    _check_monitor_memory(1, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate)
+    _check_monitor_memory(
+        1, net_id=net_id, show_monitor_memory_estimate=show_monitor_memory_estimate
+    )
 
     # Simulate a single step
     network.instance.step()
 
-def _check_monitor_memory(nb_steps:int, net_id: int, show_monitor_memory_estimate:bool):
+
+def _check_monitor_memory(
+    nb_steps: int, net_id: int, show_monitor_memory_estimate: bool
+):
     """
     Called by either *simulate*, *simulate_until*, or *step()*, this method performs a rough estimate of memory which will be
     additionally allocated during the simulation.
@@ -202,27 +277,39 @@ def _check_monitor_memory(nb_steps:int, net_id: int, show_monitor_memory_estimat
     """
     # If on macos, skip
     import platform
+
     if platform.system() == "Darwin":
         return
-    warn_threshold = 0.1   # TODO: maybe make adjustable through global config?
-    rec_size_mib = NetworkManager().get_network(net_id=net_id).instance.estimate_record_size(nb_steps)
+    warn_threshold = 0.1  # TODO: maybe make adjustable through global config?
+    rec_size_mib = (
+        NetworkManager()
+        .get_network(net_id=net_id)
+        .instance.estimate_record_size(nb_steps)
+    )
     meminfo = {}
-    with open('/proc/meminfo') as f:
+    with open("/proc/meminfo") as f:
         for line in f:
-            key, value = line.split(':')
+            key, value = line.split(":")
             meminfo[key] = int(value.strip().split()[0])  # currently free memory in kiB
-    curr_avail_mib = meminfo["MemFree"]/1024
+    curr_avail_mib = meminfo["MemFree"] / 1024
     if rec_size_mib > (curr_avail_mib * warn_threshold):
-        Messages._warning(f"The recording of monitors might consume {rec_size_mib}MiB, i.e. more then {int(warn_threshold*100)}% of your currently available memory.")
-        Messages._warning("Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included.")
+        Messages._warning(
+            f"The recording of monitors might consume {rec_size_mib}MiB, i.e. more then {int(warn_threshold * 100)}% of your currently available memory."
+        )
+        Messages._warning(
+            "Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included."
+        )
     elif show_monitor_memory_estimate:
         Messages._info(f"The recording of monitors might consume {rec_size_mib}MiB.")
-        Messages._info("Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included.")
+        Messages._info(
+            "Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included."
+        )
 
 
 ################################
 ## Decorators
 ################################
+
 
 def callbacks_enabled(net_id=0):
     """
@@ -232,6 +319,7 @@ def callbacks_enabled(net_id=0):
     network = NetworkManager().get_network(net_id=net_id)
     return network._callbacks_enabled
 
+
 def disable_callbacks(net_id=0):
     """
     Disables all callbacks for the network.
@@ -240,6 +328,7 @@ def disable_callbacks(net_id=0):
     network = NetworkManager().get_network(net_id=net_id)
     network._callbacks_enabled = False
 
+
 def enable_callbacks(net_id=0):
     """
     Enables all declared callbacks for the network.
@@ -247,6 +336,7 @@ def enable_callbacks(net_id=0):
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
     network._callbacks_enabled = True
+
 
 def clear_all_callbacks(net_id=0):
     """
@@ -259,7 +349,7 @@ def clear_all_callbacks(net_id=0):
     network._callbacks.clear()
 
 
-class every :
+class every:
     """
     Decorator to declare a callback method that will be called periodically during the simulation.
 
@@ -292,9 +382,16 @@ class every :
 
     """
 
-    def __init__(self, network:"Network"=None, period:float=1.0, offset:float=0., wait:float=0.0) -> None:
-
-        self.network = network if network is not None else NetworkManager().magic_network()
+    def __init__(
+        self,
+        network: "Network" = None,
+        period: float = 1.0,
+        offset: float = 0.0,
+        wait: float = 0.0,
+    ) -> None:
+        self.network = (
+            network if network is not None else NetworkManager().magic_network()
+        )
         self.network._callbacks.append(self)
 
         self.period = max(float(period), self.network.dt)
@@ -302,7 +399,6 @@ class every :
         self.wait = max(float(wait), 0.0)
 
     def __call__(self, f):
-
         # If there are decorator arguments, __call__() is only called
         # once, as part of the decoration process! You can only give
         # it a single argument, which is the function object.
@@ -320,14 +416,14 @@ def _simulate_with_callbacks(duration, net_id=0):
 
     # Duration
     t_start = Global.get_current_step(net_id)
-    length = int(duration/network.dt)
+    length = int(duration / network.dt)
 
     # Compute the times
     times = []
     for c in network._callbacks:
-        period = int(c.period/network.dt)
-        offset = int(c.offset/network.dt) % period
-        wait = int(c.wait/network.dt)
+        period = int(c.period / network.dt)
+        offset = int(c.offset / network.dt) % period
+        wait = int(c.wait / network.dt)
 
         moments = range(t_start + wait + offset, t_start + length, period)
         n = 0
@@ -341,7 +437,7 @@ def _simulate_with_callbacks(duration, net_id=0):
     for time, callback, n in times:
         # Advance the simulation to the desired time
         if time != Global.get_current_step(net_id):
-            network.instance.run(time-Global.get_current_step(net_id))
+            network.instance.run(time - Global.get_current_step(net_id))
         # Call the callback
         callback.func(n)
 

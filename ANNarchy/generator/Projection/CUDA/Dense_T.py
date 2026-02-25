@@ -8,7 +8,7 @@
 additional_global_functions = ""
 
 launch_config = {
-    'init': """
+    "init": """
         _threads_per_block = 0;
         _nb_blocks = 0;
 
@@ -16,7 +16,7 @@ launch_config = {
         std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
     #endif
 """,
-    'update': """
+    "update": """
         // Generate the kernel launch configuration
         _threads_per_block = 0;
         _nb_blocks = 0;
@@ -24,91 +24,89 @@ launch_config = {
     #ifdef _DEBUG
         std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
     #endif
-"""
+""",
 }
 
 attribute_decl = {
-    'local': """
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'semiglobal': """
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'global': {
-        'parameter': """
+    "global": {
+        "parameter": """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
 """,
-        'variable': """
+        "variable": """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
-"""
-    }
+""",
+    },
 }
 
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
         gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
-    'global': {
-        'parameter': """
+    "global": {
+        "parameter": """
         // Global %(attr_type)s %(name)s
         %(name)s = 0.0;
     """,
-        'variable': """
+        "variable": """
         // Global %(attr_type)s %(name)s
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
-"""
-    }
+""",
+    },
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s - host
         %(name)s.clear();
         %(name)s.shrink_to_fit();
@@ -116,7 +114,7 @@ attribute_cpp_delete = {
         // %(name)s - device
         cudaFree(gpu_%(name)s);
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s - host
         %(name)s.clear();
         %(name)s.shrink_to_fit();
@@ -124,11 +122,11 @@ attribute_cpp_delete = {
         // %(name)s - device
         cudaFree(gpu_%(name)s);
 """,
-    'global': ""
+    "global": "",
 }
 
 attribute_host_to_device = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_host_to_device )
         {
@@ -144,7 +142,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_host_to_device )
         {
@@ -160,7 +158,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'global': """
+    "global": """
         // %(name)s: global
         if ( %(name)s_host_to_device )
         {
@@ -175,11 +173,11 @@ attribute_host_to_device = {
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
-"""
+""",
 }
 
 attribute_device_to_host = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -194,7 +192,7 @@ attribute_device_to_host = {
             %(name)s_device_to_host = t;
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
             // %(name)s: semiglobal
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
@@ -206,7 +204,7 @@ attribute_device_to_host = {
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """,
-    'global': """
+    "global": """
             // %(name)s: global
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
@@ -217,27 +215,23 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
-"""
+""",
 }
 
 delay = {
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay ;""",
-
-        'pyx_struct':
-"""
+        "pyx_struct": """
         # Uniform delay
         int delay""",
-        'init': """
+        "init": """
     delay = delays[0][0];
 """,
-        'pyx_wrapper_init':
-"""
+        "pyx_wrapper_init": """
         proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor':
-"""
+        "pyx_wrapper_accessor": """
     # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
@@ -245,29 +239,29 @@ delay = {
         return proj%(id_proj)s.delay
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
-"""
+""",
     }
 }
 
 event_driven = {
-    'declare': """
+    "declare": """
     std::vector< long > _last_event;
     long* _gpu_last_event;
 """,
-    'cpp_init': """
+    "cpp_init": """
     _last_event = init_matrix_variable<long>(-10000);
     _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);
 """,
-    'pyx_struct': """
+    "pyx_struct": """
         vector[long] _last_event
 """,
-    'pyx_wrapper_init': """
+    "pyx_wrapper_init": """
         proj%(id_proj)s._last_event = vector[long]( syn._matrix.num_elements(), -10000)
-"""
+""",
 }
 
 spike_event_transmission = {
-    'device_kernel': """// gpu device kernel for projection %(id_proj)s
+    "device_kernel": """// gpu device kernel for projection %(id_proj)s
 __global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s ) {
     %(idx_type)s rk_pre = spiked[blockIdx.x];    // which neuron spiked
     %(idx_type)s rk_post = threadIdx.x;
@@ -289,7 +283,7 @@ __global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s d
     }
 }
 """,
-    'invoke_kernel': """
+    "invoke_kernel": """
 void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s) {
     cu_proj%(id_proj)s_psp<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
         t, dt, plasticity,
@@ -302,9 +296,9 @@ void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s d
     );
 }
 """,
-    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s);
+    "kernel_decl": """void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s);
 """,
-    'host_call': """
+    "host_call": """
     if ( pop%(id_pre)s->_active && (pop%(id_pre)s->spike_count > 0) && proj%(id_proj)s->_transmission ) {
         int tpb = 32;
         int nb = pop%(id_pre)s->spike_count;
@@ -331,13 +325,13 @@ void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s d
         }
     #endif
     }
-"""
+""",
 }
 
 # Update of local synaptic equations, consist of body (annarchyDevice.cu),
 # header and call semantic (take place in ANNarchyHost.cu)
 local_synapse_update = {
-    'device_kernel': """
+    "device_kernel": """
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_local_step(
     /* connectivity */
@@ -366,7 +360,7 @@ __global__ void cuProj%(id_proj)s_local_step(
     }
 }
 """,
-    'invoke_kernel': """
+    "invoke_kernel": """
 void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
     cuProj%(id_proj)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         /* default args*/
@@ -378,9 +372,9 @@ void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_typ
     );
 }
 """,
-    'kernel_decl': """void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    "kernel_decl": """void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
-    'host_call': """
+    "host_call": """
         // local update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
         RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(__proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s->stream);
@@ -425,7 +419,7 @@ int nb_blocks;
 """
 
 spike_postevent = {
-    'device_kernel': """// Projection %(id_proj)s: post-synaptic events
+    "device_kernel": """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent(
     // default constants
     const long int t, const %(float_prec)s dt, bool plasticity,
@@ -453,7 +447,7 @@ __global__ void cuProj%(id_proj)s_postevent(
     }
 }
 """,
-    'invoke_kernel': """
+    "invoke_kernel": """
 void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s ){
     cuProj%(id_proj)s_postevent<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         t, dt, plasticity,
@@ -468,8 +462,8 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
     );
 }
 """,
-    'kernel_decl': "void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s );",
-    'host_call': """
+    "kernel_decl": "void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s );",
+    "host_call": """
     if ( proj%(id_proj)s->_transmission && pop%(id_post)s->_active && (pop%(id_post)s->spike_count > 0) ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
@@ -497,49 +491,46 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
         }
     #endif
     }
-"""
+""",
 }
 
 conn_templates = {
     # connectivity representation
-    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size, const char* mask",
-    'conn_call': "pop%(id_post)s->size, pop%(id_pre)s->size, proj%(id_proj)s->device_mask()",
-    'conn_kernel': "post_size, pre_size, mask",
-
+    "conn_header": "const %(idx_type)s post_size, const %(idx_type)s pre_size, const char* mask",
+    "conn_call": "pop%(id_post)s->size, pop%(id_pre)s->size, proj%(id_proj)s->device_mask()",
+    "conn_kernel": "post_size, pre_size, mask",
     # launch config
-    'launch_config': launch_config,
-
+    "launch_config": launch_config,
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'host_to_device': attribute_host_to_device,
-    'device_to_host': attribute_device_to_host,
-    'delay': delay,
-    'event_driven': event_driven,
-
-    #operations
-    'rate_psp': None,
-    'spike_transmission': {
-        'event_driven': spike_event_transmission,
-        'continuous': None
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "host_to_device": attribute_host_to_device,
+    "device_to_host": attribute_device_to_host,
+    "delay": delay,
+    "event_driven": event_driven,
+    # operations
+    "rate_psp": None,
+    "spike_transmission": {
+        "event_driven": spike_event_transmission,
+        "continuous": None,
     },
-    'synapse_update': {
-        'global': None,
-        'semiglobal': None,
-        'local': local_synapse_update,
-        'call': synapse_update_call
+    "synapse_update": {
+        "global": None,
+        "semiglobal": None,
+        "local": local_synapse_update,
+        "call": synapse_update_call,
     },
-    'post_event': spike_postevent
+    "post_event": spike_postevent,
 }
 
 conn_ids = {
-    'local_index': "[j]",
-    'semiglobal_index': '[rk_post]',
-    'global_index': '[0]',
-    'pre_index': '[rk_pre]',
-    'post_index': '[rk_post]',
-    'pre_prefix': 'pre_',
-    'post_prefix': 'post_'
+    "local_index": "[j]",
+    "semiglobal_index": "[rk_post]",
+    "global_index": "[0]",
+    "pre_index": "[rk_pre]",
+    "post_index": "[rk_post]",
+    "pre_prefix": "pre_",
+    "post_prefix": "post_",
 }

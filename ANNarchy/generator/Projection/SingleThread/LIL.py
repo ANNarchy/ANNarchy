@@ -4,62 +4,56 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< std::vector<%(type)s > > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<std::vector<%(ctype)s>>);
         size_in_bytes += sizeof(std::vector<%(ctype)s>) * %(name)s.capacity();
         for(auto it = %(name)s.cbegin(); it != %(name)s.cend(); it++)
             size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
             it->clear();
@@ -68,16 +62,16 @@ attribute_cpp_delete = {
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 cpp_11_rng = {
-    'template': """%(global_rng)s
+    "template": """%(global_rng)s
 for(int i = 0; i < post_rank.size(); i++) {
 %(semiglobal_rng)s
     for(int j = 0; j < pre_rank[i].size(); j++) {
@@ -85,21 +79,21 @@ for(int i = 0; i < post_rank.size(); i++) {
     }
 }
 """,
-    'global': """
+    "global": """
 %(rd_name)s = dist_%(rd_name)s(rng[0]);
 """,
-    'semiglobal': """
+    "semiglobal": """
     %(rd_name)s[i] = dist_%(rd_name)s(rng[0]);
 """,
-    'local': """
+    "local": """
         %(rd_name)s[i][j] = dist_%(rd_name)s(rng[0]);
-"""
+""",
 }
 
 delay = {
     # A single value for all synapses
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay ;
     
@@ -107,14 +101,14 @@ delay = {
     int get_dendrite_delay(int idx) { return delay; }
     void set_delay(int delay) { this->delay = delay; }
 """,
-        'init': """
+        "init": """
         delay = delays[0][0];
 """,
-        'reset': ""
+        "reset": "",
     },
     # An individual value for each synapse
-    'nonuniform_rate_coded': {
-        'declare': """
+    "nonuniform_rate_coded": {
+        "declare": """
     // Non-uniform delay
     std::vector<std::vector<int>> delay;
     int max_delay;
@@ -134,18 +128,18 @@ delay = {
     int get_max_delay() { return max_delay; }
     void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
-        'init': """
+        "init": """
     delay = init_matrix_variable<int>(1);
     update_matrix_variable_all<int>(delay, delays);
 
     max_delay = %(pre_prefix)smax_delay;
 """,
-        'reset': ""
+        "reset": "",
     },
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': {
-        'declare': """
+    "nonuniform_spiking": {
+        "declare": """
     // Non-uniform delay
     std::vector<std::vector<int>> delay;
     int max_delay;
@@ -168,7 +162,7 @@ delay = {
     int get_max_delay() { return max_delay; }
     void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
-        'init': """
+        "init": """
     delay = init_matrix_variable<int>(1);
     update_matrix_variable_all<int>(delay, delays);
 
@@ -176,7 +170,7 @@ delay = {
     max_delay = %(pre_prefix)smax_delay ;
     _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
-        'reset': """
+        "reset": """
         while(!_delayed_spikes.empty()) {
             auto elem = _delayed_spikes.back();
             elem.clear();
@@ -186,18 +180,18 @@ delay = {
         idx_delay = 0;
         max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
-"""
-    }
+""",
+    },
 }
 
 event_driven = {
-    'declare': """
+    "declare": """
     std::vector<std::vector<long> > _last_event;
 """,
-    'cpp_init': """
+    "cpp_init": """
     _last_event = init_matrix_variable<long>(-10000);
 """,
-    'pyx_struct': """
+    "pyx_struct": """
         vector[vector[long]] _last_event
 """,
 }
@@ -210,7 +204,7 @@ event_driven = {
 # respectively [0..column_size] and this range is covered by %(idx_type)s.
 ############################################################################
 lil_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -222,7 +216,7 @@ for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
     %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
-    'max': """
+    "max": """
 %(pre_copy)s
 
 for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -237,7 +231,7 @@ for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
     %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
-    'min': """
+    "min": """
 %(pre_copy)s
 
 for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -252,7 +246,7 @@ for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
     %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
-    'mean': """
+    "mean": """
 %(pre_copy)s
 
 for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -262,7 +256,7 @@ for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
     }
     %(post_prefix)s_sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
-"""
+""",
 }
 
 ###############################################################################
@@ -284,8 +278,8 @@ for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
 # HD: for this code also lesser SSE might be suitable, but it's outdated anyways ...
 ###############################################################################
 continuous_transmission_sse_single_weight = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __SSE4_1__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -324,7 +318,7 @@ continuous_transmission_sse_single_weight = {
         } // active
     #endif
 """,
-        'float': """
+        "float": """
     #ifdef __SSE4_1__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -364,13 +358,13 @@ continuous_transmission_sse_single_weight = {
     #else
         std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
     #endif
-"""
+""",
     }
 }
 
 continuous_transmission_avx_single_weight = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -411,7 +405,7 @@ continuous_transmission_avx_single_weight = {
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
     """,
-        'float': """
+        "float": """
     #ifdef __AVX__        
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -453,13 +447,13 @@ continuous_transmission_avx_single_weight = {
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
-    """
+    """,
     }
 }
 
 continuous_transmission_avx512_single_weight = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -499,7 +493,7 @@ continuous_transmission_avx512_single_weight = {
         std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
     """,
-        'float': """
+        "float": """
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -540,7 +534,7 @@ continuous_transmission_avx512_single_weight = {
     #else
         std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
-    """
+    """,
     }
 }
 
@@ -549,8 +543,8 @@ continuous_transmission_avx512_single_weight = {
 # SIMD instructions (SSE_4_1, AVX, AVX-512)
 ###############################################################################
 continuous_transmission_sse = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __SSE4_1__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -599,7 +593,7 @@ continuous_transmission_sse = {
         std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
     #endif
     """,
-        'float': """
+        "float": """
     #ifdef __SSE4_1__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -646,13 +640,13 @@ continuous_transmission_sse = {
     #else
         std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
     #endif
-    """
+    """,
     }
 }
 
 continuous_transmission_avx = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -699,7 +693,7 @@ continuous_transmission_avx = {
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
     """,
-        'float': """
+        "float": """
     #ifdef __AVX__        
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -746,13 +740,13 @@ continuous_transmission_avx = {
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
-    """
+    """,
     }
 }
 
 continuous_transmission_avx512 = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -793,7 +787,7 @@ continuous_transmission_avx512 = {
         std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
     """,
-        'float': """
+        "float": """
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
@@ -835,7 +829,7 @@ continuous_transmission_avx512 = {
     #else
         std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
-    """
+    """,
     }
 }
 
@@ -843,7 +837,7 @@ continuous_transmission_avx512 = {
 # Rate-coded synaptic plasticity
 ###############################################################
 update_variables = {
-    'local': """
+    "local": """
 // Check periodicity
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
@@ -864,7 +858,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+    "global": """
 // Check periodicity
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
@@ -876,7 +870,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     %(semiglobal)s
     }
 }
-"""
+""",
 }
 
 ###############################################################
@@ -1006,8 +1000,8 @@ if (_transmission && %(post_prefix)s_active) {
 ##############################################################
 structural_plasticity = {
     # All code templates needed for structural plasticity.
-    'header_struct': {
-        'header': """
+    "header_struct": {
+        "header": """
     /*
      * Structural plasticity
      */
@@ -1087,19 +1081,19 @@ structural_plasticity = {
 
 %(inverse_connectivity_rebuild)s
 """,
-        'pruning': """
+        "pruning": """
     // Pruning
     bool _pruning;
     int _pruning_period;
     long int _pruning_offset;
 """,
-        'creating': """
+        "creating": """
     // Creating
     bool _creating;
     int _creating_period;
     long int _creating_offset;
 """,
-        'spiking_addcode': """
+        "spiking_addcode": """
         // Add the corresponding pair in inv_pre_rank
         int idx_post = 0;
         for(int i=0; i<post_rank.size(); i++){
@@ -1111,7 +1105,7 @@ structural_plasticity = {
         }
         inv_pre_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
 """,
-        'spiking_removecode': """
+        "spiking_removecode": """
         // Remove the corresponding pair in inv_pre_rank
         int pre = pre_rank[post][idx];
         for(int i=0; i<inv_pre_rank[pre].size(); i++){
@@ -1122,7 +1116,7 @@ structural_plasticity = {
             }
         }
 """,
-        'spiking_rebuild_backwardview': """    bool _dirty_connectivity = false;
+        "spiking_rebuild_backwardview": """    bool _dirty_connectivity = false;
     void check_and_rebuild_inverse_connectivity() {
     #ifdef _TRACE_SIMULATION_STEPS
         std::cout << "ProjStruct::check_and_rebuild_inverse_connectivity() called at time t = " << t / dt << " ms." << std::endl;
@@ -1132,11 +1126,10 @@ structural_plasticity = {
             _dirty_connectivity = false;
         }
     }
-"""
+""",
     },
-
     # Structural plasticity during the simulate() call
-    'create': """
+    "create": """
         // proj%(id_proj)s creating: %(eq)s
         void creating() {
             if((_creating)&&((t - _creating_offset) %% _creating_period == 0)){
@@ -1167,7 +1160,7 @@ structural_plasticity = {
             }
         }
     """,
-    'prune': """
+    "prune": """
         // proj%(id_proj)s pruning: %(eq)s
         void pruning() {
             if((_pruning)&&((t - _pruning_offset) %% _pruning_period == 0)){
@@ -1189,48 +1182,47 @@ structural_plasticity = {
                 }
             }
         }
-    """
+    """,
 }
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': delay,
-    'event_driven': event_driven,
-    'rng_update': cpp_11_rng,
-
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "delay": delay,
+    "event_driven": event_driven,
+    "rng_update": cpp_11_rng,
     # operations
-    'rate_coded_sum': lil_summation_operation,
-    'vectorized_default_psp': {
-        'sse': {
-            'single_w': continuous_transmission_sse_single_weight,
-            'multi_w': continuous_transmission_sse
+    "rate_coded_sum": lil_summation_operation,
+    "vectorized_default_psp": {
+        "sse": {
+            "single_w": continuous_transmission_sse_single_weight,
+            "multi_w": continuous_transmission_sse,
         },
-        'avx': {
-            'single_w': continuous_transmission_avx_single_weight,
-            'multi_w': continuous_transmission_avx
+        "avx": {
+            "single_w": continuous_transmission_avx_single_weight,
+            "multi_w": continuous_transmission_avx,
         },
-        'avx512': {
-            'single_w': continuous_transmission_avx512_single_weight,
-            'multi_w': continuous_transmission_avx512
-        }
+        "avx512": {
+            "single_w": continuous_transmission_avx512_single_weight,
+            "multi_w": continuous_transmission_avx512,
+        },
     },
-    'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'spiking_sum_variable_delay': spiking_summation_variable_delay,
-    'post_event': spiking_post_event,
-    'structural_plasticity': structural_plasticity
+    "update_variables": update_variables,
+    "spiking_sum_fixed_delay": spiking_summation_fixed_delay,
+    "spiking_sum_variable_delay": spiking_summation_variable_delay,
+    "post_event": spiking_post_event,
+    "structural_plasticity": structural_plasticity,
 }
 
 conn_ids = {
-    'local_index': "[i][j]",
-    'semiglobal_index': '[i]',
-    'global_index': '',
-    'pre_index': '[rk_pre]',
-    'post_index': '[rk_post]',
-    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-    'delay_u' : '[delay-1]' # uniform delay
+    "local_index": "[i][j]",
+    "semiglobal_index": "[i]",
+    "global_index": "",
+    "pre_index": "[rk_pre]",
+    "post_index": "[rk_post]",
+    "delay_nu": "[delay[i][j]-1]",  # non-uniform delay
+    "delay_u": "[delay-1]",  # uniform delay
 }

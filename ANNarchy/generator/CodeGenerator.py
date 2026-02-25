@@ -15,12 +15,25 @@ from ANNarchy.parser.Extraction import extract_functions
 
 from ANNarchy.generator.NanoBind.Generator import NanoBindGenerator
 from ANNarchy.generator.Monitor.MonitorGenerator import MonitorGenerator
-from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
-from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st, global_operation_templates_openmp, global_operation_templates_cuda
+from ANNarchy.generator.Population import (
+    SingleThreadGenerator,
+    OpenMPGenerator,
+    CUDAGenerator,
+)
+from ANNarchy.generator.Projection import (
+    SingleThreadProjectionGenerator,
+    OpenMPProjectionGenerator,
+    CUDAProjectionGenerator,
+)
+from ANNarchy.generator.Template.GlobalOperationTemplate import (
+    global_operation_templates_st,
+    global_operation_templates_openmp,
+    global_operation_templates_cuda,
+)
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.generator.Template import BaseTemplate
 from ANNarchy.generator import Profile
+
 
 class CodeGenerator(object):
     """
@@ -32,6 +45,7 @@ class CodeGenerator(object):
     OpenMP or sequential code is dependent on the number of
     threads.
     """
+
     def __init__(self, annarchy_dir, net_id, cuda_config):
         """
         Constructor initializes the PopulationGenerator and ProjectionGenerator
@@ -48,38 +62,47 @@ class CodeGenerator(object):
         self.net_id = net_id
         self._network = NetworkManager().get_network(self.net_id)
         self._annarchy_dir = annarchy_dir
-        self._populations = self._network.get_populations() 
+        self._populations = self._network.get_populations()
         self._projections = self._network.get_projections()
         self._cuda_config = cuda_config
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
         if self._network._profiler is not None:
-            if ConfigManager().get('paradigm', self.net_id) == "openmp":
+            if ConfigManager().get("paradigm", self.net_id) == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
-            elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+            elif ConfigManager().get("paradigm", self.net_id) == "cuda":
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
-                Messages._error('No ProfileGenerator available for '
-                              + ConfigManager().get('paradigm', self.net_id))
+                Messages._error(
+                    "No ProfileGenerator available for "
+                    + ConfigManager().get("paradigm", self.net_id)
+                )
         else:
             self._profgen = None
 
         # Instantiate code generator based on the target platform
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
-            if ConfigManager().get('num_threads', self.net_id) == 1:
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
+            if ConfigManager().get("num_threads", self.net_id) == 1:
                 self._popgen = SingleThreadGenerator(self._profgen, net_id)
                 self._projgen = SingleThreadProjectionGenerator(self._profgen, net_id)
             else:
                 self._popgen = OpenMPGenerator(self._profgen, net_id)
                 self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
-            self._popgen = CUDAGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
-            self._projgen = CUDAProjectionGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
+            self._popgen = CUDAGenerator(
+                self._cuda_config["cuda_version"], self._profgen, net_id
+            )
+            self._projgen = CUDAProjectionGenerator(
+                self._cuda_config["cuda_version"], self._profgen, net_id
+            )
         else:
-            Messages._error("No PopulationGenerator for " + ConfigManager().get('paradigm', self.net_id))
+            Messages._error(
+                "No PopulationGenerator for "
+                + ConfigManager().get("paradigm", self.net_id)
+            )
 
         # Py-extenstion and RecordGenerator are commonly defined
         self._nb_gen = NanoBindGenerator(annarchy_dir, net_id)
@@ -110,14 +133,14 @@ class CodeGenerator(object):
         if self._network._profiler is not None:
             t0 = time.time()
 
-        if ConfigManager().get('verbose', self.net_id):
-            if ConfigManager().get('paradigm', self.net_id) == "openmp":
-                if ConfigManager().get('num_threads', self.net_id) > 1:
-                    Messages._print('\nGenerate code for OpenMP ...')
+        if ConfigManager().get("verbose", self.net_id):
+            if ConfigManager().get("paradigm", self.net_id) == "openmp":
+                if ConfigManager().get("num_threads", self.net_id) > 1:
+                    Messages._print("\nGenerate code for OpenMP ...")
                 else:
-                    Messages._print('\nGenerate sequential code ...')
-            elif ConfigManager().get('paradigm', self.net_id) == "cuda":
-                print('\nGenerate CUDA code ...')
+                    Messages._print("\nGenerate sequential code ...")
+            elif ConfigManager().get("paradigm", self.net_id) == "cuda":
+                print("\nGenerate CUDA code ...")
             else:
                 raise NotImplementedError
 
@@ -138,21 +161,23 @@ class CodeGenerator(object):
 
         # Create all projections
         for proj in self._projections:
-            self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
+            self._proj_desc.append(
+                self._projgen.header_struct(proj, self._annarchy_dir)
+            )
 
         # where all source files should take place
-        source_dest = self._annarchy_dir+'/generate/net'+str(self.net_id)+'/'
+        source_dest = self._annarchy_dir + "/generate/net" + str(self.net_id) + "/"
 
         # Generate header code for the analysed pops and projs
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
-            with open(source_dest+'ANNarchy.hpp', 'w') as ofile:
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
+            with open(source_dest + "ANNarchy.hpp", "w") as ofile:
                 ofile.write(self._generate_header())
 
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             invoke_header, host_header = self._generate_header()
-            with open(source_dest+'ANNarchyKernel.cuh', 'w') as ofile:
+            with open(source_dest + "ANNarchyKernel.cuh", "w") as ofile:
                 ofile.write(invoke_header)
-            with open(source_dest+'ANNarchy.hpp', 'w') as ofile:
+            with open(source_dest + "ANNarchy.hpp", "w") as ofile:
                 ofile.write(host_header)
 
         else:
@@ -162,22 +187,24 @@ class CodeGenerator(object):
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
-            with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
+            with open(source_dest + "ANNarchy.cpp", "w") as ofile:
                 ofile.write(self._generate_body())
 
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             device_code, host_code = self._generate_body()
-            with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
+            with open(source_dest + "ANNarchy.cpp", "w") as ofile:
                 ofile.write(host_code)
-            with open(source_dest+'ANNarchyKernel.cu', 'w') as ofile:
+            with open(source_dest + "ANNarchyKernel.cu", "w") as ofile:
                 ofile.write(device_code)
 
         else:
             raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
-        with open(source_dest+'ANNarchyCore'+str(self.net_id)+'.cpp', 'w') as ofile:
+        with open(
+            source_dest + "ANNarchyCore" + str(self.net_id) + ".cpp", "w"
+        ) as ofile:
             ofile.write(self._nb_gen.generate())
 
         self._generate_file_overview(source_dest)
@@ -199,35 +226,37 @@ class CodeGenerator(object):
         proj_desc = """proj%(id_proj)s, %(type_proj)s(pre='%(pre_name)s', post='%(post_name)s', target='%(target)s', synapse='%(synapse_type)s', name='%(name)s') using connector: %(pattern)s \n"""
 
         # Equal to target path in CodeGenerator.generate()
-        with open(source_dest+"codegen.log", 'w', encoding="utf-8") as ofile:
+        with open(source_dest + "codegen.log", "w", encoding="utf-8") as ofile:
             ofile.write("Filename, Object Description\n")
             for pop in self._populations:
                 pop_type = type(pop).__name__
                 desc_dict = {
-                    'id_pop': pop.id,
-                    'name_pop': pop.name,
-                    'neuron_type': pop.neuron_type.name,
-                    'type_pop': pop_type
+                    "id_pop": pop.id,
+                    "name_pop": pop.name,
+                    "neuron_type": pop.neuron_type.name,
+                    "type_pop": pop_type,
                 }
                 ofile.write(pop_desc % desc_dict)
 
             for proj in self._projections:
                 proj_type = type(proj).__name__
                 desc_dict = {
-                    'id_proj': proj.id,
-                    'type_proj': proj_type,
-                    'pre_name': proj.pre.name,
-                    'post_name': proj.post.name,
-                    'target': proj.target,
-                    'synapse_type': proj.synapse_type.name,
-                    'name': proj.name
+                    "id_proj": proj.id,
+                    "type_proj": proj_type,
+                    "pre_name": proj.pre.name,
+                    "post_name": proj.post.name,
+                    "target": proj.target,
+                    "synapse_type": proj.synapse_type.name,
+                    "name": proj.name,
                 }
 
                 # In case of debug, we print the parameters otherwise not
-                if ConfigManager().get('debug', self.net_id):
-                    desc_dict.update({'pattern': proj.connector_description})
+                if ConfigManager().get("debug", self.net_id):
+                    desc_dict.update({"pattern": proj.connector_description})
                 else:
-                    desc_dict.update({'pattern': proj.connector_description.split(',')[0]})
+                    desc_dict.update(
+                        {"pattern": proj.connector_description.split(",")[0]}
+                    )
 
                 ofile.write(proj_desc % desc_dict)
 
@@ -241,12 +270,12 @@ class CodeGenerator(object):
         """
         # Analyse the populations
         for pop in self._populations:
-            pop.global_operations = pop.neuron_type.description['global_operations']
+            pop.global_operations = pop.neuron_type.description["global_operations"]
             pop.delayed_variables = []
 
         # Propagate the global operations from the projections to the populations
         for proj in self._projections:
-            for op in proj.synapse_type.description['pre_global_operations']:
+            for op in proj.synapse_type.description["pre_global_operations"]:
                 if isinstance(proj.pre, PopulationView):
                     if not op in proj.pre.population.global_operations:
                         proj.pre.population.global_operations.append(op)
@@ -254,7 +283,7 @@ class CodeGenerator(object):
                     if not op in proj.pre.global_operations:
                         proj.pre.global_operations.append(op)
 
-            for op in  proj.synapse_type.description['post_global_operations']:
+            for op in proj.synapse_type.description["post_global_operations"]:
                 if isinstance(proj.post, PopulationView):
                     if not op in proj.post.population.global_operations:
                         proj.post.population.global_operations.append(op)
@@ -263,7 +292,7 @@ class CodeGenerator(object):
                         proj.post.global_operations.append(op)
 
             if proj.max_delay > 1:
-                for var in proj.synapse_type.description['dependencies']['pre']:
+                for var in proj.synapse_type.description["dependencies"]["pre"]:
                     if isinstance(proj.pre, PopulationView):
                         proj.pre.population.delayed_variables.append(var)
                     else:
@@ -271,7 +300,10 @@ class CodeGenerator(object):
 
         # Make sure the operations are declared only once
         for pop in self._populations:
-            pop.global_operations = [dict(y) for y in sorted(set(tuple(x.items())) for x in pop.global_operations)]
+            pop.global_operations = [
+                dict(y)
+                for y in sorted(set(tuple(x.items())) for x in pop.global_operations)
+            ]
             pop.delayed_variables = sorted(list(set(pop.delayed_variables)))
 
     def _generate_header(self):
@@ -284,15 +316,15 @@ class CodeGenerator(object):
         pop_ptr = ""
 
         for pop in self._pop_desc:
-            pop_struct += pop['include']
-            pop_ptr += pop['extern']
+            pop_struct += pop["include"]
+            pop_ptr += pop["extern"]
 
         # struct declaration for each projection
         proj_struct = ""
         proj_ptr = ""
         for proj in self._proj_desc:
-            proj_struct += proj['include']
-            proj_ptr += proj['extern']
+            proj_struct += proj["include"]
+            proj_ptr += proj["extern"]
 
         # Custom functions
         custom_func = self._header_custom_functions()
@@ -302,50 +334,52 @@ class CodeGenerator(object):
 
         # Final code
         header_code = ""
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
             header_code = BaseTemplate.omp_header_template % {
-                'float_prec': ConfigManager().get('precision', self.net_id),
-                'pop_struct': pop_struct,
-                'proj_struct': proj_struct,
-                'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr,
-                'custom_func': custom_func,
-                'custom_constant': custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': ConfigManager().get('precision', self.net_id)},
+                "float_prec": ConfigManager().get("precision", self.net_id),
+                "pop_struct": pop_struct,
+                "proj_struct": proj_struct,
+                "pop_ptr": pop_ptr,
+                "proj_ptr": proj_ptr,
+                "custom_func": custom_func,
+                "custom_constant": custom_constant,
+                "built_in": BaseTemplate.built_in_functions
+                + BaseTemplate.integer_power_cpu
+                % {"float_prec": ConfigManager().get("precision", self.net_id)},
             }
             return header_code
 
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # kernel declaration
             invoke_kernel_def = ""
             for pop in self._pop_desc:
-                invoke_kernel_def += pop['update_header']
+                invoke_kernel_def += pop["update_header"]
 
             for proj in self._proj_desc:
-                invoke_kernel_def += proj['psp_kernel_decl']
-                invoke_kernel_def += proj['update_synapse_header']
-                invoke_kernel_def += proj['postevent_header']
+                invoke_kernel_def += proj["psp_kernel_decl"]
+                invoke_kernel_def += proj["update_synapse_header"]
+                invoke_kernel_def += proj["postevent_header"]
 
             glob_ops_header, _, _ = self._body_def_glops()
             invoke_kernel_def += glob_ops_header
 
             device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
-                'float_prec': ConfigManager().get('precision', self.net_id),
-                'invoke_kernel_def': invoke_kernel_def
+                "float_prec": ConfigManager().get("precision", self.net_id),
+                "invoke_kernel_def": invoke_kernel_def,
             }
 
             host_header_code = BaseTemplate.cuda_header_template % {
-                'float_prec': ConfigManager().get('precision', self.net_id),
-                'pop_struct': pop_struct,
-                'proj_struct': proj_struct,
-                'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr,
-                'custom_func': custom_func,
-                'built_in': BaseTemplate.built_in_functions,
-                'custom_constant': custom_constant
+                "float_prec": ConfigManager().get("precision", self.net_id),
+                "pop_struct": pop_struct,
+                "proj_struct": proj_struct,
+                "pop_ptr": pop_ptr,
+                "proj_ptr": proj_ptr,
+                "custom_func": custom_func,
+                "built_in": BaseTemplate.built_in_functions,
+                "custom_constant": custom_constant,
             }
             return device_invoke_header, host_header_code
-        
+
         else:
             raise NotImplementedError
 
@@ -361,7 +395,12 @@ class CodeGenerator(object):
         # Attention CUDA: this definition will work only on host side.
         code = ""
         for _, func in GlobalObjectManager().get_functions():
-            code += extract_functions(description=func, local_global=True, net_id=self.net_id)[0]['cpp'] + '\n'
+            code += (
+                extract_functions(
+                    description=func, local_global=True, net_id=self.net_id
+                )[0]["cpp"]
+                + "\n"
+            )
 
         return code
 
@@ -378,16 +417,22 @@ class CodeGenerator(object):
         code = ""
         for obj in constants:
             obj_str = {
-                'name': obj.name,
-                'float_prec': ConfigManager().get('precision', self.net_id)
+                "name": obj.name,
+                "float_prec": ConfigManager().get("precision", self.net_id),
             }
             if _check_paradigm("openmp", self.net_id):
-                code += """
+                code += (
+                    """
 extern %(float_prec)s %(name)s;
-void set_%(name)s(%(float_prec)s value);""" % obj_str
+void set_%(name)s(%(float_prec)s value);"""
+                    % obj_str
+                )
             elif _check_paradigm("cuda", self.net_id):
-                code += """
-void set_%(name)s(%(float_prec)s value);""" % obj_str
+                code += (
+                    """
+void set_%(name)s(%(float_prec)s value);"""
+                    % obj_str
+                )
             else:
                 raise NotImplementedError
 
@@ -414,36 +459,41 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
 
         if len(constants) == 0:
             return "", ""
-        
-        if _check_paradigm("openmp", self.net_id):
 
+        if _check_paradigm("openmp", self.net_id):
             decl_code = ""
             init_code = ""
             for obj in constants:
                 obj_str = {
-                    'name': obj.name,
-                    'value': obj.value,
-                    'float_prec': ConfigManager().get('precision', self.net_id)
+                    "name": obj.name,
+                    "value": obj.value,
+                    "float_prec": ConfigManager().get("precision", self.net_id),
                 }
-                decl_code += """
+                decl_code += (
+                    """
 %(float_prec)s %(name)s;
-void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
-                init_code += """
-        %(name)s = 0.0;""" % obj_str
+void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
+                    % obj_str
+                )
+                init_code += (
+                    """
+        %(name)s = 0.0;"""
+                    % obj_str
+                )
 
             return decl_code, init_code
 
         elif _check_paradigm("cuda", self.net_id):
-
             host_init_code = ""
             device_decl_code = ""
             for obj in constants:
                 obj_str = {
-                    'name': obj.name,
-                    'value': obj.value,
-                    'float_prec': ConfigManager().get('precision', self.net_id)
+                    "name": obj.name,
+                    "value": obj.value,
+                    "float_prec": ConfigManager().get("precision", self.net_id),
                 }
-                device_decl_code += """__device__ __constant__ %(float_prec)s %(name)s;
+                device_decl_code += (
+                    """__device__ __constant__ %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value) {
     cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(float_prec)s), 0, cudaMemcpyHostToDevice);
 #ifdef _DEBUG
@@ -451,11 +501,16 @@ void set_%(name)s(%(float_prec)s value) {
     if ( err != cudaSuccess )
         std::cerr << cudaGetErrorString(err) << std::endl;
 #endif
-}""" % obj_str
+}"""
+                    % obj_str
+                )
 
                 # TODO: is this really needed, it's overwritten anyways ?
-                host_init_code += """
-        set_%(name)s(0.0);""" % obj_str
+                host_init_code += (
+                    """
+        set_%(name)s(0.0);"""
+                    % obj_str
+                )
 
             return device_decl_code, host_init_code
 
@@ -474,19 +529,19 @@ void set_%(name)s(%(float_prec)s value) {
         # struct declaration for each population
         pop_ptr = ""
         for pop in self._pop_desc:
-            pop_ptr += pop['instance']
+            pop_ptr += pop["instance"]
 
         # struct declaration for each projection
         proj_ptr = ""
         for proj in self._proj_desc:
-            proj_ptr += proj['instance']
+            proj_ptr += proj["instance"]
 
         # Code for the global operations
         glop_definition = self._body_def_glops()
         update_globalops = ""
         for pop in self._pop_desc:
-            if 'gops_update' in pop.keys():
-                update_globalops += pop['gops_update']
+            if "gops_update" in pop.keys():
+                update_globalops += pop["gops_update"]
 
         # Reset presynaptic sums
         reset_sums = self._body_resetcomputesum_pop()
@@ -501,86 +556,90 @@ void set_%(name)s(%(float_prec)s value) {
         # Update random distributions
         rd_update_code = ""
         for desc in self._pop_desc + self._proj_desc:
-            if 'rng_update' in desc.keys():
-                rd_update_code += desc['rng_update']
+            if "rng_update" in desc.keys():
+                rd_update_code += desc["rng_update"]
 
         # Equations for the neural variables
         update_neuron = ""
         for pop in self._pop_desc:
-            if 'update' in pop.keys():
-                update_neuron += pop['update']
+            if "update" in pop.keys():
+                update_neuron += pop["update"]
 
         # Enque delayed outputs
         delay_code = ""
         for pop in self._pop_desc:
-            if 'delay_update' in pop.keys():
-                delay_code += pop['delay_update']
+            if "delay_update" in pop.keys():
+                delay_code += pop["delay_update"]
 
         # Equations for the synaptic variables
         update_synapse = ""
         for proj in self._proj_desc:
-            if 'update' in proj.keys():
-                update_synapse += proj['update']
+            if "update" in proj.keys():
+                update_synapse += proj["update"]
 
         # Equations for the post-events
         post_event = ""
         for proj in self._proj_desc:
-            if 'post_event' in proj.keys():
-                post_event += proj['post_event']
+            if "post_event" in proj.keys():
+                post_event += proj["post_event"]
 
         # Structural plasticity
-        structural_plasticity, sp_spike_backward_view_update = self._body_structural_plasticity()
+        structural_plasticity, sp_spike_backward_view_update = (
+            self._body_structural_plasticity()
+        )
 
         # Early stopping
         run_until = self._body_run_until()
 
-        #Profiling
+        # Profiling
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
-            prof_dict['prof_include'] = prof_dict['prof_include'].replace("extern ", "")
+            prof_dict["prof_include"] = prof_dict["prof_include"].replace("extern ", "")
         else:
-            prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
+            prof_dict = Profile.ProfileGenerator(
+                self._annarchy_dir, self.net_id
+            ).generate_body_dict()
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs
         # greatly. For further information take a look into the corresponding
         # branches.
         #
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
             # custom constants
             custom_constant, _ = self._body_custom_constants()
 
             # code fields for openMP/single thread template
             base_dict = {
-                'float_prec': ConfigManager().get('precision', self.net_id),
-                'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr,
-                'glops_def': glop_definition,
-                'initialize': self._body_initialize(),
-                'run_until': run_until,
-                'compute_sums' : compute_sums,
-                'reset_sums' : reset_sums,
-                'update_neuron' : update_neuron,
-                'update_globalops' : update_globalops,
-                'update_synapse' : update_synapse,
-                'random_dist_update' : rd_update_code,
-                'delay_code' : delay_code,
-                'post_event' : post_event,
-                'structural_plasticity': structural_plasticity,
-                'custom_constant': custom_constant,
-                'sp_spike_backward_view_update': sp_spike_backward_view_update
+                "float_prec": ConfigManager().get("precision", self.net_id),
+                "pop_ptr": pop_ptr,
+                "proj_ptr": proj_ptr,
+                "glops_def": glop_definition,
+                "initialize": self._body_initialize(),
+                "run_until": run_until,
+                "compute_sums": compute_sums,
+                "reset_sums": reset_sums,
+                "update_neuron": update_neuron,
+                "update_globalops": update_globalops,
+                "update_synapse": update_synapse,
+                "random_dist_update": rd_update_code,
+                "delay_code": delay_code,
+                "post_event": post_event,
+                "structural_plasticity": structural_plasticity,
+                "custom_constant": custom_constant,
+                "sp_spike_backward_view_update": sp_spike_backward_view_update,
             }
 
             # profiling
             base_dict.update(prof_dict)
 
             # complete code template
-            if ConfigManager().get('num_threads', self.net_id) == 1:
+            if ConfigManager().get("num_threads", self.net_id) == 1:
                 return BaseTemplate.st_body_template % base_dict
             else:
                 return BaseTemplate.omp_body_template % base_dict
 
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
             #
             # The CUDA linking process is a big problem for object oriented approaches
@@ -602,7 +661,7 @@ void set_%(name)s(%(float_prec)s value) {
             # their linker in the next releases, so one could remove this overhead.
             psp_call = ""
             for proj in self._proj_desc:
-                psp_call += proj['psp_host_call']
+                psp_call += proj["psp_host_call"]
 
             # custom constants
             device_custom_constant, _ = self._body_custom_constants()
@@ -610,14 +669,16 @@ void set_%(name)s(%(float_prec)s value) {
             # custom functions
             custom_func = ""
             for pop in self._pop_desc:
-                custom_func += pop['custom_func']
+                custom_func += pop["custom_func"]
             for proj in self._proj_desc:
-                custom_func += proj['custom_func']
+                custom_func += proj["custom_func"]
             for _, func in GlobalObjectManager().get_functions():
-                custom_func += extract_functions(
-                    description=func, 
-                    local_global=True, 
-                    net_id=self.net_id)[0]['cpp'].replace("inline", "__device__") + '\n'
+                custom_func += (
+                    extract_functions(
+                        description=func, local_global=True, net_id=self.net_id
+                    )[0]["cpp"].replace("inline", "__device__")
+                    + "\n"
+                )
 
             # pre-defined/common available kernel
             common_kernel = self._cuda_common_kernel(self._projections)
@@ -625,43 +686,43 @@ void set_%(name)s(%(float_prec)s value) {
             pop_kernel = ""
             pop_invoke_kernel = ""
             for pop in self._pop_desc:
-                pop_kernel += pop['update_body']
-                pop_invoke_kernel += pop['update_invoke']
+                pop_kernel += pop["update_body"]
+                pop_invoke_kernel += pop["update_invoke"]
 
             pop_update_fr = ""
             for pop in self._pop_desc:
-                pop_update_fr += pop['update_FR']
+                pop_update_fr += pop["update_FR"]
 
             psp_device_kernel = ""
             psp_invoke_kernel = ""
             for proj in self._proj_desc:
-                psp_device_kernel += proj['psp_device_kernel']
-                psp_invoke_kernel += proj['psp_invoke_kernel']
+                psp_device_kernel += proj["psp_device_kernel"]
+                psp_invoke_kernel += proj["psp_invoke_kernel"]
 
             delay_code = ""
             for pop in self._pop_desc:
-                if 'update_delay' in pop.keys():
-                    delay_code += pop['update_delay']
+                if "update_delay" in pop.keys():
+                    delay_code += pop["update_delay"]
 
             syn_kernel = ""
             syn_invoke_kernel = ""
             for proj in self._proj_desc:
-                syn_kernel += proj['update_synapse_body']
-                syn_invoke_kernel += proj['update_synapse_invoke']
+                syn_kernel += proj["update_synapse_body"]
+                syn_invoke_kernel += proj["update_synapse_invoke"]
 
             syn_call = ""
             for proj in self._proj_desc:
-                syn_call += proj['update_synapse_call']
+                syn_call += proj["update_synapse_call"]
 
             postevent_device_kernel = ""
             postevent_invoke_kernel = ""
             for proj in self._proj_desc:
-                postevent_device_kernel += proj['postevent_body']
-                postevent_invoke_kernel += proj['postevent_invoke']
+                postevent_device_kernel += proj["postevent_body"]
+                postevent_invoke_kernel += proj["postevent_invoke"]
 
             postevent_call = ""
             for proj in self._proj_desc:
-                postevent_call += proj['postevent_call']
+                postevent_call += proj["postevent_call"]
 
             clear_sums = self._body_resetcomputesum_pop()
 
@@ -677,64 +738,74 @@ void set_%(name)s(%(float_prec)s value) {
             # memory transfers
             host_device_transfer, device_host_transfer = "", ""
             for pop in self._pop_desc:
-                host_device_transfer += pop['host_to_device']
+                host_device_transfer += pop["host_to_device"]
                 # DtoH is performed only when an accessor is called.
 
             for proj in self._proj_desc:
-                host_device_transfer += proj['host_to_device']
+                host_device_transfer += proj["host_to_device"]
                 # DtoH is performed only when an accessor is called.
 
             # Profiling
             if self._profgen:
                 prof_dict = self._profgen.generate_body_dict()
-                prof_dict['prof_include'] = prof_dict['prof_include'].replace("extern ", "")
+                prof_dict["prof_include"] = prof_dict["prof_include"].replace(
+                    "extern ", ""
+                )
             else:
-                prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
+                prof_dict = Profile.ProfileGenerator(
+                    self._annarchy_dir, self.net_id
+                ).generate_body_dict()
 
-            device_code = BaseTemplate.cuda_device_kernel % {      # Target: ANNarchyKernel.cu
-                'common_kernel': common_kernel,
-                'pop_kernel': pop_kernel,
-                'pop_invoke_kernel': pop_invoke_kernel,
-                'psp_kernel': psp_device_kernel,
-                'psp_invoke_kernel': psp_invoke_kernel,
-                'syn_kernel': syn_kernel,
-                'syn_invoke_kernel': syn_invoke_kernel,
-                'glob_ops_kernel': glob_ops_body,
-                'glob_ops_invoke_kernel': glob_ops_invoke,
-                'postevent_kernel': postevent_device_kernel,
-                'postevent_invoke_kernel': postevent_invoke_kernel,
-                'custom_func': custom_func,
-                'custom_constant': device_custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': ConfigManager().get('precision', self.net_id)},
-                'float_prec': ConfigManager().get('precision', self.net_id)
-            }
+            device_code = (
+                BaseTemplate.cuda_device_kernel
+                % {  # Target: ANNarchyKernel.cu
+                    "common_kernel": common_kernel,
+                    "pop_kernel": pop_kernel,
+                    "pop_invoke_kernel": pop_invoke_kernel,
+                    "psp_kernel": psp_device_kernel,
+                    "psp_invoke_kernel": psp_invoke_kernel,
+                    "syn_kernel": syn_kernel,
+                    "syn_invoke_kernel": syn_invoke_kernel,
+                    "glob_ops_kernel": glob_ops_body,
+                    "glob_ops_invoke_kernel": glob_ops_invoke,
+                    "postevent_kernel": postevent_device_kernel,
+                    "postevent_invoke_kernel": postevent_invoke_kernel,
+                    "custom_func": custom_func,
+                    "custom_constant": device_custom_constant,
+                    "built_in": BaseTemplate.built_in_functions
+                    + BaseTemplate.integer_power_cuda
+                    % {"float_prec": ConfigManager().get("precision", self.net_id)},
+                    "float_prec": ConfigManager().get("precision", self.net_id),
+                }
+            )
 
             base_dict = {
                 # network definitions
-                'float_prec': ConfigManager().get('precision', self.net_id),
-                'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr,
-                'run_until': run_until,
-                'clear_sums': clear_sums,
-                'compute_sums' : psp_call,
-                'update_neuron' : update_neuron,
-                'update_FR': pop_update_fr,
-                'update_globalops' : update_globalops,
-                'update_synapse' : syn_call,
-                'post_event': postevent_call,
-                'delay_code': delay_code,
-                'initialize' : self._body_initialize(),
-                'structural_plasticity': structural_plasticity,
-
+                "float_prec": ConfigManager().get("precision", self.net_id),
+                "pop_ptr": pop_ptr,
+                "proj_ptr": proj_ptr,
+                "run_until": run_until,
+                "clear_sums": clear_sums,
+                "compute_sums": psp_call,
+                "update_neuron": update_neuron,
+                "update_FR": pop_update_fr,
+                "update_globalops": update_globalops,
+                "update_synapse": syn_call,
+                "post_event": postevent_call,
+                "delay_code": delay_code,
+                "initialize": self._body_initialize(),
+                "structural_plasticity": structural_plasticity,
                 # cuda host specific
-                'stream_setup': stream_setup,
-                'host_device_transfer': host_device_transfer,
-                'device_host_transfer': device_host_transfer,
-                'kernel_config': threads_per_kernel,
-                'sp_spike_backward_view_update': ""
+                "stream_setup": stream_setup,
+                "host_device_transfer": host_device_transfer,
+                "device_host_transfer": device_host_transfer,
+                "kernel_config": threads_per_kernel,
+                "sp_spike_backward_view_update": "",
             }
             base_dict.update(prof_dict)
-            host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cpp
+            host_code = (
+                BaseTemplate.cuda_host_body_template % base_dict
+            )  # Target: ANNarchy.cpp
 
             return device_code, host_code
         else:
@@ -745,25 +816,27 @@ void set_%(name)s(%(float_prec)s value) {
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        profiling_init = "" if self._profgen is None else self._profgen.generate_init_network()
+        profiling_init = (
+            "" if self._profgen is None else self._profgen.generate_init_network()
+        )
 
         # Initialize populations
         population_init = "    // Initialize populations\n"
         for pop in self._pop_desc:
-            population_init += pop['init']
+            population_init += pop["init"]
 
         # Initialize projections
         projection_init = "    // Initialize projections\n"
         for proj in self._proj_desc:
-            projection_init += proj['init']
+            projection_init += proj["init"]
 
         # Initialize custom constants
-        if ConfigManager().get('paradigm', self.net_id) == "openmp":
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
             init_tpl = BaseTemplate.omp_initialize_template
-        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
+        elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
@@ -772,10 +845,10 @@ void set_%(name)s(%(float_prec)s value) {
             raise NotImplementedError
 
         return init_tpl % {
-            'prof_init': profiling_init,
-            'pop_init': population_init,
-            'proj_init': projection_init,
-            'custom_constant': custom_constant
+            "prof_init": profiling_init,
+            "pop_init": population_init,
+            "proj_init": projection_init,
+            "custom_constant": custom_constant,
         }
 
     def _body_resetcomputesum_pop(self):
@@ -785,7 +858,7 @@ void set_%(name)s(%(float_prec)s value) {
         """
         code = ""
         for pop in self._populations:
-            if pop.neuron_type.type == 'rate':
+            if pop.neuron_type.type == "rate":
                 code += self._popgen.reset_computesum(pop)
 
         return code
@@ -804,22 +877,30 @@ void set_%(name)s(%(float_prec)s value) {
         rebuild_in_cpp = ""
         rebuild_out_cpp = ""
 
-        if ConfigManager().get('structural_plasticity', self.net_id):
+        if ConfigManager().get("structural_plasticity", self.net_id):
             for proj in self._projections:
                 rebuild_needed = False
-                if 'pruning' in proj.synapse_type.description.keys():
-                    pruning += tabify("proj%(id)s->pruning();\n" % {'id': proj.id}, 1)
+                if "pruning" in proj.synapse_type.description.keys():
+                    pruning += tabify("proj%(id)s->pruning();\n" % {"id": proj.id}, 1)
                     rebuild_needed = True
-                if 'creating' in proj.synapse_type.description.keys():
-                    creating += tabify("proj%(id)s->creating();\n" % {'id': proj.id}, 1)
+                if "creating" in proj.synapse_type.description.keys():
+                    creating += tabify("proj%(id)s->creating();\n" % {"id": proj.id}, 1)
                     rebuild_needed = True
                 # we only check those projections which are possibly modified
-                if rebuild_needed and proj.synapse_type.type == 'spike':
-                    rebuild_in_cpp += tabify("proj%(id)s->check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
+                if rebuild_needed and proj.synapse_type.type == "spike":
+                    rebuild_in_cpp += tabify(
+                        "proj%(id)s->check_and_rebuild_inverse_connectivity();\n"
+                        % {"id": proj.id},
+                        1,
+                    )
 
                 # we don't know which projection the user modifies, so we need to check all
-                if proj.synapse_type.type == 'spike':
-                    rebuild_out_cpp += tabify("proj%(id)s->check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
+                if proj.synapse_type.type == "spike":
+                    rebuild_out_cpp += tabify(
+                        "proj%(id)s->check_and_rebuild_inverse_connectivity();\n"
+                        % {"id": proj.id},
+                        1,
+                    )
 
         return creating + pruning + rebuild_in_cpp, rebuild_out_cpp
 
@@ -836,7 +917,7 @@ void set_%(name)s(%(float_prec)s value) {
         ops = []
         for pop in self._populations:
             for op in pop.global_operations:
-                ops.append(op['function'])
+                ops.append(op["function"])
 
         # no global operations
         if ops == []:
@@ -845,15 +926,16 @@ void set_%(name)s(%(float_prec)s value) {
             elif _check_paradigm("cuda", self.net_id):
                 return "", "", ""
             else:
-                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+ConfigManager().get('paradigm', self.net_id))
+                raise NotImplementedError(
+                    "CodeGenerator._body_def_glops(): no implementation for "
+                    + ConfigManager().get("paradigm", self.net_id)
+                )
 
-        type_def = {
-            'type': ConfigManager().get('precision', self.net_id)
-        }
+        type_def = {"type": ConfigManager().get("precision", self.net_id)}
 
         # the computation kernel depends on the paradigm
         if _check_paradigm("openmp", self.net_id):
-            if ConfigManager().get('num_threads', self.net_id) == 1:
+            if ConfigManager().get("num_threads", self.net_id) == 1:
                 global_op_template = global_operation_templates_st
             else:
                 global_op_template = global_operation_templates_openmp
@@ -870,13 +952,16 @@ void set_%(name)s(%(float_prec)s value) {
             body = ""
 
             for op in sorted(list(set(ops))):
-                header += global_operation_templates_cuda[op]['header'] % type_def
-                invoke += global_operation_templates_cuda[op]['invoke'] % type_def
-                body += global_operation_templates_cuda[op]['body'] % type_def
+                header += global_operation_templates_cuda[op]["header"] % type_def
+                invoke += global_operation_templates_cuda[op]["invoke"] % type_def
+                body += global_operation_templates_cuda[op]["body"] % type_def
 
             return header, invoke, body
         else:
-            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+ConfigManager().get('paradigm', self.net_id))
+            raise NotImplementedError(
+                "CodeGenerator._body_def_glops(): no implementation for "
+                + ConfigManager().get("paradigm", self.net_id)
+            )
 
     def _body_run_until(self):
         """
@@ -890,19 +975,19 @@ void set_%(name)s(%(float_prec)s value) {
                 break
         else:
             # No stop conditions were detected
-            return tpl['default']
+            return tpl["default"]
 
         # a condition has been defined, so we generate corresponding code
         cond_code = ""
         for pop in self._populations:
             if pop.stop_condition:
-                cond_code += tpl['single_pop'] % {'id': pop.id}
+                cond_code += tpl["single_pop"] % {"id": pop.id}
 
-        return tpl['body'] % {'run_until': cond_code}
+        return tpl["body"] % {"run_until": cond_code}
 
-#######################################################################
-############## CUDA specific ##########################################
-#######################################################################
+    #######################################################################
+    ############## CUDA specific ##########################################
+    #######################################################################
     def _cuda_kernel_config(self):
         """
         Each GPU kernel requires a launch configuration, established in
@@ -928,33 +1013,41 @@ void set_%(name)s(%(float_prec)s value) {
         configuration = "// Populations\n"
         for pop in self._populations:
             if pop in self._cuda_config.keys():
-                if 'num_threads' in self._cuda_config[pop].keys():
-                    num_threads = self._cuda_config[pop]['num_threads']
-                    num_blocks = int(ceil(float(pop.size)/float(num_threads)))
+                if "num_threads" in self._cuda_config[pop].keys():
+                    num_threads = self._cuda_config[pop]["num_threads"]
+                    num_blocks = int(ceil(float(pop.size) / float(num_threads)))
 
-                if 'num_blocks' in self._cuda_config[pop].keys():
-                    num_blocks = self._cuda_config[pop]['num_blocks']
+                if "num_blocks" in self._cuda_config[pop].keys():
+                    num_blocks = self._cuda_config[pop]["num_blocks"]
 
                 cfg = """#define __pop%(id)s_tpb__ %(nr)s
 #define __pop%(id)s_nb__ %(nb)s
 """
                 configuration += cfg % {
-                    'id': pop.id,
-                    'nr': num_threads,
-                    'nb': num_blocks
+                    "id": pop.id,
+                    "nr": num_threads,
+                    "nb": num_blocks,
                 }
 
-                if ConfigManager().get('verbose', self.net_id):
-                    Messages._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                if ConfigManager().get("verbose", self.net_id):
+                    Messages._print(
+                        "population",
+                        pop.id,
+                        " - kernel config: (",
+                        num_blocks,
+                        ",",
+                        num_threads,
+                        ")",
+                    )
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projections\n"
         for proj in self._projections:
             if proj in self._cuda_config.keys():
-                if 'num_threads' in self._cuda_config[proj].keys():
-                    num_threads = self._cuda_config[proj]['num_threads']
-                if 'num_blocks' in self._cuda_config[proj].keys():
-                    num_blocks = self._cuda_config[proj]['num_blocks']
+                if "num_threads" in self._cuda_config[proj].keys():
+                    num_threads = self._cuda_config[proj]["num_threads"]
+                if "num_blocks" in self._cuda_config[proj].keys():
+                    num_blocks = self._cuda_config[proj]["num_blocks"]
 
                 cfg = """#define __proj%(id_proj)s_%(target)s_tpb__ %(nr)s
 #define __proj%(id_proj)s_%(target)s_nb__ %(nb)s
@@ -962,17 +1055,29 @@ void set_%(name)s(%(float_prec)s value) {
 
                 # proj.target can hold a single or multiple targets. We use
                 # one configuration for all but need to define single names anyways
-                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                target_list = (
+                    proj.target if isinstance(proj.target, list) else [proj.target]
+                )
                 for target in target_list:
                     configuration += cfg % {
-                        'id_proj': proj.id,
-                        'target': target,
-                        'nr': num_threads,
-                        'nb': num_blocks
+                        "id_proj": proj.id,
+                        "target": target,
+                        "nr": num_threads,
+                        "nb": num_blocks,
                     }
 
-                    if ConfigManager().get('verbose', self.net_id):
-                        Messages._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                    if ConfigManager().get("verbose", self.net_id):
+                        Messages._print(
+                            "projection",
+                            proj.id,
+                            "with target",
+                            target,
+                            " - kernel config: (",
+                            num_blocks,
+                            ",",
+                            num_threads,
+                            ")",
+                        )
 
         return configuration
 
@@ -1000,32 +1105,32 @@ void set_%(name)s(%(float_prec)s value) {
             pop_assign = "    // populations\n"
             for pop in self._populations:
                 try:
-                    sid = self._cuda_config[pop]['stream']
+                    sid = self._cuda_config[pop]["stream"]
                     pop_assign += """    pop%(pid)s->stream = streams[%(sid)s];
-""" % {'pid': pop.id, 'sid': sid}
+""" % {"pid": pop.id, "sid": sid}
                 except KeyError:
                     # default stream, if either no cuda_config at all or
                     # the population is not configured by user
                     pop_assign += """    pop%(pid)s->stream = 0;
-""" % {'pid': pop.id}
+""" % {"pid": pop.id}
 
             proj_assign = "    // projections\n"
             for proj in self._projections:
                 try:
-                    sid = self._cuda_config[proj]['stream']
+                    sid = self._cuda_config[proj]["stream"]
                     proj_assign += """    proj%(pid)s->stream = streams[%(sid)s];
-""" % {'pid': proj.id, 'sid': sid}
+""" % {"pid": proj.id, "sid": sid}
                 except KeyError:
                     # default stream, if either no cuda_config at all or
                     # the projection is not configured by user
                     proj_assign += """    proj%(pid)s->stream = 0;
-""" % {'pid': proj.id}
+""" % {"pid": proj.id}
 
         # Write config
         stream_config = BaseTemplate.cuda_stream_setup % {
-            'nbStreams': max_number_streams,
-            'pop_assign': pop_assign,
-            'proj_assign': proj_assign
+            "nbStreams": max_number_streams,
+            "pop_assign": pop_assign,
+            "proj_assign": proj_assign,
         }
 
         return stream_config
@@ -1040,8 +1145,8 @@ void set_%(name)s(%(float_prec)s value) {
         max_tpb = 512
         warp_size = 32
 
-        num_neur = pop.size / 2 # at least 2 iterations per thread
-        guess = warp_size       # smallest block is 1 warp
+        num_neur = pop.size / 2  # at least 2 iterations per thread
+        guess = warp_size  # smallest block is 1 warp
 
         # Simplest case: we have more neurons than
         # available threads per block
@@ -1049,7 +1154,9 @@ void set_%(name)s(%(float_prec)s value) {
             guess = max_tpb
 
         # check which is the closest possible thread amount
-        pow_of_2 = [2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2))+1)]
+        pow_of_2 = [
+            2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2)) + 1)
+        ]
         for i in range(len(pow_of_2)):
             if pow_of_2[i] < num_neur:
                 continue
@@ -1069,8 +1176,8 @@ void set_%(name)s(%(float_prec)s value) {
         max_tpb = 512
         warp_size = 32
 
-        num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
-        guess = warp_size       # smallest block is 1 warp
+        num_neur = proj.pre.size / 4  # at least 1/4 of the neurons are connected
+        guess = warp_size  # smallest block is 1 warp
 
         # Simplest case: we have more neurons than
         # available threads per block
@@ -1078,7 +1185,9 @@ void set_%(name)s(%(float_prec)s value) {
             guess = max_tpb
 
         # check which is the closest possible thread amount
-        pow_of_2 = [2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2))+1)]
+        pow_of_2 = [
+            2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2)) + 1)
+        ]
         for i in range(len(pow_of_2)):
             if pow_of_2[i] < num_neur:
                 continue
@@ -1086,8 +1195,8 @@ void set_%(name)s(%(float_prec)s value) {
                 guess = pow_of_2[i]
                 break
 
-        if ConfigManager().get('verbose', self.net_id):
-            Messages._print('projection', proj.id, ' - kernel size:', guess)
+        if ConfigManager().get("verbose", self.net_id):
+            Messages._print("projection", proj.id, " - kernel size:", guess)
 
         return guess
 
@@ -1106,10 +1215,16 @@ void set_%(name)s(%(float_prec)s value) {
         code = ""
         # TODO: generalize!
         if "csr" in fmts:
-            from ANNarchy.generator.Projection.CUDA.CSR import additional_global_functions
+            from ANNarchy.generator.Projection.CUDA.CSR import (
+                additional_global_functions,
+            )
+
             code += additional_global_functions
         elif "csr_vector" in fmts:
-            from ANNarchy.generator.Projection.CUDA.CSR_Vector import additional_global_functions
+            from ANNarchy.generator.Projection.CUDA.CSR_Vector import (
+                additional_global_functions,
+            )
+
             code += additional_global_functions
 
         return code

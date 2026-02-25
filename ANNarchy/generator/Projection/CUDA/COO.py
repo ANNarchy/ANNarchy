@@ -8,7 +8,7 @@
 additional_global_functions = ""
 
 launch_config = {
-    'init': """
+    "init": """
         _threads_per_block = 192;
         unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
@@ -17,7 +17,7 @@ launch_config = {
         std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """,
-    'update': """
+    "update": """
         if (nb_blocks != -1) {
             _nb_blocks = static_cast<unsigned int>(nb_blocks);
             _threads_per_block = threads_per_block;
@@ -30,92 +30,92 @@ launch_config = {
     #ifdef _DEBUG
         std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
-"""
+""",
 }
 
 attribute_decl = {
-    'local': """
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'semiglobal': """
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'global': """
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_dirty = true;
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
         %(name)s_dirty = true;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(bool);
         size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         cudaFree(gpu_%(name)s);
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         cudaFree(gpu_%(name)s);
 """,
-    'global': ""
+    "global": "",
 }
 
 attribute_host_to_device = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_host_to_device )
         {
@@ -131,7 +131,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_host_to_device )
         {
@@ -147,7 +147,7 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'global': """
+    "global": """
         // %(name)s: global
         if ( %(name)s_host_to_device )
         {
@@ -162,11 +162,11 @@ attribute_host_to_device = {
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
-"""
+""",
 }
 
 attribute_device_to_host = {
-    'local': """
+    "local": """
         // %(name)s: local
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -181,7 +181,7 @@ attribute_device_to_host = {
             %(name)s_device_to_host = t;
         }
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -196,7 +196,7 @@ attribute_device_to_host = {
             %(name)s_device_to_host = t;
         }
 """,
-    'global': """
+    "global": """
         // %(name)s: global
         if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
@@ -210,12 +210,12 @@ attribute_device_to_host = {
         #endif
             %(name)s_device_to_host = t;
         }
-"""
+""",
 }
 
 rate_psp_kernel = {
-    'device_kernel': {
-        'sum': """
+    "device_kernel": {
+        "sum": """
 __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     %(size_type)s j = segments[blockIdx.x] + threadIdx.x;
     %(size_type)s C = segments[blockIdx.x+1];
@@ -240,9 +240,9 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
 }
 """
     },
-    'kernel_decl': """__global__ void cu_proj%(id)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    "kernel_decl": """__global__ void cu_proj%(id)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'host_call': """
+    "host_call": """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         int sharedMemSize = proj%(id_proj)s.segment_size() * sizeof(%(float_prec)s);
@@ -262,49 +262,36 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
     #endif
     }
 """,
-    'thread_init': {
-        'float': {
-            'sum': "0.0f",
-            'min': "FLT_MAX",
-            'max': "FLT_MIN",
-            'mean': "0.0f"
-        },
-        'double': {
-            'sum': "0.0",
-            'min': "DBL_MAX",
-            'max': "DBL_MIN",
-            'mean': "0.0"
-        }
-    }
+    "thread_init": {
+        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
+        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
+    },
 }
 
 conn_templates = {
     # connectivity representation
-    'conn_header': "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices",
-    'conn_call': "proj%(id_proj)s->segment_size(), proj%(id_proj)s->gpu_segments(), proj%(id_proj)s->gpu_row_indices(), proj%(id_proj)s->gpu_column_indices()",
-    'conn_kernel': "",
-
+    "conn_header": "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices",
+    "conn_call": "proj%(id_proj)s->segment_size(), proj%(id_proj)s->gpu_segments(), proj%(id_proj)s->gpu_row_indices(), proj%(id_proj)s->gpu_column_indices()",
+    "conn_kernel": "",
     # launch config
-    'launch_config': launch_config,
-
+    "launch_config": launch_config,
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'host_to_device': attribute_host_to_device,
-    'device_to_host': attribute_device_to_host,
-
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "host_to_device": attribute_host_to_device,
+    "device_to_host": attribute_device_to_host,
     # operations
-    'rate_psp': rate_psp_kernel,
+    "rate_psp": rate_psp_kernel,
 }
 
 conn_ids = {
-    'local_index': "[j]",
-    'semiglobal_index': '[i]',
-    'global_index': '[0]',
-    'pre_index': '[column_indices[j]]',
-    'post_index': '[row_indices[j]]',
-    'pre_prefix': 'pre_',
-    'post_prefix': 'post_',
+    "local_index": "[j]",
+    "semiglobal_index": "[i]",
+    "global_index": "[0]",
+    "pre_index": "[column_indices[j]]",
+    "post_index": "[row_indices[j]]",
+    "pre_prefix": "pre_",
+    "post_prefix": "post_",
 }

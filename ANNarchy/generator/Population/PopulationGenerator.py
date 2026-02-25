@@ -6,6 +6,7 @@
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.generator.Utils import tabify
 
+
 class PopulationGenerator(object):
     """
     Base class for population generators in ANNarchy. Inherited by
@@ -13,6 +14,7 @@ class PopulationGenerator(object):
     * OpenMPGenerator: single-thread and multi-core implementation
     * CUDAGenerator: gpu implementation
     """
+
     def __init__(self, profile_generator, net_id):
         """
         Initialize PopulationGenerator.
@@ -65,23 +67,25 @@ class PopulationGenerator(object):
 
         # The conductance/current variables for spiking neurons are stored in
         # pop.neuron_type.description['variables'] but only if they are used.
-        if pop.neuron_type.type == 'spike':
+        if pop.neuron_type.type == "spike":
             try:
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
+                all_targets = set(pop.neuron_type.description["targets"] + pop.targets)
             except TypeError:
                 # The projection has multiple targets
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
+                all_targets = set(
+                    pop.neuron_type.description["targets"] + pop.targets[0]
+                )
 
             for target in sorted(list(all_targets)):
-                attr_name = 'g_'+target
+                attr_name = "g_" + target
                 if attr_name not in already_processed:
                     # we assume here, that targets are local variables
                     id_dict = {
-                        'type' : ConfigManager().get('precision', self._net_id),
-                        'name': attr_name,
-                        'attr_type': 'variable'
+                        "type": ConfigManager().get("precision", self._net_id),
+                        "name": attr_name,
+                        "attr_type": "variable",
                     }
-                    declaration += self._templates['attr_decl']['local'] % id_dict
+                    declaration += self._templates["attr_decl"]["local"] % id_dict
                     already_processed.append(attr_name)
 
         # Global operations
@@ -91,19 +95,25 @@ class PopulationGenerator(object):
 """
             for op in pop.global_operations:
                 op_dict = {
-                    'type': ConfigManager().get('precision', self._net_id),
-                    'op': op['function'],
-                    'var': op['variable']
+                    "type": ConfigManager().get("precision", self._net_id),
+                    "op": op["function"],
+                    "var": op["variable"],
                 }
-                
+
                 if _check_paradigm("openmp", self._net_id):
-                    declaration += """    %(type)s _%(op)s_%(var)s;
-""" % op_dict
+                    declaration += (
+                        """    %(type)s _%(op)s_%(var)s;
+"""
+                        % op_dict
+                    )
                 elif _check_paradigm("cuda", self._net_id):
-                    declaration += """
+                    declaration += (
+                        """
     %(type)s _%(op)s_%(var)s;
     %(type)s* _gpu_%(op)s_%(var)s;
-""" % op_dict
+"""
+                        % op_dict
+                    )
                 else:
                     raise NotImplementedError
 
@@ -111,11 +121,12 @@ class PopulationGenerator(object):
         declaration += """
     // Random numbers
 """
-        for rd in pop.neuron_type.description['random_distributions']:
-            declaration += self._templates['rng'][rd['locality']]['decl'] % {
-                'rd_name' : rd['name'],
-                'type': rd['ctype'],
-                'template': rd['template'] % {'float_prec':ConfigManager().get('precision', self._net_id)}
+        for rd in pop.neuron_type.description["random_distributions"]:
+            declaration += self._templates["rng"][rd["locality"]]["decl"] % {
+                "rd_name": rd["name"],
+                "type": rd["ctype"],
+                "template": rd["template"]
+                % {"float_prec": ConfigManager().get("precision", self._net_id)},
             }
 
         return declaration, accessors
@@ -125,8 +136,11 @@ class PopulationGenerator(object):
         """
         Small helper function, used for instance in self.update_spike_neuron()
         """
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
-            if attr['name'] == name:
+        for attr in (
+            pop.neuron_type.description["variables"]
+            + pop.neuron_type.description["parameters"]
+        ):
+            if attr["name"] == name:
                 return attr
 
         return None
@@ -140,23 +154,28 @@ class PopulationGenerator(object):
         whether it is a local or global variable, a random variable or a
         variable related to global operations.
         """
-        for attr in pop.neuron_type.description['parameters']:
-            if attr['name'] == name:
-                return 'par', attr
+        for attr in pop.neuron_type.description["parameters"]:
+            if attr["name"] == name:
+                return "par", attr
 
-        for attr in pop.neuron_type.description['variables']:
-            if attr['name'] == name:
-                return 'var', attr
+        for attr in pop.neuron_type.description["variables"]:
+            if attr["name"] == name:
+                return "var", attr
 
-        for attr in pop.neuron_type.description['random_distributions']:
-            if attr['name'] == name:
-                return 'rand', attr
+        for attr in pop.neuron_type.description["random_distributions"]:
+            if attr["name"] == name:
+                return "rand", attr
 
         # the given name wasn't either an attribute nor a random distribution,
         # lets test if it was a psp
-        for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-            if name == "sum("+target+")":
-                return 'psp', { 'ctype': ConfigManager().get('precision', pop.net_id), 'name': '_sum_'+target }
+        for target in sorted(
+            list(set(pop.neuron_type.description["targets"] + pop.targets))
+        ):
+            if name == "sum(" + target + ")":
+                return "psp", {
+                    "ctype": ConfigManager().get("precision", pop.net_id),
+                    "name": "_sum_" + target,
+                }
 
         return None, None
 
@@ -175,19 +194,25 @@ class PopulationGenerator(object):
         code = "\n// Initialize global operations\n"
         for op in pop.global_operations:
             ids = {
-                'op': op['function'],
-                'var': op['variable'],
-                'type': ConfigManager().get('precision', self._net_id)
+                "op": op["function"],
+                "var": op["variable"],
+                "type": ConfigManager().get("precision", self._net_id),
             }
 
             if _check_paradigm("openmp", self._net_id):
-                code += """_%(op)s_%(var)s = 0.0;
-""" % ids
+                code += (
+                    """_%(op)s_%(var)s = 0.0;
+"""
+                    % ids
+                )
 
             elif _check_paradigm("cuda", self._net_id):
-                code += """_%(op)s_%(var)s = 0.0;
+                code += (
+                    """_%(op)s_%(var)s = 0.0;
 cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
-""" % ids
+"""
+                    % ids
+                )
 
             else:
                 raise NotImplementedError
@@ -199,102 +224,124 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         Generate the codes for the C++ function Population::init_population() method.
         """
         code = ""
-        attr_tpl = self._templates['attribute_cpp_init']
+        attr_tpl = self._templates["attribute_cpp_init"]
         already_processed = []
 
         # Parameters
-        for var in pop.neuron_type.description['parameters']:
+        for var in pop.neuron_type.description["parameters"]:
             # Avoid doublons
-            if var['name'] in already_processed:
+            if var["name"] in already_processed:
                 continue
 
-            if _check_paradigm("cuda", self._net_id) and var['locality'] == "global":
-                code += attr_tpl[var['locality']]['parameter'] % {'name': var['name']}
+            if _check_paradigm("cuda", self._net_id) and var["locality"] == "global":
+                code += attr_tpl[var["locality"]]["parameter"] % {"name": var["name"]}
             else:
-                init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
-                var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
-                        'init': init, 'attr_type': 'parameter'}
-                code += attr_tpl[var['locality']] % var_ids
+                init = (
+                    "false"
+                    if var["ctype"] == "bool"
+                    else ("0" if var["ctype"] == "int" else "0.0")
+                )
+                var_ids = {
+                    "id": pop.id,
+                    "name": var["name"],
+                    "type": var["ctype"],
+                    "init": init,
+                    "attr_type": "parameter",
+                }
+                code += attr_tpl[var["locality"]] % var_ids
 
-            already_processed.append(var['name'])
+            already_processed.append(var["name"])
 
         # Variables
-        for var in pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description["variables"]:
             # Avoid doublons
-            if var['name'] in already_processed:
+            if var["name"] in already_processed:
                 continue
 
-            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
-            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
-                       'init': init, 'attr_type': 'variable'}
+            init = (
+                "false"
+                if var["ctype"] == "bool"
+                else ("0" if var["ctype"] == "int" else "0.0")
+            )
+            var_ids = {
+                "id": pop.id,
+                "name": var["name"],
+                "type": var["ctype"],
+                "init": init,
+                "attr_type": "variable",
+            }
 
-            if _check_paradigm("cuda", self._net_id) and var['locality'] == "global":
-                code += attr_tpl[var['locality']]['variable'] % var_ids
+            if _check_paradigm("cuda", self._net_id) and var["locality"] == "global":
+                code += attr_tpl[var["locality"]]["variable"] % var_ids
             else:
-                code += attr_tpl[var['locality']] % var_ids
+                code += attr_tpl[var["locality"]] % var_ids
 
-            already_processed.append(var['name'])
+            already_processed.append(var["name"])
 
-        # Random numbers 
+        # Random numbers
         if _check_paradigm("openmp", self._net_id):
-            if len(pop.neuron_type.description['random_distributions']) > 0:
+            if len(pop.neuron_type.description["random_distributions"]) > 0:
                 rng_code = "\n// Random numbers\n"
-                for rd in pop.neuron_type.description['random_distributions']:
+                for rd in pop.neuron_type.description["random_distributions"]:
                     rng_ids = {
-                        'id': pop.id,
-                        'rd_name': rd['name'],
-                        'type': rd['ctype'],
+                        "id": pop.id,
+                        "rd_name": rd["name"],
+                        "type": rd["ctype"],
                     }
-                    rng_code += self._templates['rng'][rd['locality']]['init'] % rng_ids
-                
-                code += tabify(rng_code,2)
+                    rng_code += self._templates["rng"][rd["locality"]]["init"] % rng_ids
+
+                code += tabify(rng_code, 2)
 
         else:
-            if len(pop.neuron_type.description['random_distributions']) > 0:
+            if len(pop.neuron_type.description["random_distributions"]) > 0:
                 code += """
                 // Random numbers"""
-                for dist in pop.neuron_type.description['random_distributions']:
+                for dist in pop.neuron_type.description["random_distributions"]:
                     rng_ids = {
-                        'id': pop.id,
-                        'rd_name': dist['name'],
+                        "id": pop.id,
+                        "rd_name": dist["name"],
                     }
-                    code += self._templates['rng'][dist['locality']]['init'] % rng_ids
+                    code += self._templates["rng"][dist["locality"]]["init"] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)
 
         # rate-coded targets
-        if pop.neuron_type.type == 'rate':
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+        if pop.neuron_type.type == "rate":
+            for target in sorted(
+                list(set(pop.neuron_type.description["targets"] + pop.targets))
+            ):
                 ids = {
-                    'id': pop.id,
-                    'name': "_sum_"+target,
-                    'attr_type': 'psp',
-                    'type': ConfigManager().get('precision', self._net_id),
-                    'init': 0.0
+                    "id": pop.id,
+                    "name": "_sum_" + target,
+                    "attr_type": "psp",
+                    "type": ConfigManager().get("precision", self._net_id),
+                    "init": 0.0,
                 }
-                code += attr_tpl['local'] % ids
+                code += attr_tpl["local"] % ids
 
         # or unused synaptic spiking targets
         else:
             try:
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
+                all_targets = set(pop.neuron_type.description["targets"] + pop.targets)
             except TypeError:
                 # The projection has multiple targets
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
+                all_targets = set(
+                    pop.neuron_type.description["targets"] + pop.targets[0]
+                )
 
             for target in sorted(list(all_targets)):
-                attr_name = 'g_'+target
+                attr_name = "g_" + target
                 if attr_name not in already_processed:
                     id_dict = {
-                        'type' : ConfigManager().get('precision', self._net_id),
-                        'name': attr_name,
-                        'attr_type': 'variable',
-                        'init': 0.0
+                        "type": ConfigManager().get("precision", self._net_id),
+                        "name": attr_name,
+                        "attr_type": "variable",
+                        "init": 0.0,
                     }
-                    code += self._templates['attribute_cpp_init']['local'] % id_dict
+                    code += self._templates["attribute_cpp_init"]["local"] % id_dict
                     already_processed.append(attr_name)
-                    
+
         return code
 
     def _local_functions(self, pop):
@@ -334,34 +381,35 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         implementing generators should extent the resulting code template.
         """
         from ANNarchy.generator.Utils import tabify
+
         code = ""
 
-       # Variables
+        # Variables
         code += "// Parameters\n"
-        for attr in pop.neuron_type.description['parameters']:
+        for attr in pop.neuron_type.description["parameters"]:
             # HD: we need to clear only local parameters, the others are no vectors
-            if attr['locality'] == "local":
+            if attr["locality"] == "local":
                 # HD: clear alone does not deallocate, it only resets size.
                 #     So we need to call shrink_to_fit afterwards.
-                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                ids = {"ctype": attr["ctype"], "name": attr["name"]}
                 code += "%(name)s.clear();\n" % ids
                 code += "%(name)s.shrink_to_fit();\n" % ids
-        code+="\n"
+        code += "\n"
 
         # Variables
         code += "// Variables\n"
-        for attr in pop.neuron_type.description['variables']:
+        for attr in pop.neuron_type.description["variables"]:
             # HD: we need to clear only local variables, the others are no vectors
-            if attr['locality'] == "local":
+            if attr["locality"] == "local":
                 # HD: clear alone does not deallocate, it only resets size.
                 #     So we need to call shrink_to_fit afterwards.
-                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                ids = {"ctype": attr["ctype"], "name": attr["name"]}
                 code += "%(name)s.clear();\n" % ids
                 code += "%(name)s.shrink_to_fit();\n" % ids
 
         # Spike-specific code
-        if pop.neuron_type.description['type'] == 'spike':
-            code += self._templates['spike_specific']['spike']['clear']
+        if pop.neuron_type.description["type"] == "spike":
+            code += self._templates["spike_specific"]["spike"]["clear"]
 
             # Mean - FR
             code += """
@@ -376,12 +424,12 @@ _spike_history.shrink_to_fit();
 
         # Random variables
         code += "\n// RNGs\n"
-        for dist in pop.neuron_type.description['random_distributions']:
+        for dist in pop.neuron_type.description["random_distributions"]:
             rng_ids = {
-                'id': pop.id,
-                'rd_name': dist['name'],
+                "id": pop.id,
+                "rd_name": dist["name"],
             }
-            code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
+            code += self._templates["rng"][dist["locality"]]["clear"] % rng_ids
 
         code = tabify(code, 2)
         return code
@@ -395,45 +443,54 @@ _spike_history.shrink_to_fit();
         Consequently implementing generators should extent the resulting code template. This is done by filling the
         'size_in_bytes' field in the _specific_template.
         """
-        if 'size_in_bytes' in pop._specific_template.keys():
-            return pop._specific_template['size_in_bytes']
+        if "size_in_bytes" in pop._specific_template.keys():
+            return pop._specific_template["size_in_bytes"]
 
         from ANNarchy.generator.Utils import tabify
+
         code = ""
 
         # Parameters
         code += "// Parameters\n"
-        for attr in pop.neuron_type.description['parameters']:
-            ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            if attr['locality'] == "global":
+        for attr in pop.neuron_type.description["parameters"]:
+            ids = {"ctype": attr["ctype"], "name": attr["name"]}
+            if attr["locality"] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += (
+                    "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n"
+                    % ids
+                )
 
         # Variables
         code += "// Variables\n"
-        for attr in pop.neuron_type.description['variables']:
-            ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            if attr['locality'] == "global":
+        for attr in pop.neuron_type.description["variables"]:
+            ids = {"ctype": attr["ctype"], "name": attr["name"]}
+            if attr["locality"] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += (
+                    "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n"
+                    % ids
+                )
 
         # Random variables
-        code +="// RNGs\n"
+        code += "// RNGs\n"
         if _check_paradigm("openmp", self._net_id):
-            for dist in pop.neuron_type.description['random_distributions']:
-                ids = {
-                    'ctype': dist['ctype'],
-                    'name': dist['name']
-                }
-                if dist['locality'] == "local":
-                    code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+            for dist in pop.neuron_type.description["random_distributions"]:
+                ids = {"ctype": dist["ctype"], "name": dist["name"]}
+                if dist["locality"] == "local":
+                    code += (
+                        "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n"
+                        % ids
+                    )
                 else:
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:
-            for dist in pop.neuron_type.description['random_distributions']:
-                code += "size_in_bytes += sizeof(curandState*);\t// gpu_%(name)s\n" % {'name': dist['name']}
+            for dist in pop.neuron_type.description["random_distributions"]:
+                code += "size_in_bytes += sizeof(curandState*);\t// gpu_%(name)s\n" % {
+                    "name": dist["name"]
+                }
 
         code = tabify(code, 2)
         return code
@@ -442,23 +499,30 @@ _spike_history.shrink_to_fit();
         """
         Generate a get/set template for all attributes in the given population
         """
-        declaration = ""        # Attribute declarations
-        accessors = ""          # No default accessor methods.
+        declaration = ""  # Attribute declarations
+        accessors = ""  # No default accessor methods.
         already_processed = []
         code_ids_per_type = {}
 
         # Sort the parameters/variables per type
-        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
-            if var['name'] in already_processed:
+        for var in (
+            pop.neuron_type.description["parameters"]
+            + pop.neuron_type.description["variables"]
+        ):
+            if var["name"] in already_processed:
                 continue
 
             # add an empty list for this type if needed
-            if var['ctype'] not in code_ids_per_type.keys():
-                code_ids_per_type[var['ctype']] = []
+            if var["ctype"] not in code_ids_per_type.keys():
+                code_ids_per_type[var["ctype"]] = []
 
             # Important which template to choose
-            locality = var['locality']
-            attr_type = 'parameter' if var in pop.neuron_type.description['parameters'] else 'variable'
+            locality = var["locality"]
+            attr_type = (
+                "parameter"
+                if var in pop.neuron_type.description["parameters"]
+                else "variable"
+            )
 
             # For GPUs we need to tell the host that this variable need to be updated
             if _check_paradigm("cuda", self._net_id):
@@ -466,38 +530,53 @@ _spike_history.shrink_to_fit();
                     read_dirty_flag = ""
                     write_dirty_flag = ""
                 else:
-                    write_dirty_flag = "%(name)s_host_to_device = true;" % {'name': var['name']}
-                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host();" % {'name': var['name']}
+                    write_dirty_flag = "%(name)s_host_to_device = true;" % {
+                        "name": var["name"]
+                    }
+                    read_dirty_flag = (
+                        "if ( %(name)s_device_to_host < t ) device_to_host();"
+                        % {"name": var["name"]}
+                    )
             else:
                 read_dirty_flag = ""
                 write_dirty_flag = ""
 
             # add to the processing list
-            code_ids_per_type[var['ctype']].append({
-                'type' : var['ctype'],
-                'name': var['name'],
-                'locality': locality,
-                'attr_type': attr_type,
-                'write_dirty_flag': write_dirty_flag,
-                'read_dirty_flag': read_dirty_flag
-            })
+            code_ids_per_type[var["ctype"]].append(
+                {
+                    "type": var["ctype"],
+                    "name": var["name"],
+                    "locality": locality,
+                    "attr_type": attr_type,
+                    "write_dirty_flag": write_dirty_flag,
+                    "read_dirty_flag": read_dirty_flag,
+                }
+            )
 
-            already_processed.append(var['name'])
+            already_processed.append(var["name"])
 
         # For rate-coded models add _sum_target
         if pop.neuron_type.type == "rate":
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                prec_type = ConfigManager().get('precision', self._net_id)
+            for target in sorted(
+                list(set(pop.neuron_type.description["targets"] + pop.targets))
+            ):
+                prec_type = ConfigManager().get("precision", self._net_id)
 
                 # add to the processing list
-                code_ids_per_type[prec_type].append({
-                    'type' : prec_type,
-                    'name': "_sum_"+target,
-                    'locality': 'local',
-                    'attr_type': 'psp',
-                    'write_dirty_flag': "_sum_"+target+"_host_to_device = true;",
-                    'read_dirty_flag': "if ( _sum_"+target+"_device_to_host < t ) device_to_host();"
-                })
+                code_ids_per_type[prec_type].append(
+                    {
+                        "type": prec_type,
+                        "name": "_sum_" + target,
+                        "locality": "local",
+                        "attr_type": "psp",
+                        "write_dirty_flag": "_sum_"
+                        + target
+                        + "_host_to_device = true;",
+                        "read_dirty_flag": "if ( _sum_"
+                        + target
+                        + "_device_to_host < t ) device_to_host();",
+                    }
+                )
 
         # For spiking models we add spike vector
         if pop.neuron_type.type == "spike":
@@ -506,26 +585,30 @@ _spike_history.shrink_to_fit();
                 code_ids_per_type["int"] = []
 
             # add to the processing list
-            code_ids_per_type["int"].append({
-                'type' : "int",
-                'name': "spiked",
-                'locality': 'local',
-                'attr_type': 'spike',
-                'write_dirty_flag': "",
-                'read_dirty_flag': ""
-            })
+            code_ids_per_type["int"].append(
+                {
+                    "type": "int",
+                    "name": "spiked",
+                    "locality": "local",
+                    "attr_type": "spike",
+                    "write_dirty_flag": "",
+                    "read_dirty_flag": "",
+                }
+            )
 
         # Generate code snippets
         for ctype in code_ids_per_type.keys():
             for ids in code_ids_per_type[ctype]:
-                locality = ids['locality']
+                locality = ids["locality"]
 
                 # Declaration codes
-                if ids['name'] == "spiked":
-                    declaration += ""   # already declared
+                if ids["name"] == "spiked":
+                    declaration += ""  # already declared
                 elif _check_paradigm("cuda", self._net_id) and locality == "global":
-                    declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
+                    declaration += (
+                        self._templates["attr_decl"][locality][ids["attr_type"]] % ids
+                    )
                 else:
-                    declaration += self._templates['attr_decl'][locality] % ids
+                    declaration += self._templates["attr_decl"][locality] % ids
 
         return declaration, accessors, already_processed

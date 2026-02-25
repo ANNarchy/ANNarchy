@@ -4,7 +4,7 @@
 """
 
 cuda_population = {
-    'template': """
+    "template": """
 class PopRecorder%(id)s : public Monitor
 {
 protected:
@@ -70,15 +70,15 @@ public:
 %(struct_code)s
 };
 """,
-    'local': {
-    'struct': """
+    "local": {
+        "struct": """
     // Local variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ; """,
-    'init': """
+        "init": """
         this->%(name)s = std::vector< std::vector< %(type)s > >();
         this->record_%(name)s = false;""",
-    'recording': """
+        "recording": """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             cudaMemcpy(pop%(id)s->%(name)s.data(), pop%(id)s->gpu_%(name)s, pop%(id)s->size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
@@ -104,7 +104,7 @@ public:
             #endif
             }
         }""",
-    'clear': """
+        "clear": """
     void clear_%(name)s() {
         for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
             it->clear();
@@ -113,56 +113,56 @@ public:
         this->%(name)s.clear();
     }
 """,
-    'size_in_bytes': """
+        "size_in_bytes": """
     // Local variable %(name)s
     size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
     for (auto it = %(name)s.cbegin(); it != %(name)s.cend(); it++)
         size_in_bytes += it->capacity() * sizeof(%(type)s);
 """,
-    'size_in_bytes_estimate': """
+        "size_in_bytes_estimate": """
     // local variable %(name)s
     if (this->record_%(name)s)
         estimate += num_rec * sizeof(%(type)s) * ( (this->partial) ? this->ranks.size() : pop%(id)s->size );
-"""
+""",
     },
-    'semiglobal': { # Does not exist for populations
-        'struct': "",
-        'init': "",
-        'recording': "",
-        'clear': "",
-        'size_in_bytes': ""
+    "semiglobal": {  # Does not exist for populations
+        "struct": "",
+        "init": "",
+        "recording": "",
+        "clear": "",
+        "size_in_bytes": "",
     },
-    'global': {
-    'struct': """
+    "global": {
+        "struct": """
     // Global variable %(name)s
     std::vector< %(type)s > %(name)s ;
     bool record_%(name)s ; """,
-    'init': """
+        "init": """
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
-    'recording': """
+        "recording": """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s->%(name)s);
         } """,
-    'clear': """
+        "clear": """
     void clear_%(name)s() {
         this->%(name)s.clear();
     }
     """,
-    'size_in_bytes': """
+        "size_in_bytes": """
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s) * this->%(name)s.capacity();
 """,
-    'size_in_bytes_estimate': """
+        "size_in_bytes_estimate": """
 // global variable %(name)s
 if (this->record_%(name)s)
     estimate += num_rec * sizeof(%(type)s);
-"""
-    }
+""",
+    },
 }
 
 cuda_projection = {
-    'struct': """
+    "struct": """
 class ProjRecorder%(id)s : public Monitor
 {
 protected:
@@ -231,18 +231,18 @@ public:
 %(struct_code)s
 };
 """,
-    'local': {
-        'struct': """
+    "local": {
+        "struct": """
     // Local variable %(name)s
     std::vector< std::vector< std::vector< %(type)s > > > %(name)s ;
     bool record_%(name)s ;
 """,
-    'init': """
+        "init": """
         // Local variable %(name)s
         this->%(name)s = std::vector< std::vector< std::vector< %(type)s > > >();
         this->record_%(name)s = false;
 """,
-    'recording': """
+        "recording": """
         // Local variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             auto host_local = proj%(id)s->get_device_matrix_variable_as_lil<%(float_prec)s>(proj%(id)s->gpu_%(name)s);
@@ -256,7 +256,7 @@ public:
             tmp.clear();
         }
 """,
-    'clear': """
+        "clear": """
     void clear_%(name)s() {
         // local variable %(name)s
         for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
@@ -267,31 +267,31 @@ public:
         %(name)s.shrink_to_fit();
     }
 """,
-        'size_in_bytes': """
+        "size_in_bytes": """
 // local variable %(name)s
 size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += sizeof(%(type)s) * it->capacity();
 }
 """,
-        'size_in_bytes_estimate': """
+        "size_in_bytes_estimate": """
 // local variable %(name)s
 if (this->record_%(name)s)
     estimate += num_rec_steps * num_rec_synapses * sizeof(%(type)s);
-"""
+""",
     },
-    'semiglobal': {
-        'struct': """
+    "semiglobal": {
+        "struct": """
     // Semiglobal variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ;
 """,
-    'init': """
+        "init": """
         // Semiglobal variable %(name)s
         this->%(name)s = std::vector< std::vector< %(type)s > > ( this->ranks.size(), std::vector<%(type)s>() );
         this->record_%(name)s = false;
 """,
-    'recording': """
+        "recording": """
         // Semiglobal variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ ) ) {
             auto data = std::vector<%(type)s>(proj%(id)s->nb_dendrites(), 0.0);
@@ -308,7 +308,7 @@ if (this->record_%(name)s)
             }
         }
 """,
-        'clear': """
+        "clear": """
     void clear_%(name)s() {
         // semiglobal variable %(name)s
         for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
@@ -319,30 +319,30 @@ if (this->record_%(name)s)
         %(name)s.shrink_to_fit();
     }
 """,
-        'size_in_bytes': """
+        "size_in_bytes": """
 // semiglobal variable %(name)s
 size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
     size_in_bytes += sizeof(%(type)s) * it->capacity();
 }
 """,
-        'size_in_bytes_estimate': """
+        "size_in_bytes_estimate": """
 if (this->record_%(name)s)
      estimate += num_rec_steps * ranks.size() * sizeof(%(type)s);
-"""
+""",
     },
-    'global': {
-        'struct': """
+    "global": {
+        "struct": """
     // Global variable %(name)s
     std::vector< %(type)s > %(name)s ;
     bool record_%(name)s ;
 """,
-    'init': """
+        "init": """
         // Global variable %(name)s
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false;
 """,
-    'recording': """
+        "recording": """
         // Global variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             %(type)s tmp = %(type)s(0);
@@ -356,20 +356,20 @@ if (this->record_%(name)s)
         #endif
         }
 """,
-        'clear': """
+        "clear": """
     void clear_%(name)s() {
         // global variable %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
     }
 """,
-        'size_in_bytes': """
+        "size_in_bytes": """
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
 """,
-        'size_in_bytes_estimate': """
+        "size_in_bytes_estimate": """
 if (this->record_%(name)s)
     estimate += num_rec_steps * sizeof(%(type)s);
-"""
-    }
+""",
+    },
 }

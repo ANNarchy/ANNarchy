@@ -4,13 +4,23 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import numpy
 
 from conftest import TARGET_FOLDER
-from ANNarchy import clear, DiscreteUniform, Network, Neuron, Population, \
-    Projection, Synapse, Uniform
+from ANNarchy import (
+    clear,
+    DiscreteUniform,
+    Network,
+    Neuron,
+    Population,
+    Projection,
+    Synapse,
+    Uniform,
+)
 
-class test_SpikingNoDelay():
+
+class test_SpikingNoDelay:
     """
     In this class the spiking transmission is computed and tested without any
     synaptic delay for the following patterns:
@@ -18,6 +28,7 @@ class test_SpikingNoDelay():
         * fixed_number_pre
         * all_to_all
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -35,19 +46,27 @@ class test_SpikingNoDelay():
 
         cls._proj = Projection(pre=cls._pop1, post=cls._pop2, target="one2one")
         # weights set in the test
-        cls._proj.one_to_one(weights=1.0, force_multiple_weights=True,
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls._proj.one_to_one(
+            weights=1.0,
+            force_multiple_weights=True,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._proj2 = Projection(pre=cls._pop1, post=cls._pop3, target="all2all")
-        cls._proj2.all_to_all(weights=Uniform(0,1),
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        cls._proj2.all_to_all(
+            weights=Uniform(0, 1),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._proj3 = Projection(pre=cls._pop1, post=cls._pop3, target="fnp")
-        cls._proj3.fixed_number_pre(5, weights=Uniform(0,1),
-                                       storage_format=cls.storage_format,
-                                       storage_order=cls.storage_order)
+        cls._proj3.fixed_number_pre(
+            5,
+            weights=Uniform(0, 1),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
@@ -77,7 +96,6 @@ class test_SpikingNoDelay():
 
         # simulate 1 step
         self._network.simulate(2)
-
 
         # Verify with numpy result
         numpy.testing.assert_allclose(self._pop2.v, result)
@@ -117,13 +135,15 @@ class test_SpikingNoDelay():
         # Verify with numpy result
         numpy.testing.assert_allclose(self._pop3.sum("fnp"), result)
 
-class test_SpikingUniformDelay():
+
+class test_SpikingUniformDelay:
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
     computed and tested for the one2one patterns with a special focus on using
     uniform synaptic delays.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -156,16 +176,21 @@ class test_SpikingUniformDelay():
 
         # A projection with uniform delay
         proj = Projection(pre=pop1, post=pop2, target="ff", synapse=synapse_loc)
-        proj.one_to_one(weights=1.0, delays=10.0,
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj.one_to_one(
+            weights=1.0,
+            delays=10.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         # A projection with uniform delay
-        proj2 = Projection(pre=pop1, post=pop2, target="ff_glob",
-                           synapse=synapse_glob)
-        proj2.one_to_one(weights=1.0, delays=10.0,
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj2 = Projection(pre=pop1, post=pop2, target="ff_glob", synapse=synapse_glob)
+        proj2.one_to_one(
+            weights=1.0,
+            delays=10.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         # Build up network
         cls._network = Network()
@@ -284,13 +309,15 @@ class test_SpikingUniformDelay():
         self._network.simulate(4)
         numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), 9.0)
 
-class test_SpikingNonuniformDelay():
+
+class test_SpikingNonuniformDelay:
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
     computed and tested for the one2one patterns with a special focus on using
     non-uniform synaptic delays.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -317,9 +344,12 @@ class test_SpikingNonuniformDelay():
 
         # A projection with non-uniform delay
         proj = Projection(pop1, pop2, target="ff")
-        proj.one_to_one(weights=1.0, delays=DiscreteUniform(1, 5),
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj.one_to_one(
+            weights=1.0,
+            delays=DiscreteUniform(1, 5),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         # Build up network
         cls._network = Network()
@@ -371,19 +401,19 @@ class test_SpikingNonuniformDelay():
         # should access (t-3)th element
         numpy.testing.assert_allclose(self._pop2.sum("ff"), [20.0, 20.0, 20.0])
 
-class test_SynapseOperations():
+
+class test_SynapseOperations:
     """
     Next to the weighted sum across inputs we allow the application of global
     operations (min, max, mean).
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Define and compile the network for this test.
         """
-        input_neuron = Neuron(
-            parameters="r=0.0"
-        )
+        input_neuron = Neuron(parameters="r=0.0")
 
         output_neuron = Neuron(
             equations="""
@@ -391,33 +421,33 @@ class test_SynapseOperations():
             """
         )
 
-        syn_max = Synapse(
-            psp="pre.r * w",
-            operation="max"
-        )
+        syn_max = Synapse(psp="pre.r * w", operation="max")
 
-        syn_min = Synapse(
-            psp="pre.r * w",
-            operation="min"
-        )
+        syn_min = Synapse(psp="pre.r * w", operation="min")
 
-        syn_mean = Synapse(
-            psp="pre.r * w",
-            operation="mean"
-        )
+        syn_mean = Synapse(psp="pre.r * w", operation="mean")
 
         pop1 = Population((3, 3), neuron=input_neuron)
         pop2 = Population(4, neuron=output_neuron)
 
         proj1 = Projection(pop1, pop2, target="p1", synapse=syn_max)
-        proj1.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj1.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
         proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
-        proj2.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj2.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
         proj3 = Projection(pop1, pop2, target="p3", synapse=syn_mean)
-        proj3.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj3.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network = Network()
         cls._network.add([pop1, pop2, proj1, proj2, proj3])
@@ -446,7 +476,7 @@ class test_SynapseOperations():
         with maximum across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_max = numpy.amax(pre_r) # weights=1.0
+        res_max = numpy.amax(pre_r)  # weights=1.0
 
         # set value
         self._pop1.r = pre_r
@@ -463,7 +493,7 @@ class test_SynapseOperations():
         with minimum across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_min = numpy.amin(pre_r) # weights=1.0
+        res_min = numpy.amin(pre_r)  # weights=1.0
 
         # set value
         self._pop1.r = pre_r
@@ -480,7 +510,7 @@ class test_SynapseOperations():
         with mean across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_mean = numpy.mean( pre_r ) # weights=1.0
+        res_mean = numpy.mean(pre_r)  # weights=1.0
 
         # set value
         self._pop1.r = pre_r
@@ -491,7 +521,8 @@ class test_SynapseOperations():
         # verify agains numpy
         numpy.testing.assert_allclose(self._pop2.sum("p3"), res_mean)
 
-class test_SynapticAccess():
+
+class test_SynapticAccess:
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects.
@@ -499,6 +530,7 @@ class test_SynapticAccess():
     This particular test focuses on the usage of them in synaptic learning
     rules (for instance covariance).
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -516,14 +548,17 @@ class test_SynapticAccess():
             """,
             equations="""
                 tau * dw/dt = (pre.r - mean(pre.r) ) * (post.r - mean(post.r) )
-            """
+            """,
         )
 
         pre = Population(6, neuron)
         post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = cov)
-        proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj = Projection(pre, post, "exc", synapse=cov)
+        proj.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network = Network()
         cls._network.add([pre, post, proj])
@@ -546,8 +581,10 @@ class test_SynapticAccess():
         """
         pass
 
+
 if __name__ == "__main__":
     import unittest
+
     def run_with(c, formats, orders):
         """
         Run the tests with all given storage formats and orders. This is achieved
@@ -558,15 +595,15 @@ if __name__ == "__main__":
                 if s_order == "pre_to_post" and s_format not in ["lil", "csr"]:
                     continue
                 cls_name = c.__name__ + "_" + str(s_format) + "_" + str(s_order)
-                glob = {"storage_format":s_format, "storage_order":s_order}
+                glob = {"storage_format": s_format, "storage_order": s_order}
                 globals()[cls_name] = type(cls_name, (c, unittest.TestCase), glob)
         # Delete the base class so that it will not be done again
         del globals()[c.__name__]
         del c
 
     mode = ["lil"]
-    storage_orders = ['post_to_pre']
-    loc = [l for l in locals() if l.startswith('test_')]
+    storage_orders = ["post_to_pre"]
+    loc = [l for l in locals() if l.startswith("test_")]
 
     for c in loc:
         run_with(locals()[c], mode, storage_orders)

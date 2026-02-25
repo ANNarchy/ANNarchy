@@ -1,17 +1,31 @@
 import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
+from sympy.parsing.sympy_parser import (
+    parse_expr,
+    standard_transformations,
+    convert_xor,
+    auto_number,
+)
 from sympy.printing.latex import LatexPrinter
 import re
 
 from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
-from ..Extraction import *
+from ..Extraction import (
+    extract_parameters,
+    extract_variables,
+    get_attributes,
+    extract_prepost,
+    extract_pre_spike_variable,
+    extract_post_spike_variable,
+    extract_functions,
+)
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 
 ##################################
 ### Process individual equations
 ##################################
+
 
 def _process_random(val):
     "Transforms a connector attribute (weights, delays) into a string representation"
@@ -20,43 +34,48 @@ def _process_random(val):
     else:
         return str(val)
 
+
 # Really crappy...
 # When target has a number (ff1), sympy thinks the 1 is a number
 # the target is replaced by a text to avoid this
 target_replacements = [
-    'firsttarget',
-    'secondtarget',
-    'thirdtarget',
-    'fourthtarget',
-    'fifthtarget',
-    'sixthtarget',
-    'seventhtarget',
-    'eighthtarget',
-    'ninthtarget',
-    'tenthtarget',
-    'eleventhtarget',
-    'twefthtarget',
-    'thirteenthtarget',
-    'fourteenthtarget'
+    "firsttarget",
+    "secondtarget",
+    "thirdtarget",
+    "fourthtarget",
+    "fifthtarget",
+    "sixthtarget",
+    "seventhtarget",
+    "eighthtarget",
+    "ninthtarget",
+    "tenthtarget",
+    "eleventhtarget",
+    "twefthtarget",
+    "thirteenthtarget",
+    "fourteenthtarget",
 ]
 
-def _process_neuron_equations(neuron, net_id):
 
+def _process_neuron_equations(neuron, net_id):
     # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=net_id)
-    variables = extract_variables(neuron.equations, 'neuron', net_id=net_id)
-    variable_names = [var['name'] for var in variables]
-    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=True)
+    parameters = extract_parameters(
+        neuron.parameters, neuron.extra_values, "neuron", net_id=net_id
+    )
+    variables = extract_variables(neuron.equations, "neuron", net_id=net_id)
+    variable_names = [var["name"] for var in variables]
+    attributes, local_var, semiglobal_var, global_var = get_attributes(
+        parameters, variables, neuron=True
+    )
 
     # Create a dictionary for parsing
     local_dict = {
-        'g_target': sp.Symbol(r'g_{\text{target}}'),
-        'dt': sp.Symbol(r'\Delta t'),
-        't_pre': sp.Symbol(r't_{\text{pre}}'),
-        't_post': sp.Symbol(r't_{\text{pos}}'),
-        'Uniform': sp.Function(r'\mathcal{U}'),
-        'Normal': sp.Function(r'\mathcal{N}'),
-        'ite': sp.Function(r'ite', nargs=3)
+        "g_target": sp.Symbol(r"g_{\text{target}}"),
+        "dt": sp.Symbol(r"\Delta t"),
+        "t_pre": sp.Symbol(r"t_{\text{pre}}"),
+        "t_post": sp.Symbol(r"t_{\text{pos}}"),
+        "Uniform": sp.Function(r"\mathcal{U}"),
+        "Normal": sp.Function(r"\mathcal{N}"),
+        "ite": sp.Function(r"ite", nargs=3),
     }
 
     for att in attributes:
@@ -68,13 +87,13 @@ def _process_neuron_equations(neuron, net_id):
 
     for var in variables:
         # Retrieve the equation
-        eq = var['eq']
+        eq = var["eq"]
 
         # Extract sum(target)
         targets = []
-        target_list = re.findall(r'(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', eq)
+        target_list = re.findall(r"(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)", eq)
         for l, t in target_list:
-            if t.strip() == '':
+            if t.strip() == "":
                 continue
             replacement = target_replacements[len(targets)]
             targets.append((t.strip(), replacement))
@@ -82,36 +101,39 @@ def _process_neuron_equations(neuron, net_id):
             tex_dict[replacement] = replacement
 
         for target, repl in targets:
-            eq = eq.replace('sum('+target+')', repl)
+            eq = eq.replace("sum(" + target + ")", repl)
 
         # Parse the equation
-        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
+        ode = re.findall(r"([^\w]*)d([\w]+)/dt", eq)
         if len(ode) > 0:
             name = ode[0][1]
-            
-            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            
-            grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
-            
-            local_dict['_grad_'+name] = grad_symbol
-            
-            tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
-        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
+            eq = eq.replace("d" + name + "/dt", "_grad_" + name)
+
+            grad_symbol = sp.Symbol(
+                r"\frac{d" + _latexify_name(name, variable_names) + "}{dt}"
+            )
+
+            local_dict["_grad_" + name] = grad_symbol
+
+            tex_dict[grad_symbol] = (
+                r"\frac{d" + _latexify_name(name, variable_names) + "}{dt}"
+            )
+
+        var_code = _analyse_equation(var["eq"], eq, local_dict, tex_dict)
 
         # Replace the targets
         for target, repl in targets:
             target = target.replace("_", r"\_")
             var_code = var_code.replace(
-                repl, 
-                r'\sum_{\text{'+target+r'}} w \cdot r^{\text{pre}}(t-d)'
+                repl, r"\sum_{\text{" + target + r"}} w \cdot r^{\text{pre}}(t-d)"
             )
 
         # Add the code
-        var['latex'] = var_code
-        var['ode'] = len(ode) > 0
+        var["latex"] = var_code
+        var["ode"] = len(ode) > 0
 
-    if not neuron.spike: # rate-code, no spike
+    if not neuron.spike:  # rate-code, no spike
         return variables, "", []
 
     # Additional code for spiking neurons
@@ -120,10 +142,10 @@ def _process_neuron_equations(neuron, net_id):
     # Reset
     spike_reset = []
     if neuron.reset is not None:
-        reset_vars = extract_variables(neuron.reset, 'neuron', net_id=net_id)
+        reset_vars = extract_variables(neuron.reset, "neuron", net_id=net_id)
         for var in reset_vars:
-            eq = var['eq']
-            spike_reset.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
+            eq = var["eq"]
+            spike_reset.append(_analyse_equation(var["eq"], eq, local_dict, tex_dict))
 
     return variables, spike_condition, spike_reset
 
@@ -135,21 +157,25 @@ def _process_synapse_equations(synapse, net_id):
     post_event = []
 
     # Extract parameters and variables
-    parameters = extract_parameters(synapse.parameters, object_type='synapse', net_id=net_id)
-    variables = extract_variables(synapse.equations, 'synapse', net_id=net_id)
-    variable_names = [var['name'] for var in variables]
-    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=False)
+    parameters = extract_parameters(
+        synapse.parameters, object_type="synapse", net_id=net_id
+    )
+    variables = extract_variables(synapse.equations, "synapse", net_id=net_id)
+    variable_names = [var["name"] for var in variables]
+    attributes, local_var, semiglobal_var, global_var = get_attributes(
+        parameters, variables, neuron=False
+    )
 
     # Create a dictionary for parsing
     local_dict = {
-        'w': sp.Symbol(r'w(t)'),
-        'dt': sp.Symbol(r'\Delta t'),
-        'g_target': sp.Symbol(r'g_{\text{target}(t)}'),
-        't_pre': sp.Symbol(r't_{\text{pre}}'),
-        't_post': sp.Symbol(r't_{\text{pos}}'),
-        'Uniform': sp.Function(r'\mathcal{U}'),
-        'Normal': sp.Function(r'\mathcal{N}'),
-        'ite': sp.Function(r'ite', nargs=3)
+        "w": sp.Symbol(r"w(t)"),
+        "dt": sp.Symbol(r"\Delta t"),
+        "g_target": sp.Symbol(r"g_{\text{target}(t)}"),
+        "t_pre": sp.Symbol(r"t_{\text{pre}}"),
+        "t_post": sp.Symbol(r"t_{\text{pos}}"),
+        "Uniform": sp.Function(r"\mathcal{U}"),
+        "Normal": sp.Function(r"\mathcal{N}"),
+        "ite": sp.Function(r"ite", nargs=3),
     }
 
     for att in attributes:
@@ -159,115 +185,151 @@ def _process_synapse_equations(synapse, net_id):
     for key, val in local_dict.items():
         tex_dict[val] = str(val)
 
-
     # PSP
     if synapse.psp:
-        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description, net_id=net_id)
-        for dep in dependencies['post']:
-            local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
-        for dep in dependencies['pre']:
-            local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t-d)")
-        if synapse.type == 'rate':  
+        psp, untouched_var, dependencies = extract_prepost(
+            "psp", synapse.psp.strip(), synapse.description, net_id=net_id
+        )
+        for dep in dependencies["post"]:
+            local_dict["_post_" + dep + "__"] = sp.Symbol(
+                r"{" + dep + r"^{\text{post}}}(t)"
+            )
+        for dep in dependencies["pre"]:
+            local_dict["_pre_" + dep + "__"] = sp.Symbol(
+                r"{" + dep + r"^{\text{pre}}}(t-d)"
+            )
+        if synapse.type == "rate":
             psp = _analyse_part(psp, local_dict, tex_dict)
-        else:  
-            psp = r"g_\text{target}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict)
+        else:
+            psp = r"g_\text{target}(t) \mathrel{+}= " + _analyse_part(
+                psp, local_dict, tex_dict
+            )
     else:
-        if synapse.type == 'rate':
+        if synapse.type == "rate":
             psp = r"w(t) \cdot r^{\text{pre}}(t)"
         else:
             psp = ""
 
-
     # Variables
     for var in variables:
         # Retrieve the equation
-        eq = var['eq']
+        eq = var["eq"]
 
         # pre/post variables
-        targets=[]
-        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, net_id=net_id)
+        targets = []
+        eq, untouched_var, dependencies = extract_prepost(
+            var["name"], eq, synapse.description, net_id=net_id
+        )
 
-        for dep in dependencies['post']:
-            if dep.startswith('sum('):
-                target = re.findall(r'sum\(([\w]+)\)', dep)[0]
+        for dep in dependencies["post"]:
+            if dep.startswith("sum("):
+                target = re.findall(r"sum\(([\w]+)\)", dep)[0]
                 targets.append(target)
-                local_dict['_post_sum_'+target] = sp.Symbol('PostSum'+target)
+                local_dict["_post_sum_" + target] = sp.Symbol("PostSum" + target)
             else:
-                content = r"{" + _latexify_name(dep, variable_names) + r"^{\text{post}}}(t)"
-                local_dict['_post_'+dep+'__'] = sp.Symbol(content)
+                content = (
+                    r"{" + _latexify_name(dep, variable_names) + r"^{\text{post}}}(t)"
+                )
+                local_dict["_post_" + dep + "__"] = sp.Symbol(content)
 
-        for dep in dependencies['pre']:
-            if dep.startswith('sum('):
-                target = re.findall(r'sum\(([\w]+)\)', dep)[0]
+        for dep in dependencies["pre"]:
+            if dep.startswith("sum("):
+                target = re.findall(r"sum\(([\w]+)\)", dep)[0]
                 targets.append(target)
-                local_dict['_pre_sum_'+target] = sp.Symbol('PreSum'+target)
+                local_dict["_pre_sum_" + target] = sp.Symbol("PreSum" + target)
             else:
-                local_dict['_pre_'+dep+'__'] = sp.Symbol("{" + dep + r"^{\text{pre}}}(t-d)")
+                local_dict["_pre_" + dep + "__"] = sp.Symbol(
+                    "{" + dep + r"^{\text{pre}}}(t-d)"
+                )
 
         # Parse the equation
-        #eq = eq.replace(' ', '') # supress spaces
-        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
+        # eq = eq.replace(' ', '') # supress spaces
+        ode = re.findall(r"([^\w]*)d([\w]+)/dt", eq)
         if len(ode) > 0:
-            
             name = ode[0][1]
-            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            
-            grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}')
-            
-            local_dict['_grad_'+name] = grad_symbol
-            
-            tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}'
+            eq = eq.replace("d" + name + "/dt", "_grad_" + name)
+
+            grad_symbol = sp.Symbol(
+                r"\frac{d" + _latexify_name(name, variable_names) + r"}{dt}"
+            )
+
+            local_dict["_grad_" + name] = grad_symbol
+
+            tex_dict[grad_symbol] = (
+                r"\frac{d" + _latexify_name(name, variable_names) + r"}{dt}"
+            )
 
         # Analyse
-        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
+        var_code = _analyse_equation(var["eq"], eq, local_dict, tex_dict)
 
         # replace targets
         for target in targets:
-            
-            var_code = var_code.replace('PostSum'+target, r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{post}}")
-            
-            var_code = var_code.replace('PreSum'+target,  r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{pre}}")
+            var_code = var_code.replace(
+                "PostSum" + target,
+                r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{post}}",
+            )
+
+            var_code = var_code.replace(
+                "PreSum" + target,
+                r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{pre}}",
+            )
 
         # Add the code
-        var['latex'] = var_code
-        var['ode'] = len(ode) > 0
+        var["latex"] = var_code
+        var["ode"] = len(ode) > 0
 
     # Pre-event
-    if synapse.type == 'spike':
+    if synapse.type == "spike":
         desc = analyse_synapse(synapse, net_id=net_id)
         for var in extract_pre_spike_variable(desc, net_id=net_id):
-            eq = var['eq']
+            eq = var["eq"]
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc, net_id=net_id)
-            for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
-            for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t)")
+            eq, untouched_var, dependencies = extract_prepost(
+                var["name"], eq, desc, net_id=net_id
+            )
+            for dep in dependencies["post"]:
+                local_dict["_post_" + dep + "__"] = sp.Symbol(
+                    r"{" + dep + r"^{\text{post}}}(t)"
+                )
+            for dep in dependencies["pre"]:
+                local_dict["_pre_" + dep + "__"] = sp.Symbol(
+                    r"{" + dep + r"^{\text{pre}}}(t)"
+                )
 
-            pre_event.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
+            pre_event.append(_analyse_equation(var["eq"], eq, local_dict, tex_dict))
 
         for var in extract_post_spike_variable(desc, net_id=net_id):
-            eq = var['eq']
+            eq = var["eq"]
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc, net_id=net_id)
-            for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
-            for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t)")
+            eq, untouched_var, dependencies = extract_prepost(
+                var["name"], eq, desc, net_id=net_id
+            )
+            for dep in dependencies["post"]:
+                local_dict["_post_" + dep + "__"] = sp.Symbol(
+                    r"{" + dep + r"^{\text{post}}}(t)"
+                )
+            for dep in dependencies["pre"]:
+                local_dict["_pre_" + dep + "__"] = sp.Symbol(
+                    r"{" + dep + r"^{\text{pre}}}(t)"
+                )
 
-            post_event.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
+            post_event.append(_analyse_equation(var["eq"], eq, local_dict, tex_dict))
 
     return psp, variables, pre_event, post_event
 
 
-def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}", net_id=0):
+def _process_functions(
+    functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}", net_id=0
+):
     code = ""
 
-    extracted_functions = extract_functions(description=functions, local_global=False, net_id=net_id)
+    extracted_functions = extract_functions(
+        description=functions, local_global=False, net_id=net_id
+    )
 
     for func in extracted_functions:
         # arguments
-        args = func['args']
+        args = func["args"]
         args_list = ""
         for arg in args:
             args_list += _latexify_name(arg, []) + ", "
@@ -282,90 +344,104 @@ def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*
             tex_dict[val] = str(val)
 
         # parse the content
-        content = _analyse_part(func['content'], local_dict, tex_dict)
+        content = _analyse_part(func["content"], local_dict, tex_dict)
 
         # generate the code
-        code += "%(begin)s%(name)s(%(args)s) = %(content)s%(end)s" %  {
-            'name': _latexify_name(func['name'], []), 
-            'args': args_list, 
-            'content': content.strip(), 
-            'begin': begin, 
-            'end': end }
-
+        code += "%(begin)s%(name)s(%(args)s) = %(content)s%(end)s" % {
+            "name": _latexify_name(func["name"], []),
+            "args": args_list,
+            "content": content.strip(),
+            "begin": begin,
+            "end": end,
+        }
 
     return code
 
 
 # Splits an equation into two parts, caring for the increments
 def _analyse_equation(orig, eq, local_dict, tex_dict):
-
     # Analyse the left part
-    left = eq.split('=')[0]
+    left = eq.split("=")[0]
     split_idx = len(left)
-    if left[-1] in ['+', '-', '*', '/']:
+    if left[-1] in ["+", "-", "*", "/"]:
         op = left[-1]
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except Exception as e:
             Messages._print(e)
-            Messages._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
+            Messages._warning(
+                "can not transform the left side of "
+                + orig
+                + " to LaTeX, you have to do it by hand..."
+            )
             left = left[:-1]
-        operator = " = " + left +  " " + op + (" (" if op != '+' else '')
-        operator = r" \mathrel{" + op + r"}= " 
+        operator = " = " + left + " " + op + (" (" if op != "+" else "")
+        operator = r" \mathrel{" + op + r"}= "
     else:
         try:
             left = _analyse_part(left, local_dict, tex_dict)
         except Exception as e:
             Messages._print(e)
-            Messages._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
+            Messages._warning(
+                "can not transform the left side of "
+                + orig
+                + " to LaTeX, you have to do it by hand..."
+            )
         operator = " = "
 
     # Analyse the right part
     try:
-        right = _analyse_part(eq[split_idx+1:], local_dict, tex_dict)
+        right = _analyse_part(eq[split_idx + 1 :], local_dict, tex_dict)
     except Exception as e:
         Messages._print(e)
-        Messages._warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = r"\textbf{TODO} %%" + eq[split_idx+1:]
+        Messages._warning(
+            "can not transform the right side of "
+            + orig
+            + " to LaTeX, you have to do it by hand..."
+        )
+        right = r"\textbf{TODO} %%" + eq[split_idx + 1 :]
 
-    return left + operator + right + (" )" if operator.strip().endswith('(') else "")
+    return left + operator + right + (" )" if operator.strip().endswith("(") else "")
+
 
 class CustomLatexPrinter(LatexPrinter):
     def _print_Function(self, expr, exp=None):
-        '''
+        """
         For ite(), pos() and neg() only.
-        '''
+        """
         func = expr.func.__name__
-        args = [ str(self._print(arg)) for arg in expr.args ]
-        
-        if func == 'ite':
+        args = [str(self._print(arg)) for arg in expr.args]
+
+        if func == "ite":
             return r"""
 \begin{cases}
     %(then_code)s \qquad \text{if} \quad %(if_code)s \\
     \\
     %(else_code)s \qquad \text{otherwise.} 
-\end{cases}""" % {'if_code': args[0], 'then_code': args[1], 'else_code': args[2]}
+\end{cases}""" % {"if_code": args[0], "then_code": args[1], "else_code": args[2]}
 
-        elif func in ['positive', 'pos']:
+        elif func in ["positive", "pos"]:
             return r"(" + args[0] + r")^+"
-        
-        elif func in ['negative', 'neg']:
+
+        elif func in ["negative", "neg"]:
             return r"(" + args[0] + r")^-"
 
         return LatexPrinter._print_Function(self, expr, exp)
 
+
 # Analyses and transform to latex a single part of an equation
 def _analyse_part(expr, local_dict, tex_dict):
-
     def regular_expr(expr):
         analysed = parse_expr(
             expr,
-            local_dict = local_dict,
-            transformations = (standard_transformations + (convert_xor,)),
+            local_dict=local_dict,
+            transformations=(standard_transformations + (convert_xor,)),
             # transformations = (convert_xor,),
             # evaluate=False
-            )
-        return CustomLatexPrinter(settings={'symbol_names': tex_dict, 'mul_symbol':"dot"}).doprint(analysed)
+        )
+        return CustomLatexPrinter(
+            settings={"symbol_names": tex_dict, "mul_symbol": "dot"}
+        ).doprint(analysed)
 
     def _condition(condition):
         return regular_expr(transform_condition(condition))
@@ -377,59 +453,67 @@ def _analyse_part(expr, local_dict, tex_dict):
         # IF condition
         if_code = _condition(if_statement)
         # THEN
-        if isinstance(then_statement, list): # nested conditional
-            then_code =  _extract_conditional(then_statement)
+        if isinstance(then_statement, list):  # nested conditional
+            then_code = _extract_conditional(then_statement)
         else:
             then_code = regular_expr(then_statement)
         # ELSE
-        if isinstance(else_statement, list): # nested conditional
-            else_code =  _extract_conditional(else_statement)
+        if isinstance(else_statement, list):  # nested conditional
+            else_code = _extract_conditional(else_statement)
         else:
             else_code = regular_expr(else_statement)
-        return r"\begin{cases}" + then_code + r"\qquad \text{if} \quad " + if_code + r"\\ "+ else_code + r" \qquad \text{otherwise.} \end{cases}"
+        return (
+            r"\begin{cases}"
+            + then_code
+            + r"\qquad \text{if} \quad "
+            + if_code
+            + r"\\ "
+            + else_code
+            + r" \qquad \text{otherwise.} \end{cases}"
+        )
 
     # Replace and/or with sympy relationals
     expr = transform_condition(expr)
 
     # Extract if/then/else
-    if 'else' in expr:
+    if "else" in expr:
         ite_code = extract_ite(expr)
         return _extract_conditional(ite_code)
 
     # Return the transformed equation
     return regular_expr(expr)
 
+
 def extract_ite(eq):
     "if COND: THEN else: ELSE"
 
     def transform(code):
-        " Transforms the code into a list of lines."
+        "Transforms the code into a list of lines."
         res = []
         items = []
-        for arg in code.split(':'):
-            items.append( arg.strip())
+        for arg in code.split(":"):
+            items.append(arg.strip())
         for i in range(len(items)):
-            if items[i].startswith('if '):
-                res.append( items[i].strip() )
-            elif items[i].strip().endswith('else'):
-                res.append(items[i].split('else')[0].strip() )
-                res.append('else' )
-            else: # the last then
-                res.append( items[i].strip() )
+            if items[i].startswith("if "):
+                res.append(items[i].strip())
+            elif items[i].strip().endswith("else"):
+                res.append(items[i].split("else")[0].strip())
+                res.append("else")
+            else:  # the last then
+                res.append(items[i].strip())
         return res
 
-
     def parse(lines):
-        " Recursive analysis of if-else statements"
+        "Recursive analysis of if-else statements"
         result = []
         while lines:
-            if lines[0].startswith('if'):
-                block = [lines.pop(0).split('if')[1], parse(lines)]
-                if lines[0].startswith('else'):
+            if lines[0].startswith("if"):
+                block = [lines.pop(0).split("if")[1], parse(lines)]
+                if lines[0].startswith("else"):
                     lines.pop(0)
                     block.append(parse(lines))
                 result.append(block)
-            elif not lines[0].startswith(('else')):
+            elif not lines[0].startswith(("else")):
                 result.append(lines.pop(0))
             else:
                 break
@@ -440,51 +524,80 @@ def extract_ite(eq):
     condition = parse(multilined)
     return condition
 
+
 def extract_ite_func(eq):
     "ite(COND, THEN, ELSE)"
     # Process the equation
     condition = ["r>0.0", "1.0", "0.0"]
     return condition
 
+
 # Latexify names
-greek = ['alpha', 'beta', 'gamma', 'epsilon', 'eta', 'kappa', 'delta', 'lambda', 'mu', 'nu', 'zeta', 'sigma', 'phi', 'psi', 'rho', 'omega', 'xi', 'tau',
-         'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Phi', 'Psi', 'Omega'
+greek = [
+    "alpha",
+    "beta",
+    "gamma",
+    "epsilon",
+    "eta",
+    "kappa",
+    "delta",
+    "lambda",
+    "mu",
+    "nu",
+    "zeta",
+    "sigma",
+    "phi",
+    "psi",
+    "rho",
+    "omega",
+    "xi",
+    "tau",
+    "Gamma",
+    "Delta",
+    "Theta",
+    "Lambda",
+    "Xi",
+    "Phi",
+    "Psi",
+    "Omega",
 ]
 
+
 def _latexify_name(name, local):
-    parts = name.split('_')
+    parts = name.split("_")
     if len(parts) == 1:
         if len(name) == 1:
             equiv = name
         elif name in greek:
-            equiv = '\\' + name
+            equiv = "\\" + name
         else:
-            equiv = r'{\text{' + name + '}}'
+            equiv = r"{\text{" + name + "}}"
         if name in local:
-            equiv = '{' + equiv + '}(t)'
+            equiv = "{" + equiv + "}(t)"
         return equiv
     elif len(parts) == 2:
         equiv = ""
         for p in parts:
             if len(p) == 1:
-                equiv += '' + p + '_'
+                equiv += "" + p + "_"
             elif p in greek:
-                equiv += '\\' + p + '_'
+                equiv += "\\" + p + "_"
             else:
-                equiv += r'{\text{' + p + '}}' + '_'
+                equiv += r"{\text{" + p + "}}" + "_"
         equiv = equiv[:-1]
         if name in local:
-            equiv = '{' + equiv + '}(t)'
+            equiv = "{" + equiv + "}(t)"
         return equiv
     else:
-        equiv = r'{\text{' + name + '}}'
-        equiv = equiv.replace('_', '-')
+        equiv = r"{\text{" + name + "}}"
+        equiv = equiv.replace("_", "-")
         if name in local:
-            equiv = equiv + '(t)'
+            equiv = equiv + "(t)"
         return equiv
 
+
 def pop_name(name):
-    return name.replace('_', r'\_')
+    return name.replace("_", r"\_")
 
 
 def _format_list(l, sep):
@@ -493,17 +606,18 @@ def _format_list(l, sep):
     target_list = ""
     for t in l:
         target_list += t + sep
-    return target_list[:-len(sep)]
+    return target_list[: -len(sep)]
+
 
 def transform_condition(expr):
     """
     Transforms the "natural" logical operators into Sympy-compatible versions.
     """
-    expr = expr.replace (' and ', ' & ')
-    expr = expr.replace (' or ', ' | ')
-    expr = expr.replace (' is not ', ' != ')
-    expr = expr.replace (' not ', ' Not ')
-    expr = expr.replace (' not(', ' Not(')
-    expr = expr.replace (' is ', ' == ')
+    expr = expr.replace(" and ", " & ")
+    expr = expr.replace(" or ", " | ")
+    expr = expr.replace(" is not ", " != ")
+    expr = expr.replace(" not ", " Not ")
+    expr = expr.replace(" not(", " Not(")
+    expr = expr.replace(" is ", " == ")
 
     return expr

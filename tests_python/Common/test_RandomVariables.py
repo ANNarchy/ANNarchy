@@ -4,32 +4,35 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, LeakyIntegrator
 
+
 class test_NeuronRandomVariables(unittest.TestCase):
     """
     Test the correct evaluation of local equation updates.
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Compile the network for this test
         """
         LocalEquation = Neuron(
-            equations = """
+            equations="""
                 r = Uniform(0,1)
             """
         )
 
         GlobalEquation = Neuron(
-            parameters = "",
-            equations = """
+            parameters="",
+            equations="""
                 r = Uniform(0,1) : population
-            """
+            """,
         )
 
         cls._network = Network(seed=1)
@@ -80,6 +83,7 @@ class test_SynapseRandomVariables(unittest.TestCase):
     """
     Test the usage of random distributions for synapse variables
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -94,8 +98,10 @@ class test_SynapseRandomVariables(unittest.TestCase):
         cls._network = Network(seed=1)
 
         v = cls._network.create(geometry=5, neuron=LeakyIntegrator())
-        cls._test_proj = cls._network.connect(pre=v, post=v, target="exc", synapse=my_synapse)
-        cls._test_proj.fixed_number_pre(number = 1, weights=0.0)
+        cls._test_proj = cls._network.connect(
+            pre=v, post=v, target="exc", synapse=my_synapse
+        )
+        cls._test_proj.fixed_number_pre(number=1, weights=0.0)
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 

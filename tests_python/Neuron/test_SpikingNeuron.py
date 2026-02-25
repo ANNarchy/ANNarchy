@@ -4,11 +4,13 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
+
 
 class test_SpikingCondition(unittest.TestCase):
     """
@@ -16,6 +18,7 @@ class test_SpikingCondition(unittest.TestCase):
     condition.  The functionality of the optional *refractory* period is also
     tested.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -25,8 +28,8 @@ class test_SpikingCondition(unittest.TestCase):
             equations="""
                 v = v + 1.0
             """,
-            spike = "v == 3.0",
-            reset = "v = 1.0"
+            spike="v == 3.0",
+            reset="v = 1.0",
         )
 
         neuron2 = Neuron(
@@ -34,9 +37,9 @@ class test_SpikingCondition(unittest.TestCase):
             equations="""
                 v = v + 1.0
             """,
-            spike = "v == Vt",
-            reset = "v = 1.0 ",
-            refractory = 3.0
+            spike="v == Vt",
+            reset="v = 1.0 ",
+            refractory=3.0,
         )
 
         neuron3 = Neuron(
@@ -44,8 +47,8 @@ class test_SpikingCondition(unittest.TestCase):
             equations="""
                 v = v + 1.0
             """,
-            spike = "v == Vt",
-            reset = "v = 1.0 ",
+            spike="v == Vt",
+            reset="v = 1.0 ",
         )
 
         cls._network = Network()
@@ -123,4 +126,3 @@ class test_SpikingCondition(unittest.TestCase):
         numpy.testing.assert_allclose(self._population_3.neuron(0).v, 2.0)
         self._network.simulate(1)
         numpy.testing.assert_allclose(self._population_3.neuron(0).v, 1.0)
-

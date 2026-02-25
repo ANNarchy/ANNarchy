@@ -4,6 +4,7 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
@@ -33,7 +34,7 @@ class test_SpikingPopulationView(unittest.TestCase):
             """,
             spike="v > T",
             reset="v = Er",
-            refractory=5.0
+            refractory=5.0,
         )
 
         inp = Population((5, 5), neuron=LIF)

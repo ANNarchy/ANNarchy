@@ -297,11 +297,11 @@ public:
 """
 
 cpp11_profile_template = {
-    'include': """// Profiling
+    "include": """// Profiling
 #include "Profiling.hpp"
 extern class Profiling* prof_ptr;
 """,
-    'init': """
+    "init": """
     //initialize profiler, create singleton instance
     prof_ptr->register_function("net", "network", 0, "step", "overall");
     prof_ptr->register_function("net", "network", 0, "psp", "overall");
@@ -313,70 +313,70 @@ extern class Profiling* prof_ptr;
     prof_ptr->register_function("net", "network", 0, "rng", "overall");
     """,
     # Operations
-    'proj_psp_pre': """// measure synaptic transmission
+    "proj_psp_pre": """// measure synaptic transmission
     auto measure_psp = prof_ptr->get_measurement("network", "psp");
     measure_psp->start_wall_time();
     """,
-    'proj_psp_post': """// done
+    "proj_psp_post": """// done
     measure_psp->stop_wall_time();
     """,
-    'proj_step_pre': """// measure synaptic update
+    "proj_step_pre": """// measure synaptic update
     auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     measure_proj_step->start_wall_time();
     """,
-    'proj_step_post': """// done
+    "proj_step_post": """// done
     measure_proj_step->stop_wall_time();
     """,
-    'proj_post_event_pre': """// measure post-event update
+    "proj_post_event_pre": """// measure post-event update
     auto measure_proj_post_event_step = prof_ptr->get_measurement("network", "proj_post_event");
     measure_proj_step->start_wall_time();
     """,
-    'proj_post_event_post': """// done
+    "proj_post_event_post": """// done
     measure_proj_post_event_step->stop_wall_time();
     """,
-    'neur_step_pre': """// measure population update
+    "neur_step_pre": """// measure population update
     auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     measure_neur_step->start_wall_time();
     """,
-    'neur_step_post': """// done
+    "neur_step_post": """// done
     measure_neur_step->stop_wall_time();
     """,
     # Global operations
-    'global_op_pre': """// measure global operations
+    "global_op_pre": """// measure global operations
     auto measure_global_op = prof_ptr->get_measurement("network", "global_op");
     measure_global_op->start_wall_time();
     """,
-    'global_op_post': """// done
+    "global_op_post": """// done
     measure_global_op->stop_wall_time();
     """,
     # Record
-    'record_pre': """// measure record
+    "record_pre": """// measure record
     auto measure_rec = prof_ptr->get_measurement("network", "record");
     measure_rec->start_wall_time();
     """,
-    'record_post': """// done
+    "record_post": """// done
     measure_rec->stop_wall_time();
     """,
     # RNG
-    'rng_pre': """// measure update rng
+    "rng_pre": """// measure update rng
     auto measure_rng = prof_ptr->get_measurement("network", "rng");
     measure_rng->start_wall_time();
     """,
-    'rng_post': """// done
+    "rng_post": """// done
     measure_rng->stop_wall_time();
     """,
     # Overall and setup
-    'step_pre': """// before
+    "step_pre": """// before
     auto measure = prof_ptr->get_measurement("network", "step");
     measure->start_wall_time();
     """,
-    'step_post': """// after
+    "step_post": """// after
     measure->stop_wall_time();
     """,
-    'run_pre': """
+    "run_pre": """
     prof_ptr->reset();
     """,
-    'run_post': """
+    "run_post": """
     prof_ptr->evaluate();
         prof_ptr->store();
     #ifdef _DEBUG
@@ -384,49 +384,48 @@ extern class Profiling* prof_ptr;
         std::cout << *prof_ptr << std::endl;
     #endif
     """,
-
     #
     # Execute the profile in each Object (i. e. populations, projections)
-    'compute_psp': {
-        'before' : "measure_psp->start_wall_time();",
-        'after' : "measure_psp->stop_wall_time();"
+    "compute_psp": {
+        "before": "measure_psp->start_wall_time();",
+        "after": "measure_psp->stop_wall_time();",
     },
-    'update_synapse': {
-        'before' : "measure_step->start_wall_time();",
-        'after' : "measure_step->stop_wall_time();"
+    "update_synapse": {
+        "before": "measure_step->start_wall_time();",
+        "after": "measure_step->stop_wall_time();",
     },
-    'post_event': {
-        'before' : "measure_pe->start_wall_time();",
-        'after' : "measure_pe->stop_wall_time();"
+    "post_event": {
+        "before": "measure_pe->start_wall_time();",
+        "after": "measure_pe->stop_wall_time();",
     },
-    'update_neuron': {
-        'before' : "measure_step->start_wall_time();",
-        'after' : "measure_step->stop_wall_time();"
+    "update_neuron": {
+        "before": "measure_step->start_wall_time();",
+        "after": "measure_step->stop_wall_time();",
     },
-    'update_rng':{
-        'before' : "measure_rng->start_wall_time();",
-        'after' : "measure_rng->stop_wall_time();"
+    "update_rng": {
+        "before": "measure_rng->start_wall_time();",
+        "after": "measure_rng->stop_wall_time();",
     },
-    'update_delay':{
-        'before' : "measure_delay->start_wall_time();",
-        'after' : "measure_delay->stop_wall_time();"
+    "update_delay": {
+        "before": "measure_delay->start_wall_time();",
+        "after": "measure_delay->stop_wall_time();",
     },
-    'spike_gather': {
-        'before' : "measure_sc->start_wall_time();",
-        'after' : "measure_sc->stop_wall_time();"
+    "spike_gather": {
+        "before": "measure_sc->start_wall_time();",
+        "after": "measure_sc->stop_wall_time();",
     },
-    'spike_prop': {
-        'before' : "measure_prop->start_wall_time();",
-        'after' : "measure_prop->stop_wall_time();"
-    }
+    "spike_prop": {
+        "before": "measure_prop->start_wall_time();",
+        "after": "measure_prop->stop_wall_time();",
+    },
 }
 
 cpp11_omp_profile_template = {
-    'include': """// Profiling
+    "include": """// Profiling
 #include "Profiling.hpp"
 extern class Profiling* prof_ptr;
 """,
-    'init': """
+    "init": """
     //initialize profiler, create singleton instance
     prof_ptr->register_function("net", "network", 0, "step", "overall");
     prof_ptr->register_function("net", "network", 0, "psp", "overall");
@@ -438,99 +437,98 @@ extern class Profiling* prof_ptr;
     prof_ptr->register_function("net", "network", 0, "rng", "overall");
     """,
     # Operations
-    'proj_psp_pre': """// measure synaptic transmission
+    "proj_psp_pre": """// measure synaptic transmission
     auto measure_psp = prof_ptr->get_measurement("network", "psp");
     #pragma omp barrier
     #pragma omp master
     measure_psp->start_wall_time();
     """,
-    'proj_psp_post': """// done
+    "proj_psp_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_psp->stop_wall_time();
     """,
-    'proj_step_pre': """// measure synaptic update
+    "proj_step_pre": """// measure synaptic update
     auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->start_wall_time();
     """,
-    'proj_step_post': """// done
+    "proj_step_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->stop_wall_time();
     """,
-    'proj_post_event_pre': """// measure post-event update
+    "proj_post_event_pre": """// measure post-event update
     auto measure_proj_post_event_step = prof_ptr->get_measurement("network", "proj_post_event");
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->start_wall_time();
     """,
-    'proj_post_event_post': """// done
+    "proj_post_event_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_proj_post_event_step->stop_wall_time();
     """,
-    'neur_step_pre': """// measure population update
+    "neur_step_pre": """// measure population update
     auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     #pragma omp barrier
     #pragma omp master
     measure_neur_step->start_wall_time();
     """,
-    'neur_step_post': """// done
+    "neur_step_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_neur_step->stop_wall_time();
     """,
     # Global operations
-    'global_op_pre': """// measure global operations
+    "global_op_pre": """// measure global operations
     auto measure_global_op = prof_ptr->get_measurement("network", "global_op");
     #pragma omp barrier
     #pragma omp master
     measure_global_op->start_wall_time();
     """,
-    'global_op_post': """// done
+    "global_op_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_global_op->stop_wall_time();
     """,
     # Record
-    'record_pre': """// measure record
+    "record_pre": """// measure record
     auto measure_rec = prof_ptr->get_measurement("network", "record");
     #pragma omp barrier
     #pragma omp master
     measure_rec->start_wall_time();
     """,
-    'record_post': """// done
+    "record_post": """// done
     #pragma omp barrier
     #pragma omp master
     measure_rec->stop_wall_time();
     """,
     # RNG
-    'rng_pre': """// measure update rng
+    "rng_pre": """// measure update rng
     auto measure_rng = prof_ptr->get_measurement("network", "rng");
     #pragma omp master
     measure_rng->start_wall_time();
     """,
-    'rng_post': """// done
+    "rng_post": """// done
     #pragma omp master
     measure_rng->stop_wall_time();
     """,
-
     # Overall and setup
-    'step_pre': """// before
+    "step_pre": """// before
     auto measure = prof_ptr->get_measurement("network", "step");
     #pragma omp master
     measure->start_wall_time();
     """,
-    'step_post': """// after
+    "step_post": """// after
     #pragma omp master
     measure->stop_wall_time();
     """,
-    'run_pre': """
+    "run_pre": """
     prof_ptr->reset();
     """,
-    'run_post': """
+    "run_post": """
     prof_ptr->evaluate();
     if (false) {
         prof_ptr->store();
@@ -538,45 +536,43 @@ extern class Profiling* prof_ptr;
         std::cout << *prof_ptr << std::endl;
     }
     """,
-
     #
     # Execute the profile in each Object (i. e. populations, projections)
-    'compute_psp': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_psp->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_psp->stop_wall_time();"
+    "compute_psp": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_psp->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_psp->stop_wall_time();",
     },
-    'update_synapse': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();"
+    "update_synapse": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();",
     },
-    'post_event': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_pe->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_pe->stop_wall_time();"
+    "post_event": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_pe->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_pe->stop_wall_time();",
     },
-    'update_neuron': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();"
+    "update_neuron": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();",
     },
-    'update_rng':{
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->stop_wall_time();"
+    "update_rng": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_rng->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_rng->stop_wall_time();",
     },
-    'update_delay':{
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_delay->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_delay->stop_wall_time();"
+    "update_delay": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_delay->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_delay->stop_wall_time();",
     },
-    'spike_gather': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_sc->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_sc->stop_wall_time();"
+    "spike_gather": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_sc->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_sc->stop_wall_time();",
     },
-    'spike_prop': {
-        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_prop->start_wall_time();",
-        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_prop->stop_wall_time();"
-    }
+    "spike_prop": {
+        "before": "#pragma omp barrier\n#pragma omp master\nmeasure_prop->start_wall_time();",
+        "after": "#pragma omp barrier\n#pragma omp master\nmeasure_prop->stop_wall_time();",
+    },
 }
 
-cuda_profile_header = \
-"""
+cuda_profile_header = """
 class Measurement{
     std::string _type;
     std::string _label;
@@ -659,11 +655,11 @@ public:
 """
 
 cuda_profile_template = {
-    'include': """// Profiling
+    "include": """// Profiling
 #include "Profiling.hpp"
 extern class Profiling* prof_ptr;
 """,
-    'init': """
+    "init": """
     //initialize profiler, create singleton instance
     prof_ptr->register_function("net", "network", 0, "step", "overall");
     prof_ptr->register_function("net", "network", 0, "psp", "overall");
@@ -673,40 +669,39 @@ extern class Profiling* prof_ptr;
     prof_ptr->register_function("net", "network", 0, "record", "overall");
     """,
     # Operations
-    'proj_psp_pre': """// measure synaptic transmission
+    "proj_psp_pre": """// measure synaptic transmission
     auto measure_psp = prof_ptr->get_measurement("network", "psp");
     measure_psp->start_wall_time();
     """,
-    'proj_psp_post': """// done
+    "proj_psp_post": """// done
     measure_psp->stop_wall_time();
     """,
-    'proj_step_pre': """// measure synaptic transmission
+    "proj_step_pre": """// measure synaptic transmission
     auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     measure_proj_step->start_wall_time();
     """,
-    'proj_step_post': """// done
+    "proj_step_post": """// done
     measure_proj_step->stop_wall_time();
     """,
-    'neur_step_pre': """// measure population update
+    "neur_step_pre": """// measure population update
     auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     measure_neur_step->start_wall_time();
     """,
-    'neur_step_post': """// done
+    "neur_step_post": """// done
     measure_neur_step->stop_wall_time();
     """,
-
     # Overall and setup
-    'step_pre': """// before
+    "step_pre": """// before
     auto measure = prof_ptr->get_measurement("network", "step");
     measure->start_wall_time();
     """,
-    'step_post': """// after
+    "step_post": """// after
     measure->stop_wall_time();
     """,
-    'run_pre': """
+    "run_pre": """
     prof_ptr->reset();
     """,
-    'run_post': """
+    "run_post": """
     prof_ptr->evaluate();
     if (false) {
         prof_ptr->store();
@@ -715,37 +710,37 @@ extern class Profiling* prof_ptr;
     }
     """,
     # Record
-    'record_pre': """// measure record
+    "record_pre": """// measure record
     auto measure_rec = prof_ptr->get_measurement("network", "record");
     measure_rec->start_wall_time();
     """,
-    'record_post': """// done
+    "record_post": """// done
     measure_rec->stop_wall_time();
     """,
     #
     # Operations
-    'compute_psp': {
-        'before' : "proj%(id)s->measure_psp->start_wall_time();",
-        'after' : "proj%(id)s->measure_psp->stop_wall_time();"
+    "compute_psp": {
+        "before": "proj%(id)s->measure_psp->start_wall_time();",
+        "after": "proj%(id)s->measure_psp->stop_wall_time();",
     },
-    'update_synapse': {
-        'before' : "proj%(id)s->measure_step->start_wall_time();",
-        'after' : "proj%(id)s->measure_step->stop_wall_time();"
+    "update_synapse": {
+        "before": "proj%(id)s->measure_step->start_wall_time();",
+        "after": "proj%(id)s->measure_step->stop_wall_time();",
     },
-    'post_event': {
-        'before' : "proj%(id)s->measure_pe->start_wall_time();",
-        'after' : "proj%(id)s->measure_pe->stop_wall_time();"
+    "post_event": {
+        "before": "proj%(id)s->measure_pe->start_wall_time();",
+        "after": "proj%(id)s->measure_pe->stop_wall_time();",
     },
-    'update_neuron': {
-        'before' : "pop%(id)s->measure_step->start_wall_time();",
-        'after' : "pop%(id)s->measure_step->stop_wall_time();"
+    "update_neuron": {
+        "before": "pop%(id)s->measure_step->start_wall_time();",
+        "after": "pop%(id)s->measure_step->stop_wall_time();",
     },
-    'spike_gather': {
-        'before' : "pop%(id)s->measure_gather->start_wall_time();",
-        'after' : "pop%(id)s->measure_gather->stop_wall_time();"
+    "spike_gather": {
+        "before": "pop%(id)s->measure_gather->start_wall_time();",
+        "after": "pop%(id)s->measure_gather->stop_wall_time();",
     },
-    'spike_prop': {
-        'before' : "measure_prop->start_wall_time();",
-        'after' : "measure_prop->stop_wall_time();"
+    "spike_prop": {
+        "before": "measure_prop->start_wall_time();",
+        "after": "measure_prop->stop_wall_time();",
     },
 }

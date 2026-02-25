@@ -13,20 +13,31 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 # Code templates
-from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
+from ANNarchy.generator.Projection.ProjectionGenerator import (
+    ProjectionGenerator,
+    get_bounds,
+)
 from ANNarchy.generator.Projection.SingleThread import *
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, get_highest_available_simd_instructions_type, determine_idx_type_for_projection
+from ANNarchy.generator.Utils import (
+    generate_equation_code,
+    tabify,
+    remove_trailing_spaces,
+    get_highest_available_simd_instructions_type,
+    determine_idx_type_for_projection,
+)
 
 import re
 from copy import deepcopy
+
 
 class SingleThreadGenerator(ProjectionGenerator):
     """
     The class is responsible to generate the C++ header definition for a Population
     object. The code is intendend to run on a single CPU core.
     """
+
     def __init__(self, profile_generator, net_id):
         # The super here calls all the base classes, so first
         # ProjectionGenerator and afterwards OpenMPConnectivity
@@ -52,7 +63,12 @@ class SingleThreadGenerator(ProjectionGenerator):
         self._template_ids = {}
 
         # Select the C++ connectivity template
-        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj, suppress_printouts=False)
+        (
+            sparse_matrix_include,
+            sparse_matrix_format,
+            sparse_matrix_args,
+            single_matrix,
+        ) = self._select_sparse_matrix_format(proj, suppress_printouts=False)
 
         # Update template fill elements
         self._configure_template_ids(proj)
@@ -61,7 +77,9 @@ class SingleThreadGenerator(ProjectionGenerator):
         decl, accessor = self._declaration_accessors(proj, single_matrix)
 
         # Initiliaze the projection
-        init_weights, init_delays, init_parameters_variables = self._init_parameters_variables(proj, single_matrix)
+        init_weights, init_delays, init_parameters_variables = (
+            self._init_parameters_variables(proj, single_matrix)
+        )
 
         # Synaptic plasticity
         update_prefix, update_variables = self._update_synapse(proj)
@@ -73,15 +91,15 @@ class SingleThreadGenerator(ProjectionGenerator):
         post_event = self._post_event(proj)
 
         # Compute sum is the trickiest part
-        if proj.synapse_type.type == 'rate':
+        if proj.synapse_type.type == "rate":
             psp_prefix, psp_code = self._computesum_rate(proj)
         else:
             psp_prefix, psp_code = self._computesum_spiking(proj)
 
         # Detect event-driven variables
         has_event_driven = False
-        for var in proj.synapse_type.description['variables']:
-            if var['method'] == 'event-driven':
+        for var in proj.synapse_type.description["variables"]:
+            if var["method"] == "event-driven":
                 has_event_driven = True
 
         # Detect delays to generate the code
@@ -104,16 +122,18 @@ class SingleThreadGenerator(ProjectionGenerator):
         # Generate connectivity call
         # This can be either construct from LIL (the matrix was build up in Python)
         # or a C++ side implemented pattern.
-        if 'declare_connectivity_matrix' not in proj._specific_template.keys():
-            connector_call = self._connectivity_init(proj, sparse_matrix_format, sparse_matrix_args) % {
-                'sparse_format': sparse_matrix_format,
-                'init_weights': init_weights,
-                'init_delays': init_delays,
-                'rng_idx': "[0]",
-                'add_args': add_args,
-                'num_threads': "",
-                'float_prec': ConfigManager().get('precision', self._net_id),
-                'idx_type': determine_idx_type_for_projection(proj)[0]
+        if "declare_connectivity_matrix" not in proj._specific_template.keys():
+            connector_call = self._connectivity_init(
+                proj, sparse_matrix_format, sparse_matrix_args
+            ) % {
+                "sparse_format": sparse_matrix_format,
+                "init_weights": init_weights,
+                "init_delays": init_delays,
+                "rng_idx": "[0]",
+                "add_args": add_args,
+                "num_threads": "",
+                "float_prec": ConfigManager().get("precision", self._net_id),
+                "idx_type": determine_idx_type_for_projection(proj)[0],
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""
@@ -121,13 +141,17 @@ class SingleThreadGenerator(ProjectionGenerator):
             # The user is responsible to define the connectivity related variables
             sparse_matrix_format = "SpecificConnectivity"
             sparse_matrix_args = ""
-            sparse_matrix_include = "#include \"Specific.hpp\"\n"
+            sparse_matrix_include = '#include "Specific.hpp"\n'
             connector_call = ""
-            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
-            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
+            declare_connectivity_matrix = proj._specific_template[
+                "declare_connectivity_matrix"
+            ]
+            access_connectivity_matrix = proj._specific_template[
+                "access_connectivity_matrix"
+            ]
 
         # Local functions
-        decl['parameters_variables'] += self._local_functions(proj)
+        decl["parameters_variables"] += self._local_functions(proj)
 
         # Memory management
         size_in_bytes = self._size_in_bytes(proj)
@@ -140,7 +164,9 @@ class SingleThreadGenerator(ProjectionGenerator):
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.hpp"\n"""
-            declare_profile, init_profile = self._prof_gen.generate_init_projection(proj)
+            declare_profile, init_profile = self._prof_gen.generate_init_projection(
+                proj
+            )
         else:
             include_profile = ""
             init_profile = ""
@@ -151,86 +177,108 @@ class SingleThreadGenerator(ProjectionGenerator):
         struct_additional = ""
         init_additional = ""
         access_additional = ""
-        if 'include_additional' in proj._specific_template.keys():
-            include_additional = proj._specific_template['include_additional']
-        if 'struct_additional' in proj._specific_template.keys():
-            struct_additional = proj._specific_template['struct_additional']
-        if 'init_additional' in proj._specific_template.keys():
-            init_additional = proj._specific_template['init_additional']
-        if 'access_additional' in proj._specific_template.keys():
-            access_additional = proj._specific_template['access_additional']
+        if "include_additional" in proj._specific_template.keys():
+            include_additional = proj._specific_template["include_additional"]
+        if "struct_additional" in proj._specific_template.keys():
+            struct_additional = proj._specific_template["struct_additional"]
+        if "init_additional" in proj._specific_template.keys():
+            init_additional = proj._specific_template["init_additional"]
+        if "access_additional" in proj._specific_template.keys():
+            access_additional = proj._specific_template["access_additional"]
 
         # Gather all code segments produced so far
         final_code_dict = {
             # version tag
-            'annarchy_version': ANNarchy.__release__,
+            "annarchy_version": ANNarchy.__release__,
             # fill code templates
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'id_proj': proj.id,
-            'name_pre': proj.pre.name,
-            'name_post': proj.post.name,
-            'target': proj.target,
-            'sparse_matrix_include': sparse_matrix_include,
-            'sparse_format': sparse_matrix_format,
-            'sparse_format_args': sparse_matrix_args,
-            'include_additional': include_additional,
-            'include_profile': include_profile,
-            'struct_additional': struct_additional,
-            'declare_connectivity_matrix': declare_connectivity_matrix,
-            'access_connectivity_matrix': access_connectivity_matrix,
-            'declare_delays': decl['declare_delay'] if has_delay else "",
-            'declare_event_driven': decl['event_driven'] if has_event_driven else "",
-            'declare_rng': decl['rng'],
-            'declare_parameters_variables': decl['parameters_variables'],
-            'declare_additional': decl['additional'],
-            'declare_profile': declare_profile,
-            'connector_call': connector_call,
-            'init_event_driven': "",
-            'init_rng': init_rng,
-            'init_parameters_variables': init_parameters_variables,
-            'init_additional': init_additional,
-            'init_profile': init_profile,
-            'psp_prefix': psp_prefix,
-            'psp_code': psp_code,
-            'update_rng': update_rng,
-            'update_prefix': update_prefix,
-            'update_variables': update_variables,
-            'update_max_delay': update_max_delay,
-            'reset_ring_buffer': reset_ring_buffer,
-            'post_event': post_event,
-            'access_parameters_variables': accessor,
-            'access_additional': access_additional,
-            'size_in_bytes': size_in_bytes,
-            'clear_container': clear_container,
-            'float_prec': ConfigManager().get('precision', self._net_id),
-            'creating': creating,
-            'pruning': pruning
+            "id_pre": proj.pre.id,
+            "id_post": proj.post.id,
+            "id_proj": proj.id,
+            "name_pre": proj.pre.name,
+            "name_post": proj.post.name,
+            "target": proj.target,
+            "sparse_matrix_include": sparse_matrix_include,
+            "sparse_format": sparse_matrix_format,
+            "sparse_format_args": sparse_matrix_args,
+            "include_additional": include_additional,
+            "include_profile": include_profile,
+            "struct_additional": struct_additional,
+            "declare_connectivity_matrix": declare_connectivity_matrix,
+            "access_connectivity_matrix": access_connectivity_matrix,
+            "declare_delays": decl["declare_delay"] if has_delay else "",
+            "declare_event_driven": decl["event_driven"] if has_event_driven else "",
+            "declare_rng": decl["rng"],
+            "declare_parameters_variables": decl["parameters_variables"],
+            "declare_additional": decl["additional"],
+            "declare_profile": declare_profile,
+            "connector_call": connector_call,
+            "init_event_driven": "",
+            "init_rng": init_rng,
+            "init_parameters_variables": init_parameters_variables,
+            "init_additional": init_additional,
+            "init_profile": init_profile,
+            "psp_prefix": psp_prefix,
+            "psp_code": psp_code,
+            "update_rng": update_rng,
+            "update_prefix": update_prefix,
+            "update_variables": update_variables,
+            "update_max_delay": update_max_delay,
+            "reset_ring_buffer": reset_ring_buffer,
+            "post_event": post_event,
+            "access_parameters_variables": accessor,
+            "access_additional": access_additional,
+            "size_in_bytes": size_in_bytes,
+            "clear_container": clear_container,
+            "float_prec": ConfigManager().get("precision", self._net_id),
+            "creating": creating,
+            "pruning": pruning,
         }
 
         # Generate the final code
-        final_code = self._templates['projection_header'] % final_code_dict
+        final_code = self._templates["projection_header"] % final_code_dict
 
         # remove right-trailing white spaces
         final_code = remove_trailing_spaces(final_code)
 
         # Store file (default: $(cwd)/annarchy/)
-        with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/proj'+str(proj.id)+'.hpp', 'w') as ofile:
+        with open(
+            annarchy_dir
+            + "/generate/net"
+            + str(self._net_id)
+            + "/proj"
+            + str(proj.id)
+            + ".hpp",
+            "w",
+        ) as ofile:
             ofile.write(final_code)
 
         # Dictionary for inclusions in ANNarchy.cpp
         proj_desc = {
-            'include': """#include "proj%(id)s.hpp"\n""" % {'id': proj.id},
-            'extern': """extern ProjStruct%(id)s *proj%(id)s;\n"""% {'id': proj.id},
-            'instance': """ProjStruct%(id)s *proj%(id)s;\n"""% {'id': proj.id},
-            'init': """    proj%(id)s->init_projection();\n""" % {'id' : proj.id}
+            "include": """#include "proj%(id)s.hpp"\n""" % {"id": proj.id},
+            "extern": """extern ProjStruct%(id)s *proj%(id)s;\n""" % {"id": proj.id},
+            "instance": """ProjStruct%(id)s *proj%(id)s;\n""" % {"id": proj.id},
+            "init": """    proj%(id)s->init_projection();\n""" % {"id": proj.id},
         }
 
         # Required call statements for the main loop (singleStep() in ANNarchy.cpp)
-        proj_desc['compute_psp'] = """\tproj%(id)s->compute_psp();\n""" % {'id' : proj.id}
-        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s->update_synapse();\n""" % {'id': proj.id}
-        proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s->update_rng();\n""" % {'id': proj.id}
-        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s->post_event();\n""" % {'id': proj.id}
+        proj_desc["compute_psp"] = """\tproj%(id)s->compute_psp();\n""" % {
+            "id": proj.id
+        }
+        proj_desc["update"] = (
+            ""
+            if update_variables == ""
+            else """\tproj%(id)s->update_synapse();\n""" % {"id": proj.id}
+        )
+        proj_desc["rng_update"] = (
+            ""
+            if update_rng == ""
+            else """\tproj%(id)s->update_rng();\n""" % {"id": proj.id}
+        )
+        proj_desc["post_event"] = (
+            ""
+            if post_event == ""
+            else """\tproj%(id)s->post_event();\n""" % {"id": proj.id}
+        )
 
         return proj_desc
 
@@ -245,7 +293,9 @@ class SingleThreadGenerator(ProjectionGenerator):
         """
         # Sanity check
         if proj._storage_order not in ["post_to_pre", "pre_to_post"]:
-            raise ValueError("storage_order argument must be either 'post_to_pre' or 'pre_to_post'")
+            raise ValueError(
+                "storage_order argument must be either 'post_to_pre' or 'pre_to_post'"
+            )
 
         # Index data types depend on the matrix dimension
         # HD (1st Dec. 2021):   until now, the data type optimization is disabled for
@@ -254,17 +304,19 @@ class SingleThreadGenerator(ProjectionGenerator):
         idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
         # Some common ids
-        self._template_ids.update({
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'idx_type': idx_type,
-            'size_type': size_type,
-            'float_prec': ConfigManager().get('precision', self._net_id),
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '->',
-            'post_prefix': 'pop'+ str(proj.post.id) + '->',
-        })
+        self._template_ids.update(
+            {
+                "id_proj": proj.id,
+                "target": proj.target,
+                "id_post": proj.post.id,
+                "id_pre": proj.pre.id,
+                "idx_type": idx_type,
+                "size_type": size_type,
+                "float_prec": ConfigManager().get("precision", self._net_id),
+                "pre_prefix": "pop" + str(proj.pre.id) + "->",
+                "post_prefix": "pop" + str(proj.post.id) + "->",
+            }
+        )
 
         # The variable fields and indices depends on matrix format
         # as well as the matrix orientation.
@@ -273,28 +325,56 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(LIL_SingleThread.conn_templates)
                 self._template_ids.update(LIL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "coo":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(COO_SingleThread.conn_templates)
                 self._template_ids.update(COO_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "dia":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(DIA_SingleThread.conn_templates)
                 self._template_ids.update(DIA_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "bsr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(BSR_SingleThread.conn_templates)
                 self._template_ids.update(BSR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
@@ -309,14 +389,28 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(ELLR_SingleThread.conn_templates)
                 self._template_ids.update(ELLR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "sell":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(SELL_SingleThread.conn_templates)
                 self._template_ids.update(SELL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "ell":
             if proj._storage_order == "post_to_pre":
@@ -324,7 +418,14 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(ELL_SingleThread.conn_ids)
 
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "hyb":
             if proj._storage_order == "post_to_pre":
@@ -333,7 +434,14 @@ class SingleThreadGenerator(ProjectionGenerator):
                 #   In contrast to most of the other formats, we can not define the
                 #   indices by one set as they are different for coo/ell part
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
+                raise Global.InvalidConfiguration(
+                    "    "
+                    + proj.name
+                    + ": storage_format = "
+                    + proj._storage_format
+                    + " and storage_order = "
+                    + proj._storage_order
+                )
 
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
@@ -344,7 +452,12 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(Dense_T_SingleThread.conn_ids)
 
         else:
-            raise Messages.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
+            raise Messages.CodeGeneratorException(
+                "    "
+                + proj.name
+                + ": no template ids available to generate single-thread code and storage_format="
+                + proj._storage_format
+            )
 
     def creating(self, proj):
         """
@@ -352,48 +465,68 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         TODO: documentation
         """
-        if 'creating' not in proj.synapse_type.description.keys():
+        if "creating" not in proj.synapse_type.description.keys():
             return ""
 
         if proj._storage_format != "lil":
-            raise NotImplementedError("Structural plasticity is only available for LIL structures.")
+            raise NotImplementedError(
+                "Structural plasticity is only available for LIL structures."
+            )
 
-        creating_structure = proj.synapse_type.description['creating']
+        creating_structure = proj.synapse_type.description["creating"]
 
         # Random stuff
         proba = ""
         proba_init = ""
-        if 'proba' in creating_structure['bounds'].keys():
-            val = creating_structure['bounds']['proba']
-            proba += '&&(unif(rng[0])<' + val + ')'
+        if "proba" in creating_structure["bounds"].keys():
+            val = creating_structure["bounds"]["proba"]
+            proba += "&&(unif(rng[0])<" + val + ")"
             proba_init += "std::uniform_real_distribution<double> unif(0.0, 1.0);"
-        if  creating_structure['rd']:
-            proba_init += "\n        " +  creating_structure['rd']['template'] + ' rd(' + creating_structure['rd']['args'] + ');'
+        if creating_structure["rd"]:
+            proba_init += (
+                "\n        "
+                + creating_structure["rd"]["template"]
+                + " rd("
+                + creating_structure["rd"]["args"]
+                + ");"
+            )
 
         # delays
         delay = ""
-        if 'd' in creating_structure['bounds'].keys():
-            d = int(creating_structure['bounds']['delay']/ConfigManager().get('dt', self._net_id))
+        if "d" in creating_structure["bounds"].keys():
+            d = int(
+                creating_structure["bounds"]["delay"]
+                / ConfigManager().get("dt", self._net_id)
+            )
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
-                    Messages._error('creating: you can not add a delay higher than the maximum of existing delays')
+                    Messages._error(
+                        "creating: you can not add a delay higher than the maximum of existing delays"
+                    )
 
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
-                    Messages._error('creating: you can not add a delay different from the others if they were constant.')
+                    Messages._error(
+                        "creating: you can not add a delay different from the others if they were constant."
+                    )
 
         creation_ids = deepcopy(self._template_ids)
-        creating_condition = creating_structure['cpp'] % creation_ids
+        creating_condition = creating_structure["cpp"] % creation_ids
 
-        creation_ids.update({
-            'eq': creating_structure['eq'],
-            'condition': creating_condition,
-            'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
-            'proba' : proba, 'proba_init': proba_init,
-            'delay': delay
-        })
-        creating = self._templates['structural_plasticity']['create'] % creation_ids
+        creation_ids.update(
+            {
+                "eq": creating_structure["eq"],
+                "condition": creating_condition,
+                "weights": 0.0
+                if not "w" in creating_structure["bounds"].keys()
+                else creating_structure["bounds"]["w"],
+                "proba": proba,
+                "proba_init": proba_init,
+                "delay": delay,
+            }
+        )
+        creating = self._templates["structural_plasticity"]["create"] % creation_ids
 
         return creating
 
@@ -403,33 +536,43 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         TODO: documentation
         """
-        if 'pruning' not in proj.synapse_type.description.keys():
+        if "pruning" not in proj.synapse_type.description.keys():
             return ""
 
         if proj._storage_format != "lil":
-            raise NotImplementedError("Structural plasticity is only available for LIL structures.")
+            raise NotImplementedError(
+                "Structural plasticity is only available for LIL structures."
+            )
 
-        pruning_structure = proj.synapse_type.description['pruning']
+        pruning_structure = proj.synapse_type.description["pruning"]
 
         proba = ""
         proba_init = ""
-        if 'proba' in pruning_structure['bounds'].keys():
-            val = pruning_structure['bounds']['proba']
-            proba = '&&(unif(rng[0])<' + val + ')'
+        if "proba" in pruning_structure["bounds"].keys():
+            val = pruning_structure["bounds"]["proba"]
+            proba = "&&(unif(rng[0])<" + val + ")"
             proba_init = "std::uniform_real_distribution<double> unif(0.0, 1.0);"
-        if pruning_structure['rd']:
-            proba_init += "\n        " +  pruning_structure['rd']['template'] + ' rd(' + pruning_structure['rd']['args'] + ');'
+        if pruning_structure["rd"]:
+            proba_init += (
+                "\n        "
+                + pruning_structure["rd"]["template"]
+                + " rd("
+                + pruning_structure["rd"]["args"]
+                + ");"
+            )
 
         pruning_ids = deepcopy(self._template_ids)
-        pruning_condition = pruning_structure['cpp'] % pruning_ids
+        pruning_condition = pruning_structure["cpp"] % pruning_ids
 
-        pruning_ids.update({
-            'eq': pruning_structure['eq'],
-            'condition': pruning_condition,
-            'proba' : proba,
-            'proba_init': proba_init
-        })
-        pruning = self._templates['structural_plasticity']['prune'] % pruning_ids
+        pruning_ids.update(
+            {
+                "eq": pruning_structure["eq"],
+                "condition": pruning_condition,
+                "proba": proba,
+                "proba_init": proba_init,
+            }
+        )
+        pruning = self._templates["structural_plasticity"]["prune"] % pruning_ids
 
         return pruning
 
@@ -438,10 +581,10 @@ class SingleThreadGenerator(ProjectionGenerator):
         Create the c++ code for post-synaptic potential computation.
         """
         # Specific projection (e. g. convolution, pooling or user-defined stuff)
-        if 'psp_code' in proj._specific_template.keys():
-            psp_code = proj._specific_template['psp_code']
-            if 'psp_prefix' in proj._specific_template.keys():
-                psp_prefix = proj._specific_template['psp_prefix']
+        if "psp_code" in proj._specific_template.keys():
+            psp_code = proj._specific_template["psp_code"]
+            if "psp_prefix" in proj._specific_template.keys():
+                psp_prefix = proj._specific_template["psp_prefix"]
             else:
                 psp_prefix = ""
 
@@ -455,44 +598,71 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         # For a default continous transmission we can use a hand-written
         # AVX implementation or unrolled versions of the BSR
-        if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
-                      proj.synapse_type.description['psp']['eq']=="w*pre.r":
-
+        if (
+            isinstance(proj.synapse_type, DefaultRateCodedSynapse)
+            or proj.synapse_type.description["psp"]["eq"] == "w*pre.r"
+        ):
             simd_type = get_highest_available_simd_instructions_type(proj.net_id)
 
             # Does our current system support SIMD and does the selected format offer an implementation?
-            if simd_type is not None and "vectorized_default_psp" in self._templates.keys():
+            if (
+                simd_type is not None
+                and "vectorized_default_psp" in self._templates.keys()
+            ):
                 try:
                     # The default weighted sum can be re-formulated for single weights
                     if proj._has_single_weight():
-                        template = self._templates["vectorized_default_psp"][simd_type]["single_w"]
+                        template = self._templates["vectorized_default_psp"][simd_type][
+                            "single_w"
+                        ]
                     else:
-                        template = self._templates["vectorized_default_psp"][simd_type]["multi_w"]
+                        template = self._templates["vectorized_default_psp"][simd_type][
+                            "multi_w"
+                        ]
 
                     # the access to pre-synaptic firing depends on the delay
                     if proj.max_delay <= 1:
                         # no synaptic delay
-                        ids.update({
-                            'get_r': ids['pre_prefix']+"r.data()",
-                        })
+                        ids.update(
+                            {
+                                "get_r": ids["pre_prefix"] + "r.data()",
+                            }
+                        )
 
-                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
+                        psp_code = (
+                            template["sum"][
+                                ConfigManager().get("precision", self._net_id)
+                            ]
+                            % ids
+                        )
 
                         if self._prof_gen:
-                            psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+                            psp_code = self._prof_gen.annotate_computesum_rate(
+                                proj, psp_code
+                            )
 
                         return "", psp_code
 
                     elif proj.uniform_delay != -1 and proj.max_delay > 1:
                         # Uniform delay
-                        ids.update({
-                            'get_r': ids['pre_prefix']+"_delayed_r[delay-1].data()",
-                        })
+                        ids.update(
+                            {
+                                "get_r": ids["pre_prefix"]
+                                + "_delayed_r[delay-1].data()",
+                            }
+                        )
 
-                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
+                        psp_code = (
+                            template["sum"][
+                                ConfigManager().get("precision", self._net_id)
+                            ]
+                            % ids
+                        )
 
                         if self._prof_gen:
-                            psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+                            psp_code = self._prof_gen.annotate_computesum_rate(
+                                proj, psp_code
+                            )
 
                         return "", psp_code
 
@@ -504,7 +674,9 @@ class SingleThreadGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Messages._debug("No SIMD implementation found, fallback to non-SIMD code")
+                    Messages._debug(
+                        "No SIMD implementation found, fallback to non-SIMD code"
+                    )
                     template = ""
 
             else:
@@ -519,25 +691,33 @@ class SingleThreadGenerator(ProjectionGenerator):
                         blockDim = proj._bsr_tile_size
 
                         # Loop unroll depends on the block-size
-                        unrolled_template = self._templates["unrolled_default_psp"][blockDim]
+                        unrolled_template = self._templates["unrolled_default_psp"][
+                            blockDim
+                        ]
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
-                            template = unrolled_template[simd_type]['multi_w']['sum'][ConfigManager().get('precision', self._net_id)]
+                            template = unrolled_template[simd_type]["multi_w"]["sum"][
+                                ConfigManager().get("precision", self._net_id)
+                            ]
                         else:
-                            template = unrolled_template['none']['multi_w']["sum"]
+                            template = unrolled_template["none"]["multi_w"]["sum"]
 
                         # the access to pre-synaptic firing depends on the delay
                         if proj.max_delay <= 1:
                             # no synaptic delay
-                            ids.update({
-                                'get_r': ids['pre_prefix']+"r.data()",
-                            })
+                            ids.update(
+                                {
+                                    "get_r": ids["pre_prefix"] + "r.data()",
+                                }
+                            )
 
                             psp_code = template % ids
 
                             if self._prof_gen:
-                                psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+                                psp_code = self._prof_gen.annotate_computesum_rate(
+                                    proj, psp_code
+                                )
 
                             return "", psp_code
                         else:
@@ -549,47 +729,54 @@ class SingleThreadGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Messages._debug("No SIMD implementation found, fallback to non-SIMD code")
+                        Messages._debug(
+                            "No SIMD implementation found, fallback to non-SIMD code"
+                        )
                         template = ""
 
         # Default variables needed in psp_code
-        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
+        psp_prefix = tabify(
+            "%(float_prec)s sum;"
+            % {"float_prec": ConfigManager().get("precision", self._net_id)},
+            2,
+        )
 
         # Choose the corresponding summation template
         try:
-            template = self._templates['rate_coded_sum']
+            template = self._templates["rate_coded_sum"]
         except KeyError:
-           raise Messages.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
+            raise Messages.CodeGeneratorException(
+                "    SingleThreadGenerator: no template for this configuration available"
+            )
 
         # The psp uses in almost all cases one time the pre-synaptic index,
         # therefore I want to spare the usage of the explicit rk_pre variable.
         if proj._storage_format == "lil":
-            ids['pre_index'] = "[pre_rank[i][j]]"
-            ids['post_index'] = "[post_rank[i]]"
+            ids["pre_index"] = "[pre_rank[i][j]]"
+            ids["post_index"] = "[post_rank[i]]"
         elif proj._storage_format == "csr":
-            ids['pre_index'] = "[col_idx[j]]"
+            ids["pre_index"] = "[col_idx[j]]"
 
         # Dependencies
-        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+        dependencies = list(set(proj.synapse_type.description["dependencies"]["pre"]))
 
         # Retrieve the PSP
-        if not 'psp' in  proj.synapse_type.description.keys(): # default
+        if not "psp" in proj.synapse_type.description.keys():  # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
-        else: # custom psp
-            psp = (proj.synapse_type.description['psp']['cpp'])
+        else:  # custom psp
+            psp = proj.synapse_type.description["psp"]["cpp"]
 
         # Special case where w is a single value
         if proj._has_single_weight():
-            psp = re.sub(
-                r'([^\w]+)w%\(local_index\)s',
-                r'\1w',
-                ' ' + psp
-            )
+            psp = re.sub(r"([^\w]+)w%\(local_index\)s", r"\1w", " " + psp)
 
         # Allow the use of global variables in psp (issue60)
         for var in dependencies:
-            if var in proj.pre.neuron_type.description['global']:
-                psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
+            if var in proj.pre.neuron_type.description["global"]:
+                psp = psp.replace(
+                    "%(pre_prefix)s" + var + "%(pre_index)s",
+                    "%(pre_prefix)s" + var + "%(global_index)s",
+                )
 
         # Delayed variables
         if isinstance(proj.pre, PopulationView):
@@ -598,30 +785,35 @@ class SingleThreadGenerator(ProjectionGenerator):
             delayed_variables = proj.pre.delayed_variables
 
         # Delays
-        if proj.max_delay > 1: # There is non-zero delay
-            if proj.uniform_delay == -1: # Non-uniform delays
+        if proj.max_delay > 1:  # There is non-zero delay
+            if proj.uniform_delay == -1:  # Non-uniform delays
                 for var in delayed_variables:
-                    if var in proj.pre.neuron_type.description['local']:
+                    if var in proj.pre.neuron_type.description["local"]:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_"
+                            + var
+                            + "%(delay_nu)s%(pre_index)s",
                         )
                     else:
-                        Messages._print(proj.synapse_type.description['psp']['eq'])
-                        Messages._error('The psp accesses a global variable with a non-uniform delay!')
+                        Messages._print(proj.synapse_type.description["psp"]["eq"])
+                        Messages._error(
+                            "The psp accesses a global variable with a non-uniform delay!"
+                        )
 
-
-            else: # Uniform delays
+            else:  # Uniform delays
                 for var in delayed_variables:
-                    if var in proj.pre.neuron_type.description['local']:
+                    if var in proj.pre.neuron_type.description["local"]:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_"
+                            + var
+                            + "%(delay_u)s%(pre_index)s",
                         )
                     else:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(global_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
+                            "%(pre_prefix)s" + var + "%(global_index)s",
+                            "%(pre_prefix)s_delayed_" + var + "%(delay_u)s",
                         )
 
         # If there is a uniform delay, the performance can be improved by
@@ -629,16 +821,28 @@ class SingleThreadGenerator(ProjectionGenerator):
         pre_copy = ""
         if proj.max_delay > 1 and proj.uniform_delay != -1:
             for var in dependencies:
-                if var in proj.pre.neuron_type.description['local']:
-                    pre_copy += "std::vector<%(float_prec)s> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
+                if var in proj.pre.neuron_type.description["local"]:
+                    pre_copy += (
+                        "std::vector<%(float_prec)s> _pre_"
+                        + var
+                        + " = %(pre_prefix)s_delayed_"
+                        + var
+                        + "%(delay_u)s;"
+                    )
                     psp = psp.replace(
-                        '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s',
-                        '_pre_'+var+'%(pre_index)s'
+                        "%(pre_prefix)s_delayed_" + var + "%(delay_u)s%(pre_index)s",
+                        "_pre_" + var + "%(pre_index)s",
                     )
 
         # Special case for diagonal format
         if proj._storage_format == "dia":
-            ids.update({'omp_simd': '' if ConfigManager().get('disable_SIMD_SpMV', self._net_id) else '#pragma omp simd'})
+            ids.update(
+                {
+                    "omp_simd": ""
+                    if ConfigManager().get("disable_SIMD_SpMV", self._net_id)
+                    else "#pragma omp simd"
+                }
+            )
 
         # The hybrid format needs to be handled seperately
         # as its composed of two parts
@@ -651,47 +855,50 @@ class SingleThreadGenerator(ProjectionGenerator):
             pre_copy = pre_copy % ids
 
             # add non-default template ids
-            ids.update({
-                'pre_copy': pre_copy,
-                'psp': psp.replace(';', '')
-            })
+            ids.update({"pre_copy": pre_copy, "psp": psp.replace(";", "")})
 
             # Generate the code depending on the operation
-            sum_code = template[proj.synapse_type.operation] %  ids
+            sum_code = template[proj.synapse_type.operation] % ids
 
         else:
-            ids.update({'delay_u' : '[delay-1]'})
+            ids.update({"delay_u": "[delay-1]"})
 
             # take the same indices as used normally
             # (lookup: self._configure_template_ids())
             coo_ids = deepcopy(self._template_ids)
-            coo_ids.update({
-                'local_index': '->coo[j]',
-                'pre_index': '[*col_it]',
-                'post_index': '[*row_it]'
-            })
+            coo_ids.update(
+                {
+                    "local_index": "->coo[j]",
+                    "pre_index": "[*col_it]",
+                    "post_index": "[*row_it]",
+                }
+            )
             coo_psp = psp % coo_ids
 
             ell_ids = deepcopy(self._template_ids)
-            ell_ids.update({
-                'local_index': '->ell[j]',
-                'semiglobal_index': '[i]',
-                'global_index': '',
-                'post_index': '[rk_post]',
-                'pre_index': '[rk_pre]'
-            })
+            ell_ids.update(
+                {
+                    "local_index": "->ell[j]",
+                    "semiglobal_index": "[i]",
+                    "global_index": "",
+                    "post_index": "[rk_post]",
+                    "pre_index": "[rk_pre]",
+                }
+            )
             ell_psp = psp % ell_ids
 
-            ids.update({
-                'pre_copy': pre_copy % ids,
-                'coo_psp': coo_psp.replace(';', ''),
-                'ell_psp': ell_psp.replace(';', ''),
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target': proj.target,
-                'ell_post_index': ell_ids['post_index'],
-                'coo_post_index': coo_ids['post_index'],
-            })
+            ids.update(
+                {
+                    "pre_copy": pre_copy % ids,
+                    "coo_psp": coo_psp.replace(";", ""),
+                    "ell_psp": ell_psp.replace(";", ""),
+                    "id_pre": proj.pre.id,
+                    "id_post": proj.post.id,
+                    "target": proj.target,
+                    "ell_post_index": ell_ids["post_index"],
+                    "coo_post_index": coo_ids["post_index"],
+                }
+            )
 
             sum_code = template[proj.synapse_type.operation] % ids
 
@@ -700,7 +907,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         if (_transmission && %(post_prefix)s_active) {
 %(code)s
         } // active
-        """ % {'post_prefix': ids['post_prefix'], 'code': tabify(sum_code, 3)}
+        """ % {"post_prefix": ids["post_prefix"], "code": tabify(sum_code, 3)}
 
         if self._prof_gen:
             final_code = self._prof_gen.annotate_computesum_rate(proj, final_code)
@@ -712,9 +919,9 @@ class SingleThreadGenerator(ProjectionGenerator):
         TODO: docs!
         """
         # PSP form
-        g_target = eq['cpp'].split('=')[1]
+        g_target = eq["cpp"].split("=")[1]
         # Operation (g_target is replaced by sum in 'cpp')
-        operation = re.search(r'sum (.*?)=', eq['cpp']).group(1).strip() + "="
+        operation = re.search(r"sum (.*?)=", eq["cpp"]).group(1).strip() + "="
         # Check targets
         if isinstance(proj.target, str):
             targets = [proj.target]
@@ -725,38 +932,43 @@ class SingleThreadGenerator(ProjectionGenerator):
         for target in targets:
             # Special case where w is a single value
             if proj._has_single_weight():
-                g_target = re.sub(
-                    r'([^\w]+)w%\(local_index\)s',
-                    r'\1w',
-                    g_target
-                )
+                g_target = re.sub(r"([^\w]+)w%\(local_index\)s", r"\1w", g_target)
 
             # update post-synaptic potential code
             target_dict = {
-                'post_prefix': ids['post_prefix'],
-                'target': target,
-                'g_target': g_target % ids,
-                'eq': eq['eq'],
-                'post_index': ids['post_index'],
-                'operation': operation
+                "post_prefix": ids["post_prefix"],
+                "target": target,
+                "g_target": g_target % ids,
+                "eq": eq["eq"],
+                "post_index": ids["post_index"],
+                "operation": operation,
             }
-            g_target_code += """
+            g_target_code += (
+                """
     %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
-"""% target_dict
+"""
+                % target_dict
+            )
 
             # Determine bounds
-            for key, val in eq['bounds'].items():
-                if not key in ['min', 'max']:
+            for key, val in eq["bounds"].items():
+                if not key in ["min", "max"]:
                     continue
                 try:
                     value = str(float(val))
-                except: # TODO: more complex operations
+                except:  # TODO: more complex operations
                     value = val % ids
 
                 g_target_code += """
     if (%(post_prefix)sg_%(target)s%(post_index)s %(op)s %(val)s)
         %(post_prefix)sg_%(target)s%(post_index)s = %(val)s;
-""" % {'post_prefix': ids['post_prefix'], 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
+""" % {
+                    "post_prefix": ids["post_prefix"],
+                    "target": target,
+                    "post_index": ids["post_index"],
+                    "op": "<" if key == "min" else ">",
+                    "val": value,
+                }
 
         return g_target_code
 
@@ -774,9 +986,12 @@ class SingleThreadGenerator(ProjectionGenerator):
 
             * psp_prefix and psp_code
         """
-        if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
-            psp_prefix = proj._specific_template['psp_prefix']
-            psp_code = proj._specific_template['psp_code']
+        if (
+            "psp_prefix" in proj._specific_template.keys()
+            and "psp_code" in proj._specific_template.keys()
+        ):
+            psp_prefix = proj._specific_template["psp_prefix"]
+            psp_code = proj._specific_template["psp_code"]
 
             if len(psp_code) > 0 and self._prof_gen:
                 psp_code = self._prof_gen.annotate_computesum_spiking(proj, psp_code)
@@ -792,28 +1007,34 @@ class SingleThreadGenerator(ProjectionGenerator):
         # The spike transmission is triggered from pre-synaptic side
         # and the indices need to be changed.
         if proj._storage_format == "lil":
-            ids.update({
-                'pre_index': '[rk_j]',
-                'post_index': '[post_rank[i]]',
-            })
+            ids.update(
+                {
+                    "pre_index": "[rk_j]",
+                    "post_index": "[post_rank[i]]",
+                }
+            )
 
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                ids.update({
-                    'local_index': "[_inv_idx[syn]]",
-                    'semiglobal_index': '[_row_idx[syn]]',
-                    'pre_index': '[_pre]',
-                    'post_index': '[_row_idx[syn]]',
-                })
+                ids.update(
+                    {
+                        "local_index": "[_inv_idx[syn]]",
+                        "semiglobal_index": "[_row_idx[syn]]",
+                        "pre_index": "[_pre]",
+                        "post_index": "[_row_idx[syn]]",
+                    }
+                )
             else:
-                ids.update({
-                    'local_index': "[syn]",
-                    'semiglobal_index': '[col_idx_[syn]]',
-                    'pre_index': '[_pre]',
-                    'post_index': '[col_idx_[syn]]',
-                })
+                ids.update(
+                    {
+                        "local_index": "[syn]",
+                        "semiglobal_index": "[col_idx_[syn]]",
+                        "pre_index": "[_pre]",
+                        "post_index": "[col_idx_[syn]]",
+                    }
+                )
 
-        elif proj._storage_format in ["bsr","dense"]:
+        elif proj._storage_format in ["bsr", "dense"]:
             # nothing to do here, as the indices can simply switched
             pass
 
@@ -825,7 +1046,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         # Determine the mode of synaptic transmission
         continous_transmission = False
-        if 'psp' in  proj.synapse_type.description.keys(): # continous
+        if "psp" in proj.synapse_type.description.keys():  # continous
             continous_transmission = True
 
         ####################################################
@@ -836,10 +1057,10 @@ class SingleThreadGenerator(ProjectionGenerator):
         g_target_code = ""
 
         # Analyse all elements of pre_spike
-        for eq in proj.synapse_type.description['pre_spike']:
+        for eq in proj.synapse_type.description["pre_spike"]:
             # g_target is treated differently
             # Must be at the end of the equations
-            if eq['name'] == 'g_target':
+            if eq["name"] == "g_target":
                 g_target_code += self._process_g_target_code(proj, eq, ids)
 
             else:
@@ -848,46 +1069,53 @@ class SingleThreadGenerator(ProjectionGenerator):
 
                 condition = ""
                 # Check conditions to update the variable
-                if eq['name'] == 'w': # Surround it by the learning flag
-                    condition = "_plasticity" # Plasticity can be disabled
+                if eq["name"] == "w":  # Surround it by the learning flag
+                    condition = "_plasticity"  # Plasticity can be disabled
 
-                if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
-                    simultaneous = "%(pre_prefix)slast_spike[%(pre_index)s] != %(post_prefix)slast_spike[%(post_index)s]" % ids
+                if (
+                    "unless_post" in eq["flags"]
+                ):  # Flags avoids pre-spike evaluation when post fires at the same time
+                    simultaneous = (
+                        "%(pre_prefix)slast_spike[%(pre_index)s] != %(post_prefix)slast_spike[%(post_index)s]"
+                        % ids
+                    )
                     if condition == "":
                         condition = simultaneous
                     else:
                         condition += "&&(" + simultaneous + ")"
 
                 eq_dict = {
-                    'eq': eq['eq'],
-                    'cpp': eq['cpp'] % ids,
-                    'bounds': get_bounds(eq) % ids,
-                    'condition': condition
+                    "eq": eq["eq"],
+                    "cpp": eq["cpp"] % ids,
+                    "bounds": get_bounds(eq) % ids,
+                    "condition": condition,
                 }
 
                 # Generate the code, either with or without coundition
                 if condition != "":
-                    updated_variables_list += """
+                    updated_variables_list += (
+                        """
 // unless_post can prevent evaluation of presynaptic variables
 if (%(condition)s) {
     // %(eq)s
     %(cpp)s
     %(bounds)s
 }
-""" % eq_dict
-                else: # Normal synaptic variable
-                    updated_variables_list += """
+"""
+                        % eq_dict
+                    )
+                else:  # Normal synaptic variable
+                    updated_variables_list += (
+                        """
 // %(eq)s
 %(cpp)s
-%(bounds)s""" % eq_dict
+%(bounds)s"""
+                        % eq_dict
+                    )
 
         # Special case where w is a single value
         if proj._has_single_weight():
-            g_target_code = re.sub(
-                r'([^\w]+)w%\(local_index\)s',
-                r'\1w',
-                g_target_code
-            )
+            g_target_code = re.sub(r"([^\w]+)w%\(local_index\)s", r"\1w", g_target_code)
 
         # finalize g_target_code
         g_target_code = g_target_code % ids
@@ -904,9 +1132,7 @@ if (%(condition)s) {
             # Special case where w is a single value
             if proj._has_single_weight():
                 default_code = re.sub(
-                    r'([^\w]+)w%\(local_index\)s',
-                    r'\1w',
-                    default_code
+                    r"([^\w]+)w%\(local_index\)s", r"\1w", default_code
                 )
 
             # Check targets
@@ -918,27 +1144,30 @@ if (%(condition)s) {
             # Iterate over all targets
             for target in targets:
                 g_target_code += default_code % {
-                    'post_prefix': ids['post_prefix'],
-                    'post_index': ids['post_index'],
-                    'local_index': ids['local_index'],
-                    'target': target
+                    "post_prefix": ids["post_prefix"],
+                    "post_index": ids["post_index"],
+                    "local_index": ids["local_index"],
+                    "target": target,
                 }
 
         # Event-driven integration of synaptic variables
         has_exact = False
-        event_driven_code = ''
-        for var in proj.synapse_type.description['variables']:
-            if var['method'] == 'event-driven':
+        event_driven_code = ""
+        for var in proj.synapse_type.description["variables"]:
+            if var["method"] == "event-driven":
                 has_exact = True
                 event_driven_code += """
             // %(eq)s
             %(exact)s
-""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') % ids}
+""" % {"eq": var["eq"], "exact": var["cpp"].replace("(t)", "(t-1)") % ids}
         if has_exact:
-            event_driven_code += """
+            event_driven_code += (
+                """
             // Update the last event for the synapse
             _last_event%(local_index)s = t;
-""" % ids
+"""
+                % ids
+            )
 
         # Generate code for pre-spike variables
         pre_code = ""
@@ -949,29 +1178,31 @@ if (%(condition)s) {
 
             # Special case where w is a single value
             if proj._has_single_weight():
-                pre_code = re.sub(
-                    r'([^\w]+)w\[i\]\[j\]',
-                    r'\1w',
-                    pre_code
-                )
+                pre_code = re.sub(r"([^\w]+)w\[i\]\[j\]", r"\1w", pre_code)
 
         # Choose correct template based on connectivity
         # and take delays into account if any
         pre_array = ""
         if proj.max_delay > 1:
-            if proj.uniform_delay == -1: # Non-uniform delays
-                Messages._warning('Variable delays for spiking networks is experimental and slow...')
-                template = self._templates['spiking_sum_variable_delay']
-            else: # Uniform delays
+            if proj.uniform_delay == -1:  # Non-uniform delays
+                Messages._warning(
+                    "Variable delays for spiking networks is experimental and slow..."
+                )
+                template = self._templates["spiking_sum_variable_delay"]
+            else:  # Uniform delays
                 pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
-                template = self._templates['spiking_sum_fixed_delay']
+                template = self._templates["spiking_sum_fixed_delay"]
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
             # For dense matrices we have two code templates either using with or without mask[idx]
-            if g_target_code != "" and pre_code == "" and proj._storage_format in ["dense"]:
-                template = self._templates['spiking_sum_fixed_delay_only_psp']
+            if (
+                g_target_code != ""
+                and pre_code == ""
+                and proj._storage_format in ["dense"]
+            ):
+                template = self._templates["spiking_sum_fixed_delay_only_psp"]
             else:
-                template = self._templates['spiking_sum_fixed_delay']
+                template = self._templates["spiking_sum_fixed_delay"]
 
         if template is None:
             Messages._error("Code generation error: no template available")
@@ -981,7 +1212,10 @@ if (%(condition)s) {
         # Axonal spike events
         spiked_array_fusion_code = ""
         if proj.synapse_type.pre_axon_spike:
-            if proj.synapse_type.description['raw_pre_spike'] == proj.synapse_type.description['raw_axon_spike']:
+            if (
+                proj.synapse_type.description["raw_pre_spike"]
+                == proj.synapse_type.description["raw_axon_spike"]
+            ):
                 # default and axonal spike share the same mechanism,
                 # therefore we can join the two spike event list
                 spiked_array_fusion_code = """
@@ -989,7 +1223,7 @@ if (%(condition)s) {
         if (_axon_transmission) {
             tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
         }
-    """ % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
+    """ % {"pre_prefix": ids["pre_prefix"], "pre_array": pre_array}
 
                 pre_array = "tmp_spiked"
 
@@ -997,30 +1231,40 @@ if (%(condition)s) {
                 # axon_spike uses a different equation
                 # HD (20. Oct. 2023): together with Oliver Maith we decided that the equations are limited
                 #                     to g_target += ...
-                ids.update({
-                    'pre_array': "pop%(id_pre)s->axonal" % {'id_pre': proj.pre.id},
-                    'pre_event': "",
-                    'g_target': self._process_g_target_code(proj, proj.synapse_type.description['pre_axon_spike'][0], ids),
-                    'target': proj.target, # for omp reduce
-                    'event_driven': "",
-                    'spiked_array_fusion': ""
-                })
+                ids.update(
+                    {
+                        "pre_array": "pop%(id_pre)s->axonal" % {"id_pre": proj.pre.id},
+                        "pre_event": "",
+                        "g_target": self._process_g_target_code(
+                            proj,
+                            proj.synapse_type.description["pre_axon_spike"][0],
+                            ids,
+                        ),
+                        "target": proj.target,  # for omp reduce
+                        "event_driven": "",
+                        "spiked_array_fusion": "",
+                    }
+                )
                 complete_code += template % ids
-                complete_code = complete_code.replace("(_transmission", "(_axon_transmission")  # TODO: quite hacky ...
+                complete_code = complete_code.replace(
+                    "(_transmission", "(_axon_transmission"
+                )  # TODO: quite hacky ...
 
                 # for the default code generation path
-                pre_array = "pop%(id_pre)s->spiked" % {'id_pre': proj.pre.id}
+                pre_array = "pop%(id_pre)s->spiked" % {"id_pre": proj.pre.id}
 
         # Generate the whole code block
         if g_target_code != "" or pre_code != "":
-            ids.update({
-                'pre_array': pre_array,
-                'pre_event': pre_code,
-                'g_target': g_target_code,
-                'target': proj.target, # for omp reduce
-                'event_driven': event_driven_code,
-                'spiked_array_fusion': spiked_array_fusion_code
-            })
+            ids.update(
+                {
+                    "pre_array": pre_array,
+                    "pre_event": pre_code,
+                    "g_target": g_target_code,
+                    "target": proj.target,  # for omp reduce
+                    "event_driven": event_driven_code,
+                    "spiked_array_fusion": spiked_array_fusion_code,
+                }
+            )
             complete_code += template % ids
 
         # Add tabs
@@ -1029,7 +1273,7 @@ if (%(condition)s) {
         ####################################################
         # Not even-driven summation of psp: like rate-coded
         ####################################################
-        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
+        if "psp" in proj.synapse_type.description.keys():  # not event-based
             # Compute it as if it were rate-coded
             _, psp_code = self._computesum_rate(proj)
             psp_prefix += " int rk_post;"
@@ -1037,8 +1281,8 @@ if (%(condition)s) {
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(
-                '%(post_prefix)s_sum_%(target)s' % ids,
-                '%(post_prefix)sg_%(target)s' % ids
+                "%(post_prefix)s_sum_%(target)s" % ids,
+                "%(post_prefix)sg_%(target)s" % ids,
             )
 
             # Add it to the main code
@@ -1063,7 +1307,9 @@ if (%(condition)s) {
 
         # Annotate code
         if self._prof_gen:
-            complete_code = self._prof_gen.annotate_computesum_spiking(proj, complete_code)
+            complete_code = self._prof_gen.annotate_computesum_spiking(
+                proj, complete_code
+            )
 
         return psp_prefix, complete_code
 
@@ -1076,16 +1322,16 @@ if (%(condition)s) {
             structural_plasticity: 'header_struct' field contains all relevant code templates
 
         """
-        header_tpl = self._templates['structural_plasticity']['header_struct']
+        header_tpl = self._templates["structural_plasticity"]["header_struct"]
 
         code = ""
         # Pruning defined in the synapse
-        if 'pruning' in proj.synapse_type.description.keys():
-            code += header_tpl['pruning']
+        if "pruning" in proj.synapse_type.description.keys():
+            code += header_tpl["pruning"]
 
         # Creating defined in the synapse
-        if 'creating' in proj.synapse_type.description.keys():
-            code += header_tpl['creating']
+        if "creating" in proj.synapse_type.description.keys():
+            code += header_tpl["creating"]
 
         # Retrieve the names of extra attributes
         extra_args = ""
@@ -1094,90 +1340,130 @@ if (%(condition)s) {
         extra_args_vec_acc = ""
         add_var_code = ""
         add_var_remove = ""
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
-            if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse_type.description['local']:
-
-                if not isinstance(proj.init[var['name']], (int, float, bool)):
-                    init = var['init']
+        for var in (
+            proj.synapse_type.description["parameters"]
+            + proj.synapse_type.description["variables"]
+        ):
+            if (
+                not var["name"] in ["w", "delay"]
+                and var["name"] in proj.synapse_type.description["local"]
+            ):
+                if not isinstance(proj.init[var["name"]], (int, float, bool)):
+                    init = var["init"]
                 else:
-                    init = proj.init[var['name']]
-                extra_args += ', ' + var['ctype'] + ' _' +  var['name'] +'='+str(init)
-                extra_args_acc += ', _' +  var['name']
-                extra_args_vec_decl += ', std::vector<'+ var['ctype'] +'> _' + var['name']
-                extra_args_vec_acc += ', _' + var['name'] + '[new_item]'
-                add_var_code += ' '*8 + var['name'] + '[post_idx].insert('+var['name']+'[post_idx].begin() + pos, _' + var['name'] + ');\n'
-                add_var_remove += ' '*8 + var['name'] + '[post_idx].erase(' + var['name'] + '[post_idx].begin() + pos);\n'
+                    init = proj.init[var["name"]]
+                extra_args += ", " + var["ctype"] + " _" + var["name"] + "=" + str(init)
+                extra_args_acc += ", _" + var["name"]
+                extra_args_vec_decl += (
+                    ", std::vector<" + var["ctype"] + "> _" + var["name"]
+                )
+                extra_args_vec_acc += ", _" + var["name"] + "[new_item]"
+                add_var_code += (
+                    " " * 8
+                    + var["name"]
+                    + "[post_idx].insert("
+                    + var["name"]
+                    + "[post_idx].begin() + pos, _"
+                    + var["name"]
+                    + ");\n"
+                )
+                add_var_remove += (
+                    " " * 8
+                    + var["name"]
+                    + "[post_idx].erase("
+                    + var["name"]
+                    + "[post_idx].begin() + pos);\n"
+                )
 
         # Delays
         delay_code = ""
-        delay_remove= ""
+        delay_remove = ""
         if proj.max_delay > 1 and proj.uniform_delay == -1:
-            delay_code = ' '*8 + "delay[post_idx].insert(delay[post_idx].begin() + pos, _delay);"
-            delay_remove = ' '*8 + "delay[post_idx].erase(delay[post_idx].begin() + pos);"
+            delay_code = (
+                " " * 8
+                + "delay[post_idx].insert(delay[post_idx].begin() + pos, _delay);"
+            )
+            delay_remove = (
+                " " * 8 + "delay[post_idx].erase(delay[post_idx].begin() + pos);"
+            )
 
         # Spiking networks must update the inv_pre_rank array
-        spiking_addcode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_addcode']
-        spiking_removecode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_removecode']
+        spiking_addcode = (
+            "" if proj.synapse_type.type == "rate" else header_tpl["spiking_addcode"]
+        )
+        spiking_removecode = (
+            "" if proj.synapse_type.type == "rate" else header_tpl["spiking_removecode"]
+        )
 
         # Random distributions
         rd_addcode = ""
         rd_removecode = ""
-        for rd in proj.synapse_type.description['random_distributions']:
+        for rd in proj.synapse_type.description["random_distributions"]:
             rd_addcode += """
         %(name)s[post].insert(%(name)s[post].begin() + idx, 0.0);
-""" % {'name': rd['name']}
+""" % {"name": rd["name"]}
 
             rd_removecode += """
         %(name)s[post].erase(%(name)s[post].begin() + idx);
-""" % {'name': rd['name']}
+""" % {"name": rd["name"]}
 
         # For spiking models, we need to rebuild the backward view, if synapses are removed/added
-        inverse_connectivity_code = '' if proj.synapse_type.type == 'rate' else header_tpl['spiking_rebuild_backwardview']
+        inverse_connectivity_code = (
+            ""
+            if proj.synapse_type.type == "rate"
+            else header_tpl["spiking_rebuild_backwardview"]
+        )
 
         # Generate the code
-        code += header_tpl['header'] % {
-            'float_prec': ConfigManager().get('precision', self._net_id),
-            'extra_args': extra_args, 'extra_args_acc': extra_args_acc,
-            'extra_args_vec_decl': extra_args_vec_decl, 'extra_args_vec_acc': extra_args_vec_acc,
-            'delay_code': delay_code, 'delay_remove': delay_remove,
-            'add_code': add_var_code, 'add_remove': add_var_remove,
-            'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
-            'rd_add': rd_addcode, 'rd_remove': rd_removecode,
-            'inverse_connectivity_rebuild': inverse_connectivity_code
+        code += header_tpl["header"] % {
+            "float_prec": ConfigManager().get("precision", self._net_id),
+            "extra_args": extra_args,
+            "extra_args_acc": extra_args_acc,
+            "extra_args_vec_decl": extra_args_vec_decl,
+            "extra_args_vec_acc": extra_args_vec_acc,
+            "delay_code": delay_code,
+            "delay_remove": delay_remove,
+            "add_code": add_var_code,
+            "add_remove": add_var_remove,
+            "spike_add": spiking_addcode,
+            "spike_remove": spiking_removecode,
+            "rd_add": rd_addcode,
+            "rd_remove": rd_removecode,
+            "inverse_connectivity_rebuild": inverse_connectivity_code,
         }
 
         return code
 
     def _init_random_distributions(self, proj):
         # Is it a specific population?
-        if 'init_rng' in proj._specific_template.keys():
-            return proj._specific_template['init_rng']
+        if "init_rng" in proj._specific_template.keys():
+            return proj._specific_template["init_rng"]
 
         code = ""
-        for rd in proj.synapse_type.description['random_distributions']:
+        for rd in proj.synapse_type.description["random_distributions"]:
             ids = {
-                'id': proj.id,
-                'float_prec': ConfigManager().get('precision', self._net_id),
-                'global_index': ''
+                "id": proj.id,
+                "float_prec": ConfigManager().get("precision", self._net_id),
+                "global_index": "",
             }
-            rd_init = rd['definition'] % ids
+            rd_init = rd["definition"] % ids
             code += """    %(rd_name)s = std::vector< std::vector<double> >(post_rank.size(), std::vector<double>());
     for(int i=0; i<post_rank.size(); i++){
         %(rd_name)s[i] = std::vector<double>(pre_rank[i].size(), 0.0);
     }
     dist_%(rd_name)s = %(rd_init)s;
-""" % {'rd_name': rd['name'], 'rd_init': rd_init}
+""" % {"rd_name": rd["name"], "rd_init": rd_init}
         return code
 
     def _local_functions(self, proj):
-        " Local functions "
+        "Local functions"
         local_func = ""
-        if len(proj.synapse_type.description['functions']) > 0:
+        if len(proj.synapse_type.description["functions"]) > 0:
             local_func += """
     // Local functions
 """
-            for func in proj.synapse_type.description['functions']:
-                local_func += ' '*4 + func['cpp'] + '\n'
+            for func in proj.synapse_type.description["functions"]:
+                local_func += " " * 4 + func["cpp"] + "\n"
 
         return local_func
 
@@ -1188,7 +1474,7 @@ if (%(condition)s) {
         if proj.synapse_type.type == "rate":
             return ""
 
-        if proj.synapse_type.description['post_spike'] == []:
+        if proj.synapse_type.description["post_spike"] == []:
             return ""
 
         # Get basic template ids
@@ -1196,45 +1482,56 @@ if (%(condition)s) {
 
         # Event-driven integration
         has_event_driven = False
-        for var in proj.synapse_type.description['variables']:
-            if var['method'] == 'event-driven':
+        for var in proj.synapse_type.description["variables"]:
+            if var["method"] == "event-driven":
                 has_event_driven = True
 
         # Generate event-driven code
         event_driven_code = ""
         if has_event_driven:
-            for var in proj.synapse_type.description['variables']:
-                if var['method'] == 'event-driven':
-                    event_driven_code += '// ' + var['eq'] + '\n'
-                    event_driven_code += var['cpp'] % ids + '\n'
+            for var in proj.synapse_type.description["variables"]:
+                if var["method"] == "event-driven":
+                    event_driven_code += "// " + var["eq"] + "\n"
+                    event_driven_code += var["cpp"] % ids + "\n"
 
-            event_driven_code += """
+            event_driven_code += (
+                """
 // Update the last event for the synapse
 _last_event%(local_index)s = t;
-""" % ids
+"""
+                % ids
+            )
 
             event_driven_code = tabify(event_driven_code, 3)
 
         # Gather the equations
         post_code = ""
-        for eq in proj.synapse_type.description['post_spike']:
-            post_code += '// ' + eq['eq'] + '\n'
-            if eq['name'] == 'w':
+        for eq in proj.synapse_type.description["post_spike"]:
+            post_code += "// " + eq["eq"] + "\n"
+            if eq["name"] == "w":
                 post_code += "if(_plasticity)\n"
-            post_code += eq['cpp'] % ids + '\n'
-            post_code += get_bounds(eq) % ids + '\n'
+            post_code += eq["cpp"] % ids + "\n"
+            post_code += get_bounds(eq) % ids + "\n"
         post_code = tabify(post_code, 3)
 
         # Generate the code block
         try:
-            ids.update({
-                'post_event': post_code,
-                'event_driven': event_driven_code,
-            })
-            code = self._templates['post_event'] % ids
+            ids.update(
+                {
+                    "post_event": post_code,
+                    "event_driven": event_driven_code,
+                }
+            )
+            code = self._templates["post_event"] % ids
         except KeyError:
             # Template does not exist
-            raise KeyError("No template for spiking neurons post event (format = " + proj._storage_format + " and order = " + proj._storage_order+ ")")
+            raise KeyError(
+                "No template for spiking neurons post event (format = "
+                + proj._storage_format
+                + " and order = "
+                + proj._storage_order
+                + ")"
+            )
 
         # Annotate code
         if self._prof_gen:
@@ -1248,25 +1545,31 @@ _last_event%(local_index)s = t;
         semiglobal (per dendrite) or global (one value per projection).
         """
         # Is it a specific projection?
-        if 'update_rng' in proj._specific_template.keys():
-            return proj._specific_template['update_rng']
+        if "update_rng" in proj._specific_template.keys():
+            return proj._specific_template["update_rng"]
 
-        if len(proj.synapse_type.description['random_distributions']) == 0:
+        if len(proj.synapse_type.description["random_distributions"]) == 0:
             return ""
 
-        global_code=""
-        semiglobal_code=""
-        local_code=""
+        global_code = ""
+        semiglobal_code = ""
+        local_code = ""
 
-        for rd in proj.synapse_type.description['random_distributions']:
-            if rd['name'] in proj.synapse_type.description["local"]:
-                local_code += self._templates["rng_update"][rd["locality"]] % {'rd_name': rd['name']}
+        for rd in proj.synapse_type.description["random_distributions"]:
+            if rd["name"] in proj.synapse_type.description["local"]:
+                local_code += self._templates["rng_update"][rd["locality"]] % {
+                    "rd_name": rd["name"]
+                }
 
-        return tabify(self._templates["rng_update"]["template"] % {
-            'global_rng': global_code,
-            'semiglobal_rng': semiglobal_code,
-            'local_rng': local_code
-        }, 2)
+        return tabify(
+            self._templates["rng_update"]["template"]
+            % {
+                "global_rng": global_code,
+                "semiglobal_rng": semiglobal_code,
+                "local_rng": local_code,
+            },
+            2,
+        )
 
     def _update_synapse(self, proj):
         """
@@ -1274,13 +1577,28 @@ _last_event%(local_index)s = t;
         """
         prefix = """
         %(idx_type)s rk_post, rk_pre;
-        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': ConfigManager().get('precision', self._net_id)}
+        %(float_prec)s _dt = dt * _update_period;""" % {
+            "idx_type": determine_idx_type_for_projection(proj)[0],
+            "float_prec": ConfigManager().get("precision", self._net_id),
+        }
 
         # Global variables
-        global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
+        global_eq = generate_equation_code(
+            proj.synapse_type.description,
+            "global",
+            "proj",
+            padding=2,
+            wrap_w="_plasticity",
+        )
 
         # Semiglobal variables
-        semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
+        semiglobal_eq = generate_equation_code(
+            proj.synapse_type.description,
+            "semiglobal",
+            "proj",
+            padding=2,
+            wrap_w="_plasticity",
+        )
 
         if proj._storage_format in ["dense"]:
             use_mask = "mask_"
@@ -1288,18 +1606,36 @@ _last_event%(local_index)s = t;
             use_mask = None
 
         # Local variables
-        loc_eq_pad = 3 if not proj._storage_format=="dense" else 4
-        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity", mask_variable=use_mask)
+        loc_eq_pad = 3 if not proj._storage_format == "dense" else 4
+        local_eq = generate_equation_code(
+            proj.synapse_type.description,
+            "local",
+            "proj",
+            padding=loc_eq_pad,
+            wrap_w="_plasticity",
+            mask_variable=use_mask,
+        )
 
         # Skip generation if there are no equations
-        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
+        if (
+            local_eq.strip() == ""
+            and semiglobal_eq.strip() == ""
+            and global_eq.strip() == ""
+        ):
             return "", ""
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
-        for var in proj.synapse_type.description['variables']:
-            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+        for var in proj.synapse_type.description["variables"]:
+            if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
+                pre_code += (
+                    var["ctype"]
+                    + " "
+                    + var["pre_loop"]["name"]
+                    + " = "
+                    + var["pre_loop"]["value"]
+                    + ";\n"
+                )
 
         if len(pre_code) > 0:
             pre_code = """
@@ -1309,85 +1645,77 @@ _last_event%(local_index)s = t;
 
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements
-        global_eq = re.sub(
-            r'([^\w]+)dt([^\w]+)',
-            r'\1_dt\2',
-            global_eq
-        )
-        semiglobal_eq = re.sub(
-            r'([^\w]+)dt([^\w]+)',
-            r'\1_dt\2',
-            semiglobal_eq
-        )
-        local_eq = re.sub(
-            r'([^\w]+)dt([^\w]+)',
-            r'\1_dt\2',
-            local_eq
-        )
+        global_eq = re.sub(r"([^\w]+)dt([^\w]+)", r"\1_dt\2", global_eq)
+        semiglobal_eq = re.sub(r"([^\w]+)dt([^\w]+)", r"\1_dt\2", semiglobal_eq)
+        local_eq = re.sub(r"([^\w]+)dt([^\w]+)", r"\1_dt\2", local_eq)
 
         # Special case where w is a single value
         if proj._has_single_weight():
-            local_eq = re.sub(
-                r'([^\w]+)w%\(local_index\)s',
-                r'\1w',
-                ' ' + local_eq
-            )
-            global_eq = re.sub(
-                r'([^\w]+)w%\(local_index\)s',
-                r'\1w',
-                ' ' + global_eq
-            )
+            local_eq = re.sub(r"([^\w]+)w%\(local_index\)s", r"\1w", " " + local_eq)
+            global_eq = re.sub(r"([^\w]+)w%\(local_index\)s", r"\1w", " " + global_eq)
 
         # Dependencies
-        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+        dependencies = list(set(proj.synapse_type.description["dependencies"]["pre"]))
 
         # Take delays into account if any
         if proj.max_delay > 1:
-            if proj.uniform_delay == -1: # Non-uniform delays
+            if proj.uniform_delay == -1:  # Non-uniform delays
                 for var in dependencies:
-                    if var in proj.pre.neuron_type.description['local']:
+                    if var in proj.pre.neuron_type.description["local"]:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_"
+                            + var
+                            + "%(delay_nu)s%(pre_index)s",
                         )
                     else:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_" + var + "%(delay_nu)s",
                         )
-            else: # Uniform delays
+            else:  # Uniform delays
                 for var in dependencies:
-                    if var in proj.pre.neuron_type.description['local']:
+                    if var in proj.pre.neuron_type.description["local"]:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_"
+                            + var
+                            + "%(delay_u)s%(pre_index)s",
                         )
                     else:
                         local_eq = local_eq.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
-                            '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
+                            "%(pre_prefix)s" + var + "%(pre_index)s",
+                            "%(pre_prefix)s_delayed_" + var + "%(delay_u)s",
                         )
 
         # Choose the template
         try:
-            template = self._templates['update_variables']
+            template = self._templates["update_variables"]
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
+            Messages._error(
+                "No synaptic plasticity template found for format = "
+                + proj._storage_format,
+                " and order = " + proj._storage_order,
+            )
 
-        template_ids = deepcopy(self._template_ids) # will be extended at the end of this function
-        template_ids.update({
-            'global': global_eq % self._template_ids,
-            'semiglobal': semiglobal_eq % self._template_ids,
-            'local': local_eq % self._template_ids,
-        })
+        template_ids = deepcopy(
+            self._template_ids
+        )  # will be extended at the end of this function
+        template_ids.update(
+            {
+                "global": global_eq % self._template_ids,
+                "semiglobal": semiglobal_eq % self._template_ids,
+                "local": local_eq % self._template_ids,
+            }
+        )
 
         # Fill the code template
-        if local_eq.strip() != "": # local synapses are updated
-            code = template['local'] % template_ids
-        else: # Only global variables
-            code = template['global'] % template_ids
+        if local_eq.strip() != "":  # local synapses are updated
+            code = template["local"] % template_ids
+        else:  # Only global variables
+            code = template["global"] % template_ids
 
         if self._prof_gen:
             code = self._prof_gen.annotate_update_synapse(proj, code)
@@ -1398,7 +1726,7 @@ _last_event%(local_index)s = t;
     def _update_max_delay(self, proj):
         "When the maximum delay of a non-uniform spiking projection changes, the ring buffer for delyed spikes must be updated."
 
-        if proj.synapse_type.type == 'rate':
+        if proj.synapse_type.type == "rate":
             return "", ""
 
         if proj.uniform_delay >= 0:
@@ -1428,6 +1756,8 @@ _last_event%(local_index)s = t;
         //     std::cout << _delayed_spikes[i][0].size() << std::endl;
 """
 
-        reset_ring_buffer_code = self._templates['delay']['nonuniform_spiking']['reset'] % self._template_ids
+        reset_ring_buffer_code = (
+            self._templates["delay"]["nonuniform_spiking"]["reset"] % self._template_ids
+        )
 
         return update_delay_code, reset_ring_buffer_code

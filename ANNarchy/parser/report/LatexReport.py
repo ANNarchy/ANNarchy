@@ -177,8 +177,11 @@ footer = r"""
 ### Main method
 ##################################
 
-def report_latex(filename="./report.tex", standalone=True, gather_subprojections=False, net_id=0):
-    """   
+
+def report_latex(
+    filename="./report.tex", standalone=True, gather_subprojections=False, net_id=0
+):
+    """
     Generates a .tex file describing the network according to:
 
     > Nordlie E, Gewaltig M-O, Plesser HE (2009). Towards Reproducible Descriptions of Neuronal Network Models. PLoS Comput Biol 5(8): e1000456.
@@ -189,7 +192,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     """
 
     # stdout
-    Messages._print('Generating report in', filename)
+    Messages._print("Generating report in", filename)
 
     # Generate the summary
     summary = _generate_summary(net_id)
@@ -220,7 +223,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
         if not os.path.exists(path_name):
             os.makedirs(path_name)
 
-    with open(filename, 'w') as wfile:
+    with open(filename, "w") as wfile:
         if standalone:
             wfile.write(header)
             wfile.write(preamble)
@@ -239,14 +242,18 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
         if standalone:
             wfile.write(footer)
 
+
 ##################################
 ### Process major fields
 ##################################
 
+
 def _generate_summary(net_id):
     "part A"
 
-    population_names = str(len(NetworkManager().get_network(net_id=net_id).get_populations())) + ': '
+    population_names = (
+        str(len(NetworkManager().get_network(net_id=net_id).get_populations())) + ": "
+    )
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
@@ -255,7 +262,7 @@ def _generate_summary(net_id):
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         # population name
         population_names += LatexParser.pop_name(pop.name) + ", "
-    population_names = population_names[:-2] # suppress the last ,
+    population_names = population_names[:-2]  # suppress the last ,
 
     # List all BOLD recordings
     measurements = ""
@@ -268,7 +275,7 @@ def _generate_summary(net_id):
         # bold models sorted in measurements
         if isinstance(neur, BoldModel):
             if neur._model_instantiated:
-                measurements += neur.name + ', '
+                measurements += neur.name + ", "
         # specific inputs sorted in inputs
         if neur.name in input_name_list:
             input_type_list.append(neur.name)
@@ -276,7 +283,7 @@ def _generate_summary(net_id):
         else:
             neuron_model_names.append(neur.name)
     for neur in list(set(neuron_model_names)):
-        neuron_models += neur + ', '
+        neuron_models += neur + ", "
     # suppress the last ,
     measurements = measurements[:-2]
     neuron_models = neuron_models[:-2]
@@ -287,7 +294,7 @@ def _generate_summary(net_id):
     if len(input_type_list) > 0:
         input_types = ""
         for input in list(set(input_type_list)):
-            input_types += input + ', '
+            input_types += input + ", "
         input_types = input_types[:-2]
     else:
         input_types = "---"
@@ -296,34 +303,35 @@ def _generate_summary(net_id):
     list_synapse_models = []
     for proj in NetworkManager().get_network(net_id=net_id).get_projections():
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['-']:
+        if not proj.synapse_type.name in list(Synapse._default_names.values()) + ["-"]:
             list_synapse_models.append(proj.synapse_type.name)
     for con in list(set(list_connectivity)):
-        connectivity += con + ', '
+        connectivity += con + ", "
     for syn in list(set(list_synapse_models)):
-        synapse_models += syn + ', '
+        synapse_models += syn + ", "
     connectivity = connectivity[:-2]
-    synapse_models = synapse_models[:-2] # suppress the last ,
+    synapse_models = synapse_models[:-2]  # suppress the last ,
 
     # Write the summary
-    txt = summary_template  % {
-        'population_names' : population_names,
-        'connectivity' : connectivity,
-        'neuron_models' : neuron_models,
-        'synapse_models' : synapse_models,
-        'input_types': input_types,
-        'measurements': measurements
+    txt = summary_template % {
+        "population_names": population_names,
+        "connectivity": connectivity,
+        "neuron_models": neuron_models,
+        "synapse_models": synapse_models,
+        "input_types": input_types,
+        "measurements": measurements,
     }
     return txt
+
 
 def _generate_populations(net_id):
     def format_size(pop):
         size = str(pop.size)
-        if pop.dimension >1:
-            size += ' ('
+        if pop.dimension > 1:
+            size += " ("
             for d in range(pop.dimension):
-                size += str(pop.geometry[d]) + '*'
-            size = size.rsplit('*', 1)[0] + ')'
+                size += str(pop.geometry[d]) + "*"
+            size = size.rsplit("*", 1)[0] + ")"
         return size
 
     txt = ""
@@ -332,18 +340,20 @@ def _generate_populations(net_id):
 """
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         # Find a name for the neuron
-        if pop.neuron_type.name in Neuron._default_names.values(): # name not set
+        if pop.neuron_type.name in Neuron._default_names.values():  # name not set
             neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
         else:
             neuron_name = pop.neuron_type.name
-            neuron_name = neuron_name.replace("_", r"\_")    # escape "_" in names
+            neuron_name = neuron_name.replace("_", r"\_")  # escape "_" in names
 
         txt += pop_tpl % {
-            'pop_name': LatexParser.pop_name(pop.name), 
-            'neuron_type': neuron_name, 
-            'size': format_size(pop)}
+            "pop_name": LatexParser.pop_name(pop.name),
+            "neuron_type": neuron_name,
+            "size": format_size(pop),
+        }
 
-    return populations_template % {'populations_description': txt}
+    return populations_template % {"populations_description": txt}
+
 
 def _generate_constants(net_id):
     cst_tpl = r"""
@@ -357,15 +367,17 @@ def _generate_constants(net_id):
         return ""
 
     for constant in constants:
-        parameters += cst_tpl % {'param': LatexParser._latexify_name(constant.name, []), 'value': constant.value}
+        parameters += cst_tpl % {
+            "param": LatexParser._latexify_name(constant.name, []),
+            "value": constant.value,
+        }
 
-    txt = constants_template % {'parameters': parameters}
+    txt = constants_template % {"parameters": parameters}
 
     return txt
 
 
 def _generate_functions(net_id):
-
     functions = ""
     if GlobalObjectManager().number_functions() == 0:
         return functions
@@ -374,26 +386,46 @@ def _generate_functions(net_id):
         functions += LatexParser._process_functions(func, net_id) + "\n"
 
     return functions_template % {
-        'parameters': functions, 
-        'firstfunction': r"\hdr{1}{G}{Functions}\\ \hline"}
+        "parameters": functions,
+        "firstfunction": r"\hdr{1}{G}{Functions}\\ \hline",
+    }
+
 
 def _generate_population_parameters(net_id):
     txt = ""
     pop_tpl = r"""
     %(name)s             & $%(param)s$        & %(value)s  \\ \hline
 """
-    for rk, pop in enumerate(NetworkManager().get_network(net_id=net_id).get_populations()):
+    for rk, pop in enumerate(
+        NetworkManager().get_network(net_id=net_id).get_populations()
+    ):
         parameters = ""
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
             if isinstance(val, (list, np.ndarray)):
-                val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
-            parameters += pop_tpl % {'name': LatexParser.pop_name(pop.name) if idx==0 else "", 'param': LatexParser._latexify_name(param, []), 'value': val}
+                val = (
+                    "$["
+                    + str(np.array(val).min())
+                    + ", "
+                    + str(np.array(val).max())
+                    + "]$"
+                )
+            parameters += pop_tpl % {
+                "name": LatexParser.pop_name(pop.name) if idx == 0 else "",
+                "param": LatexParser._latexify_name(param, []),
+                "value": val,
+            }
 
         if parameters != "":
-            txt += popparameters_template % {'parameters': parameters, 'firstpopulation': r"\hdr{3}{H}{Population parameters}\\ \hline" if rk==0 else ""}
+            txt += popparameters_template % {
+                "parameters": parameters,
+                "firstpopulation": r"\hdr{3}{H}{Population parameters}\\ \hline"
+                if rk == 0
+                else "",
+            }
 
     return txt
+
 
 def _generate_projections(net_id, gather_subprojections):
     txt = r""
@@ -405,7 +437,11 @@ def _generate_projections(net_id, gather_subprojections):
         projections = []
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             for existing_proj in projections:
-                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
+                if (
+                    proj.pre.name == existing_proj.pre.name
+                    and proj.post.name == existing_proj.post.name
+                    and proj.target == existing_proj.target
+                ):  # TODO
                     break
             else:
                 projections.append(proj)
@@ -414,18 +450,23 @@ def _generate_projections(net_id, gather_subprojections):
 
     for proj in projections:
         # Find a name for the synapse
-        if proj.synapse_type.name in Synapse._default_names.values(): # name not set
+        if proj.synapse_type.name in Synapse._default_names.values():  # name not set
             synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type)
         else:
             synapse_name = proj.synapse_type.name
 
-        txt += proj_tpl % { 'pre': LatexParser.pop_name(proj.pre.name), 
-                            'post': LatexParser.pop_name(proj.post.name), 
-                            'target': (LatexParser._format_list(proj.target, ' / ')).replace("_", r"\_"),
-                            'synapse': synapse_name,
-                            'description': proj.connector_description.replace("_", r"\_")}
+        txt += proj_tpl % {
+            "pre": LatexParser.pop_name(proj.pre.name),
+            "post": LatexParser.pop_name(proj.post.name),
+            "target": (LatexParser._format_list(proj.target, " / ")).replace(
+                "_", r"\_"
+            ),
+            "synapse": synapse_name,
+            "description": proj.connector_description.replace("_", r"\_"),
+        }
 
-    return connectivity_template % {'projections_description': txt}
+    return connectivity_template % {"projections_description": txt}
+
 
 def _generate_projection_parameters(net_id, gather_subprojections):
     txt = ""
@@ -436,7 +477,11 @@ def _generate_projection_parameters(net_id, gather_subprojections):
         projections = []
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             for existing_proj in projections:
-                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
+                if (
+                    proj.pre.name == existing_proj.pre.name
+                    and proj.post.name == existing_proj.post.name
+                    and proj.target == existing_proj.target
+                ):  # TODO
                     break
             else:
                 projections.append(proj)
@@ -447,28 +492,40 @@ def _generate_projection_parameters(net_id, gather_subprojections):
     for rk, proj in enumerate(projections):
         parameters = ""
         for idx, param in enumerate(proj.parameters):
-            if param == 'w':
+            if param == "w":
                 continue
             if idx == 0:
-                proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {
-                    'pre': LatexParser.pop_name(proj.pre.name), 
-                    'post': LatexParser.pop_name(proj.post.name), 
-                    'target': LatexParser._format_list(proj.target, ' / ')}
+                proj_name = (
+                    "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s"
+                    % {
+                        "pre": LatexParser.pop_name(proj.pre.name),
+                        "post": LatexParser.pop_name(proj.post.name),
+                        "target": LatexParser._format_list(proj.target, " / "),
+                    }
+                )
             else:
                 proj_name = ""
             val = proj.init[param]
-            
+
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(np.min(val)) + ", " + str(np.max(val)) + "]$"
-            parameters += proj_tpl % {'name': proj_name, 'param': LatexParser._latexify_name(param, []), 'value': val}
+            parameters += proj_tpl % {
+                "name": proj_name,
+                "param": LatexParser._latexify_name(param, []),
+                "value": val,
+            }
 
         if parameters != "":
             txt += projparameters_template % {
-                'parameters': parameters, 
-                'firstprojection': r"\hdr{3}{H}{Projection parameters}\\ \hline" if first else ""}
+                "parameters": parameters,
+                "firstprojection": r"\hdr{3}{H}{Projection parameters}\\ \hline"
+                if first
+                else "",
+            }
             first = False
 
     return txt
+
 
 def _generate_neuron_models(net_id):
     neurons = ""
@@ -491,7 +548,6 @@ def _generate_neuron_models(net_id):
 
     first_neuron = True
     for neuron in GlobalObjectManager().get_neuron_types():
-
         # skip bold models
         if isinstance(neuron, BoldModel):
             continue
@@ -501,14 +557,16 @@ def _generate_neuron_models(net_id):
             continue
 
         # Name
-        if neuron.name in Neuron._default_names.values(): # name not set
+        if neuron.name in Neuron._default_names.values():  # name not set
             neuron_name = "Neuron " + str(neuron._rk_neurons_type)
         else:
             neuron_name = neuron.name
             neuron_name = neuron_name.replace("_", r"\_")  # escape "_" in names
 
         # Generate the code for the equations
-        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron, net_id=net_id)
+        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(
+            neuron, net_id=net_id
+        )
 
         eqs = ""
         for var in variables:
@@ -516,17 +574,19 @@ def _generate_neuron_models(net_id):
 \begin{dmath*}
 %(eq)s
 \end{dmath*}
-""" % {'eq': var['latex']}
+""" % {"eq": var["latex"]}
 
         variables_eqs = r"""
 %(eqs)s
 \\ \hline
-""" % {'eqs': eqs}
+""" % {"eqs": eqs}
 
         # Spiking neurons have an extra field for the spike condition
         spike_extra = ""
-        if neuron.type == 'spike':
-            spike_code = "If $" + spike_condition + r"$ or $t \leq t^* + t_{\text{refractory}}$:"
+        if neuron.type == "spike":
+            spike_code = (
+                "If $" + spike_condition + r"$ or $t \leq t^* + t_{\text{refractory}}$:"
+            )
 
             # Reset
             spike_code += r"""
@@ -534,18 +594,21 @@ def _generate_neuron_models(net_id):
                 \item Emit a spike at time $t^*$"""
 
             for var in spike_reset:
-                spike_code += r"""
-            \item $""" + var + "$"
+                spike_code += (
+                    r"""
+            \item $"""
+                    + var
+                    + "$"
+                )
 
             spike_code += r"""
         \end{enumerate}"""
-
 
             spike_extra = r"""
 \textbf{Spiking} &
 %(spike)s
 \\ \hline
-""" % {'spike': spike_code}
+""" % {"spike": spike_code}
 
         # Possible function
         functions = ""
@@ -554,17 +617,19 @@ def _generate_neuron_models(net_id):
 \textbf{Functions} &
 %(functions)s
 \\ \hline
-""" % {'functions': LatexParser._process_functions(neuron.functions)}
+""" % {"functions": LatexParser._process_functions(neuron.functions)}
 
         # Build the dictionary
         desc = {
-            'name': neuron_name,
-            'description': neuron.short_description,
-            'firstneuron': firstneuron if first_neuron else "",
-            'variables': variables_eqs,
-            'spike': spike_extra,
-            'functions': functions,
-            'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
+            "name": neuron_name,
+            "description": neuron.short_description,
+            "firstneuron": firstneuron if first_neuron else "",
+            "variables": variables_eqs,
+            "spike": spike_extra,
+            "functions": functions,
+            "equation_type": "Subthreshold dynamics"
+            if neuron.type == "spike"
+            else "Equations",
         }
 
         # Generate the code depending on the neuron position
@@ -574,6 +639,7 @@ def _generate_neuron_models(net_id):
         first_neuron = False
 
     return neurons
+
 
 def _generate_synapse_models(net_id):
     firstsynapse = ""
@@ -601,13 +667,15 @@ def _generate_synapse_models(net_id):
             continue
 
         # Find a name for the synapse
-        if synapse.name in Synapse._default_names.values(): # name not set
+        if synapse.name in Synapse._default_names.values():  # name not set
             synapse_name = "Synapse " + str(synapse._rk_synapses_type)
         else:
             synapse_name = synapse.name
 
         # Generate the code for the equations
-        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse, net_id)
+        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(
+            synapse, net_id
+        )
 
         eqs = ""
         for var in variables:
@@ -615,17 +683,22 @@ def _generate_synapse_models(net_id):
 \begin{dmath*}
 %(eq)s
 \end{dmath*}
-""" % {'eq': var['latex']}
+""" % {"eq": var["latex"]}
 
         variables_eqs = r"""
 %(eqs)s
 \\ \hline
-""" % {'eqs': eqs}
+""" % {"eqs": eqs}
 
         # Synaptic variables
-        variables = r"""
+        variables = (
+            r"""
 \textbf{Equations} & %(variables)s  
-\\ \hline""" % {'variables':eqs} if eqs != "" else ""
+\\ \hline"""
+            % {"variables": eqs}
+            if eqs != ""
+            else ""
+        )
 
         # PSP
         if psp != "":
@@ -633,12 +706,12 @@ def _generate_synapse_models(net_id):
 \textbf{PSP} & \begin{dmath*}
 %(psp)s
 \end{dmath*}
-\\ \hline""" % {'psp': psp}
+\\ \hline""" % {"psp": psp}
         else:
             psp_code = ""
 
         # Spiking neurons have extra fields for the event-driven
-        if synapse.type == 'spike':
+        if synapse.type == "spike":
             if len(pre_desc) > 0:
                 txt_pre = ""
                 for l in pre_desc:
@@ -646,12 +719,12 @@ def _generate_synapse_models(net_id):
 \begin{dmath*}
 %(eq)s
 \end{dmath*}
-""" % {'eq': l}
+""" % {"eq": l}
                 preevent = r"""
 \textbf{Pre-synaptic event} &
 %(preevent)s
 \\ \hline
-""" % {'preevent': txt_pre}
+""" % {"preevent": txt_pre}
             else:
                 preevent = ""
 
@@ -662,12 +735,12 @@ def _generate_synapse_models(net_id):
 \begin{dmath*}
 %(eq)s
 \end{dmath*}
-""" % {'eq': l}
+""" % {"eq": l}
                 postevent = r"""
 \textbf{Post-synaptic event} &
 %(postevent)s
 \\ \hline
-""" % {'postevent': txt_post}
+""" % {"postevent": txt_post}
             else:
                 postevent = ""
         else:
@@ -681,18 +754,18 @@ def _generate_synapse_models(net_id):
 \textbf{Functions} &
 %(functions)s
 \\ \hline
-""" % {'functions': LatexParser._process_functions(synapse.functions)}
+""" % {"functions": LatexParser._process_functions(synapse.functions)}
 
         # Build the dictionary
         desc = {
-            'name': synapse_name,
-            'description': synapse.short_description,
-            'firstsynapse': firstsynapse if idx == 0 else "",
-            'variables': variables,
-            'psp': psp_code,
-            'preevent': preevent,
-            'postevent': postevent,
-            'functions': functions
+            "name": synapse_name,
+            "description": synapse.short_description,
+            "firstsynapse": firstsynapse if idx == 0 else "",
+            "variables": variables,
+            "psp": psp_code,
+            "preevent": preevent,
+            "postevent": postevent,
+            "functions": functions,
         }
 
         # Generate the code
@@ -700,14 +773,16 @@ def _generate_synapse_models(net_id):
 
     return synapses
 
+
 def _generate_inputs(net_id):
     input_desc = input_template
 
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
-
         if isinstance(pop, input_type_list):
-            input_desc += r"{} & {} \\ \hline".format(pop.name, pop.neuron_type.short_description)
-            input_desc += '\n'
+            input_desc += r"{} & {} \\ \hline".format(
+                pop.name, pop.neuron_type.short_description
+            )
+            input_desc += "\n"
 
     input_desc += r"""
 \end{tabularx}
@@ -715,6 +790,7 @@ def _generate_inputs(net_id):
 \vspace{2ex}
 """
     return input_desc
+
 
 def _generate_measurements(net_id):
     measurements = ""
@@ -735,7 +811,6 @@ def _generate_measurements(net_id):
 
     first_define = True
     for neuron in GlobalObjectManager().get_neuron_types():
-
         # skip non-bold models
         if not isinstance(neuron, BoldModel):
             continue
@@ -745,7 +820,7 @@ def _generate_measurements(net_id):
             continue
 
         # Name
-        if neuron.name in Neuron._default_names.values(): # name not set
+        if neuron.name in Neuron._default_names.values():  # name not set
             neuron_name = "Neuron " + str(neuron._rk_neurons_type)
         else:
             neuron_name = neuron.name
@@ -759,20 +834,20 @@ def _generate_measurements(net_id):
 \begin{dmath*}
 %(eq)s
 \end{dmath*}
-""" % {'eq': var['latex']}
+""" % {"eq": var["latex"]}
 
         variables_eqs = r"""
 %(eqs)s
 \\ \hline
-""" % {'eqs': eqs}
+""" % {"eqs": eqs}
 
         # Build the dictionary
         desc = {
-            'name': neuron_name,
-            'description': neuron.short_description,
-            'header': header if first_define else "",
-            'variables': variables_eqs,
-            'equation_type': "Equations"
+            "name": neuron_name,
+            "description": neuron.short_description,
+            "header": header if first_define else "",
+            "variables": variables_eqs,
+            "equation_type": "Equations",
         }
 
         # Generate the code depending on the neuron position
@@ -792,6 +867,5 @@ def _generate_measurements(net_id):
 \\ \hline
 \end{tabularx}
 """
-
 
     return measurements

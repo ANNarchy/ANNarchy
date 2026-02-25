@@ -4,11 +4,13 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network, models
+
 
 class test_RateDefaultSynapseModels(unittest.TestCase):
     """
@@ -27,14 +29,33 @@ class test_RateDefaultSynapseModels(unittest.TestCase):
         cls._inp = cls._network.create(geometry=1, neuron=rNeuron)
         cls._out = cls._network.create(geometry=1, neuron=rNeuron)
 
-        Hebb = cls._network.connect(cls._inp, cls._out, synapse=models.Hebb, target="Hebb")
-        Hebb.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        Hebb = cls._network.connect(
+            cls._inp, cls._out, synapse=models.Hebb, target="Hebb"
+        )
+        Hebb.all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True,
+        )
 
         Oja = cls._network.connect(cls._inp, cls._out, synapse=models.Oja, target="Oja")
-        Oja.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        Oja.all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True,
+        )
 
-        IBCM = cls._network.connect(cls._inp, cls._out, synapse=models.IBCM, target="IBCM")
-        IBCM.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        IBCM = cls._network.connect(
+            cls._inp, cls._out, synapse=models.IBCM, target="IBCM"
+        )
+        IBCM.all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 

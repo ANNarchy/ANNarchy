@@ -3,16 +3,28 @@ from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 # Basic object accessors
 from .test_RateTransmission import test_RateTransmission
-from .test_RateCustomConnectivity import test_CustomConnectivityNoDelay, test_CustomConnectivityUniformDelay
+from .test_RateCustomConnectivity import (
+    test_CustomConnectivityNoDelay,
+    test_CustomConnectivityUniformDelay,
+)
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
-from .test_Projection import test_DefaultProjection, test_ModifiedProjection, test_SliceProjections
+from .test_Projection import (
+    test_DefaultProjection,
+    test_ModifiedProjection,
+    test_SliceProjections,
+)
 
 # Recording
 from .test_Monitor import test_MonitorRatePSP, test_MonitorLocalVariable
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
-from .test_RateDelays import test_NoDelay, test_UniformDelay, test_SynapseOperations, test_SynapticAccess
+from .test_RateDelays import (
+    test_NoDelay,
+    test_UniformDelay,
+    test_SynapseOperations,
+    test_SynapticAccess,
+)
 
 from .test_RateContinuousUpdate import test_RateCodedContinuousUpdate
 from .test_RateDefaultSynapseModels import test_RateDefaultSynapseModels
@@ -21,11 +33,16 @@ from .test_RateDefaultSynapseModels import test_RateDefaultSynapseModels
 from .test_SpecificProjections import test_CurrentInjection
 
 # Some features and accordingly Unittests are only allowed on specific platforms
-if _check_paradigm('openmp'):
+if _check_paradigm("openmp"):
     from .test_RateDelays import test_NonUniformDelay
     from .test_RateCustomConnectivity import test_CustomConnectivityNonUniformDelay
-    from .test_StructuralPlasticityModel import test_StructuralPlasticityModel, test_StructuralPlasticityModelDelay
-    from .test_StructuralPlasticityEnvironment import test_StructuralPlasticityEnvironment
+    from .test_StructuralPlasticityModel import (
+        test_StructuralPlasticityModel,
+        test_StructuralPlasticityModelDelay,
+    )
+    from .test_StructuralPlasticityEnvironment import (
+        test_StructuralPlasticityEnvironment,
+    )
     from .test_Convolution import test_Convolution
     from .test_Pooling import test_Pooling
 
@@ -57,8 +74,8 @@ def run_with(c, formats):
 
 # Set the mode variable from one of three dictionaries for the current tests,
 # as the data_formats are different with different paradigms.
-if _check_paradigm('openmp'):
-    if get_global_config('num_threads') == 1:
+if _check_paradigm("openmp"):
+    if get_global_config("num_threads") == 1:
         mode = single_thread
     else:
         mode = open_mp

@@ -4,12 +4,14 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import pytest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Network
+
 
 class test_ITE(unittest.TestCase):
     """
@@ -18,22 +20,23 @@ class test_ITE(unittest.TestCase):
     TODO: until now, only the successful compilation is tested, some value
     tests need to be added ...
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Setup and compile the network for this tests
         """
         SimpleITE = Neuron(
-            equations = """
+            equations="""
                 r = if (t is 1): 1.0 else: 0.0
             """
         )
 
         NestedITE = Neuron(
-            parameters = """
+            parameters="""
                 state = 1.0
             """,
-            equations = """
+            equations="""
                 r = if (t <= 5):
                         0
                     else:
@@ -41,32 +44,32 @@ class test_ITE(unittest.TestCase):
                             2
                         else:
                             1
-            """
+            """,
         )
 
         ITEinODE = Neuron(
-            equations = """
+            equations="""
                 dr/dt = if t > 5: 1 else: 0
             """
         )
 
         SimpleITE2 = Neuron(
-            equations = """
+            equations="""
                 r = ite(t is 1, 1.0, 0.0)
             """
         )
 
         NestedITE2 = Neuron(
-            parameters = """
+            parameters="""
                 state = 2.0
             """,
-            equations = """
+            equations="""
                 r = ite(state >= 2, 2, ite(state == 1, 1, 0))
-            """
+            """,
         )
 
         ITEinODE2 = Neuron(
-            equations = """
+            equations="""
                 dr/dt = ite((t > 5) and (t <20), 1, 0)
             """
         )
@@ -93,7 +96,7 @@ class test_ITE(unittest.TestCase):
         """
         Automatically called before each test method, basically to reset the network after every test.
         """
-        self._network.reset() # network reset
+        self._network.reset()  # network reset
 
     def test_works(self):
         """

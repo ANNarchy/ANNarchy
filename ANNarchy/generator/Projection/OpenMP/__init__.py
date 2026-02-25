@@ -25,6 +25,7 @@ BaseTemplates:
         * Dense_T: dense (transposed)
         * LIL_P: a partitioned LIL representation
 """
+
 from . import LIL as LIL_OpenMP
 from . import LIL_P as LIL_Sliced_OpenMP
 from . import COO as COO_OpenMP
@@ -42,13 +43,18 @@ from . import Dense_T as Dense_T_OpenMP
 
 __all__ = [
     "BaseTemplates",
-    "LIL_OpenMP", "LIL_Sliced_OpenMP",
+    "LIL_OpenMP",
+    "LIL_Sliced_OpenMP",
     "BSR_OpenMP",
     "COO_OpenMP",
     "DIA_OpenMP",
-    "CSR_OpenMP", "CSR_Sliced_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP",
+    "CSR_OpenMP",
+    "CSR_Sliced_OpenMP",
+    "CSR_T_OpenMP",
+    "CSR_T_Sliced_OpenMP",
     "ELL_OpenMP",
     "ELLR_OpenMP",
     "SELL_OpenMP",
-    "Dense_OpenMP", "Dense_T_OpenMP"
+    "Dense_OpenMP",
+    "Dense_T_OpenMP",
 ]

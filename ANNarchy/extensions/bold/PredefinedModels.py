@@ -5,6 +5,7 @@
 
 from .BoldModel import BoldModel
 
+
 #####################################################################
 ### Several balloon model variants following Stephan et al. (2007)
 ###
@@ -77,19 +78,20 @@ class balloon_CN(BoldModel):
     :param TE:        echo time
     :param epsilon:   ratio of intra- and extravascular signal
     """
-    def __init__(self,
-            phi       = 1.0,
-            kappa     = 1/1.54,
-            gamma     = 1/2.46,
-            E_0       = 0.34,
-            tau       = 0.98,
-            alpha     = 0.33,
-            V_0       = 0.02,
-            v_0       = 40.3,
-            TE        = 40/1000.,
-            epsilon   = 1.43,
-        ):
 
+    def __init__(
+        self,
+        phi=1.0,
+        kappa=1 / 1.54,
+        gamma=1 / 2.46,
+        E_0=0.34,
+        tau=0.98,
+        alpha=0.33,
+        V_0=0.02,
+        v_0=40.3,
+        TE=40 / 1000.0,
+        epsilon=1.43,
+    ):
         parameters = f"""
             second    = 1000.0 : population
             phi       = {phi} : population
@@ -102,7 +104,7 @@ class balloon_CN(BoldModel):
             v_0       = {v_0} : population
             TE        = {TE} : population
             epsilon   = {epsilon} : population
-        """ 
+        """
 
         equations = """
             # Single input
@@ -123,17 +125,19 @@ class balloon_CN(BoldModel):
             # Non-linear equation
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         """
-        name = "BoldNeuron CN",
+        name = ("BoldNeuron CN",)
         description = "BOLD computation with classic coefficients and non-linear BOLD equation (Stephan et al., 2007)."
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations,  
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
             inputs="I_CBF",
             output="BOLD",
-            name=name, description=description
+            name=name,
+            description=description,
         )
-        
+
 
 class balloon_CL(BoldModel):
     """
@@ -190,19 +194,20 @@ class balloon_CL(BoldModel):
     :param TE:        echo time
     :param epsilon:   ratio of intra- and extravascular signal
     """
-    def __init__(self,
-            phi       = 1.0,
-            kappa     = 1/1.54,
-            gamma     = 1/2.46,
-            E_0       = 0.34,
-            tau       = 0.98,
-            alpha     = 0.33,
-            V_0       = 0.02,
-            v_0       = 40.3,
-            TE        = 40/1000.,
-            epsilon   = 1.43,
-        ):
 
+    def __init__(
+        self,
+        phi=1.0,
+        kappa=1 / 1.54,
+        gamma=1 / 2.46,
+        E_0=0.34,
+        tau=0.98,
+        alpha=0.33,
+        V_0=0.02,
+        v_0=40.3,
+        TE=40 / 1000.0,
+        epsilon=1.43,
+    ):
         parameters = f"""
             second    = 1000.0 : population
             phi       = {phi} : population
@@ -215,7 +220,7 @@ class balloon_CL(BoldModel):
             v_0       = {v_0} : population
             TE        = {TE} : population
             epsilon   = {epsilon} : population
-        """ 
+        """
 
         equations = """
             # Single input
@@ -239,13 +244,16 @@ class balloon_CL(BoldModel):
         name = "BoldNeuron CL"
         description = "BOLD computation with classic coefficients and linear BOLD equation (Stephan et al., 2007)."
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations,  
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
             inputs="I_CBF",
             output="BOLD",
-            name=name, description=description
+            name=name,
+            description=description,
         )
+
 
 class balloon_RN(BoldModel):
     """
@@ -304,20 +312,21 @@ class balloon_RN(BoldModel):
     :param epsilon:   ratio of intra- and extravascular signal
     :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
     """
-    def __init__(self,
-            phi       = 1.0,
-            kappa     = 1/1.54,
-            gamma     = 1/2.46,
-            E_0       = 0.34,
-            tau       = 0.98,
-            alpha     = 0.33,
-            V_0       = 0.02,
-            v_0       = 40.3,
-            TE        = 40/1000.,
-            epsilon   = 1.43,
-            r_0       = 25,
-        ):
 
+    def __init__(
+        self,
+        phi=1.0,
+        kappa=1 / 1.54,
+        gamma=1 / 2.46,
+        E_0=0.34,
+        tau=0.98,
+        alpha=0.33,
+        V_0=0.02,
+        v_0=40.3,
+        TE=40 / 1000.0,
+        epsilon=1.43,
+        r_0=25,
+    ):
         parameters = f"""
             second    = 1000.0 : population
             phi       = {phi} : population
@@ -355,13 +364,16 @@ class balloon_RN(BoldModel):
         name = "BOLD model RN"
         description = "BOLD computation with revised coefficients and non-linear BOLD equation (Stephan et al., 2007)."
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations,  
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
             inputs="I_CBF",
             output="BOLD",
-            name=name, description=description
+            name=name,
+            description=description,
         )
+
 
 class balloon_RL(BoldModel):
     """
@@ -421,20 +433,21 @@ class balloon_RL(BoldModel):
     :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
 
     """
-    def __init__(self,
-            phi       = 1.0,
-            kappa     = 1/1.54,
-            gamma     = 1/2.46,
-            E_0       = 0.34,
-            tau       = 0.98,
-            alpha     = 0.33,
-            V_0       = 0.02,
-            v_0       = 40.3,
-            TE        = 40/1000.,
-            epsilon   = 1.43,
-            r_0       = 25,
-        ):
 
+    def __init__(
+        self,
+        phi=1.0,
+        kappa=1 / 1.54,
+        gamma=1 / 2.46,
+        E_0=0.34,
+        tau=0.98,
+        alpha=0.33,
+        V_0=0.02,
+        v_0=40.3,
+        TE=40 / 1000.0,
+        epsilon=1.43,
+        r_0=25,
+    ):
         parameters = f"""
             second    = 1000.0 : population
             phi       = {phi} : population
@@ -472,13 +485,16 @@ class balloon_RL(BoldModel):
         name = "BOLD model RL"
         description = "BOLD computation with revised coefficients and linear BOLD equation (Stephan et al., 2007)."
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations,  
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
             inputs="I_CBF",
             output="BOLD",
-            name=name, description=description
+            name=name,
+            description=description,
         )
+
 
 #################################
 ### Two input channel model
@@ -487,8 +503,8 @@ class balloon_two_inputs(BoldModel):
     """
     BOLD model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation with revised coefficients based on Buxton et al. (2004), Friston et al. (2000) and Stephan et al. (2007).
     """
-    def __init__(self):
 
+    def __init__(self):
         # damped harmonic oscillators, gamma->spring coefficient, kappa->damping coefficient
         # CBF --> gamma from Friston
         # CMRO2 --> faster --> gamma=gamma_CBF*10 (therefore scaling of I_CMRO2 by (gamma_CMRO2 / gamma_CBF) --> if same input (I_CBF==I_CMRO2) CMRO2 and CBF same steady-state)
@@ -544,13 +560,14 @@ class balloon_two_inputs(BoldModel):
         name = "BOLD model with two inputs"
         description = "BOLD model with two inputs (CBF-driving and CMRO2-driving). Combination of neurovascular coupling of Friston et al. (2000) and non-linear Balloon model with revised coefficients (Buxton et al, 1998, Stephan et al, 2007)"
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations, 
-            inputs=['I_CBF', 'I_CMRO2'],
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
+            inputs=["I_CBF", "I_CMRO2"],
             output="BOLD",
-            name=name, 
-            description=description
+            name=name,
+            description=description,
         )
 
 
@@ -561,8 +578,8 @@ class balloon_maith2021(BoldModel):
     """
     The balloon model as used in Maith et al. (2021).
     """
-    def __init__(self):
 
+    def __init__(self):
         parameters = """
             second    = 1000.0
             phi   = 1.0
@@ -592,10 +609,12 @@ class balloon_maith2021(BoldModel):
         name = "Maith2021 BOLD model"
         description = "BOLD computation from Maith et al. (2021)."
 
-        BoldModel.__init__(self, 
-            parameters=parameters, 
-            equations=equations,  
+        BoldModel.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
             inputs="I_CBF",
             output="BOLD",
-            name=name, description=description
+            name=name,
+            description=description,
         )

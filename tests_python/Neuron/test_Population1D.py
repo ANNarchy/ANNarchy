@@ -4,6 +4,7 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
@@ -12,26 +13,16 @@ from ANNarchy import Network, Neuron, Uniform, Parameter
 
 # neuron defintions common used for test cases
 neuron = Neuron(
-    parameters = dict(
-        tau = Parameter(10, locality='local')
-    ),
-    equations = """r += t/tau"""    # default init = 0.0
+    parameters=dict(tau=Parameter(10, locality="local")),
+    equations="""r += t/tau""",  # default init = 0.0
 )
 
-neuron2 = Neuron(
-    parameters = dict(
-        tau = 10
-    ),
-    equations = "r += t/tau : init = 1.0"
-)
+neuron2 = Neuron(parameters=dict(tau=10), equations="r += t/tau : init = 1.0")
 
 neuron3 = Neuron(
-    parameters = dict(
-        tau = 10,
-        r_init = 1.0
-    ),
-    equations = "r += t/tau : init = r_init"
+    parameters=dict(tau=10, r_init=1.0), equations="r += t/tau : init = r_init"
 )
+
 
 class test_Population1D(unittest.TestCase):
     """
@@ -41,6 +32,7 @@ class test_Population1D(unittest.TestCase):
         * access methods for variables and parameters
         * coordinate transformations
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -64,7 +56,7 @@ class test_Population1D(unittest.TestCase):
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self._network.reset() # network reset
+        self._network.reset()  # network reset
 
     #
     # Coordinate transformations
@@ -74,14 +66,14 @@ class test_Population1D(unittest.TestCase):
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove coordinate to rank transformation.
         """
-        self.assertSequenceEqual(self._population_1.coordinates_from_rank(1), (1, ))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(1), (1,))
 
     def test_rank_from_coordinates(self):
         """
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove rank to coordinate transformation.
         """
-        self.assertEqual(self._population_1.rank_from_coordinates((1, )), 1)
+        self.assertEqual(self._population_1.rank_from_coordinates((1,)), 1)
 
     #
     # Parameters
@@ -100,7 +92,7 @@ class test_Population1D(unittest.TestCase):
         method.  As population has the size 3 there should be 3 entries with
         value 10.
         """
-        numpy.testing.assert_allclose(self._population_1.get('tau'), [10.0, 10.0, 10.0])
+        numpy.testing.assert_allclose(self._population_1.get("tau"), [10.0, 10.0, 10.0])
 
     def test_get_neuron_tau(self):
         """
@@ -120,7 +112,7 @@ class test_Population1D(unittest.TestCase):
         """
         Assigned a new value, all instances will change.
         """
-        self._population_1.set({'tau' : 7.0})
+        self._population_1.set({"tau": 7.0})
         numpy.testing.assert_allclose(self._population_1.tau, [7.0, 7.0, 7.0])
 
     def test_set_neuron_tau(self):
@@ -150,9 +142,15 @@ class test_Population1D(unittest.TestCase):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(
+            self._population_1.attributes, ["tau", "r"], "failed listing attributes"
+        )
+        self.assertEqual(
+            self._population_1.parameters, ["tau"], "failed listing parameters"
+        )
+        self.assertEqual(
+            self._population_1.variables, ["r"], "failed listing variables"
+        )
 
     #
     # Variables
@@ -168,7 +166,7 @@ class test_Population1D(unittest.TestCase):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        numpy.testing.assert_allclose(self._population_1.get('r'), [0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose(self._population_1.get("r"), [0.0, 0.0, 0.0])
 
     def test_get_neuron_r(self):
         """
@@ -214,13 +212,15 @@ class test_Population1D(unittest.TestCase):
         variable of each neuron.
         """
         self._population_1.r = Uniform(0.0, 1.0).get_values(3)
-        self.assertTrue(any(self._population_1.r >= 0.0) and all(self._population_1.r <= 1.0))
+        self.assertTrue(
+            any(self._population_1.r >= 0.0) and all(self._population_1.r <= 1.0)
+        )
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self._population_1.set({'r': 1.0})
+        self._population_1.set({"r": 1.0})
         numpy.testing.assert_allclose(self._population_1.r, [1.0, 1.0, 1.0])
 
     #

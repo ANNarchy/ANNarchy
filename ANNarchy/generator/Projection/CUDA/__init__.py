@@ -1,5 +1,5 @@
 """
-The CUDA package does contain all code templates required for the code generation in ANNarchy 
+The CUDA package does contain all code templates required for the code generation in ANNarchy
 targeting NVIDIA graphic cards.
 
 BaseTemplates:
@@ -24,6 +24,7 @@ BaseTemplates:
 
         * CSR_T:        csrc (transposed)
 """
+
 from . import BaseTemplates
 
 from . import COO as COO_CUDA
@@ -39,4 +40,18 @@ from . import HYB as HYB_CUDA
 from . import Dense as Dense_CUDA
 from . import Dense_T as Dense_T_CUDA
 
-__all__ = ["BaseTemplates", "COO_CUDA", "BSR_CUDA", "CSR_CUDA", "CSR_T_CUDA", "CSR_SCALAR_CUDA", "CSR_VECTOR_CUDA", "ELL_CUDA", "ELLR_CUDA", "SELL_CUDA", "HYB_CUDA", "Dense_CUDA", "Dense_T_CUDA"]
+__all__ = [
+    "BaseTemplates",
+    "COO_CUDA",
+    "BSR_CUDA",
+    "CSR_CUDA",
+    "CSR_T_CUDA",
+    "CSR_SCALAR_CUDA",
+    "CSR_VECTOR_CUDA",
+    "ELL_CUDA",
+    "ELLR_CUDA",
+    "SELL_CUDA",
+    "HYB_CUDA",
+    "Dense_CUDA",
+    "Dense_T_CUDA",
+]

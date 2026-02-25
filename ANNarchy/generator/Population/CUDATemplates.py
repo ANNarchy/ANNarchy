@@ -169,26 +169,26 @@ struct PopStruct%(id)s{
 #    attr_type: either 'variable' or 'parameter'
 #
 attribute_decl = {
-    'local': """
+    "local": """
     // Local attribute %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s *gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'global': {
-        'parameter': """
+    "global": {
+        "parameter": """
     // Global parameter %(name)s
     %(type)s %(name)s;
 """,
-        'variable': """
+        "variable": """
     // Global variable %(name)s
     %(type)s %(name)s;
     %(type)s *gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
-"""
-    }
+""",
+    },
 }
 
 # Initialization of parameters due to the init_population method.
@@ -198,7 +198,7 @@ attribute_decl = {
 #    name: name of the variable
 #    init: initial value
 attribute_cpp_init = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(size, %(init)s);
         cudaMalloc(&gpu_%(name)s, size * sizeof(%(type)s));
@@ -212,12 +212,12 @@ attribute_cpp_init = {
         %(name)s_host_to_device = false;
         %(name)s_device_to_host = t;
 """,
-    'global': {
-        'parameter': """
+    "global": {
+        "parameter": """
         // Global parameter %(name)s
         %(name)s = 0.0;
 """,
-        'variable': """
+        "variable": """
         // Global variable %(name)s
         %(name)s = %(init)s;
         cudaMalloc(&gpu_%(name)s, sizeof(%(type)s));
@@ -227,18 +227,18 @@ attribute_cpp_init = {
         if ( err_%(name)s != cudaSuccess )
             std::cout << "    allocation of %(name)s failed: " << cudaGetErrorString(err_%(name)s) << std::endl;
     #endif
-"""
-    }
+""",
+    },
 }
 
 # We need to initialize the queue directly with the
 # values (init) as the data arrays for the variables are
 # only updated in front of a simulate call.
 attribute_delayed = {
-    'local': {
-        'declare': """
+    "local": {
+        "declare": """
     std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
-        'init': """
+        "init": """
         gpu_delayed_%(name)s = std::deque< %(type)s* >(max_delay, NULL);
         std::vector<%(type)s> tmp_%(name)s = std::vector<%(type)s>( size, 0.0);
         for ( int i = 0; i < max_delay; i++ ) {
@@ -251,13 +251,13 @@ attribute_delayed = {
             std::cout << "pop%(id)s - init container for delayed %(name)s (max_delay = " << max_delay << " steps): " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
-        'clear': """
+        "clear": """
 for ( int i = 0; i < max_delay; i++ )
     cudaFree( gpu_delayed_%(name)s[i] );
 gpu_delayed_%(name)s.clear();
 gpu_delayed_%(name)s.shrink_to_fit();
 """,
-        'update': """
+        "update": """
             %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
             gpu_delayed_%(name)s.pop_back();
             gpu_delayed_%(name)s.push_front(last_%(name)s);
@@ -272,7 +272,7 @@ gpu_delayed_%(name)s.shrink_to_fit();
         #    to ensure correctness of results, we need transfer from host here. The corresponding
         #    gpu arrays gpu_%(name)s are not resetted at this point of time (they will be resetted
         #    if simulate() invoked.
-        'reset' : """
+        "reset": """
         // reset %(name)s
         for ( int i = 0; i < gpu_delayed_%(name)s.size(); i++ ) {
             cudaMemcpy( gpu_delayed_%(name)s[i], %(name)s.data(), sizeof(%(type)s) * size, cudaMemcpyHostToDevice );
@@ -283,14 +283,14 @@ gpu_delayed_%(name)s.shrink_to_fit();
             std::cout << "pop%(id)s - reset delayed %(name)s failed: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
-        'resize': """
+        "resize": """
         std::cerr << "ProjStruct::update_max_delay() is not implemented for local variables." << std::endl;
-"""
+""",
     },
-    'global': {
-        'declare': """
+    "global": {
+        "declare": """
     std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
-        'init': """
+        "init": """
         gpu_delayed_%(name)s = std::deque< %(type)s* >(max_delay, NULL);
         %(type)s tmp_%(name)s = static_cast<%(type)s>(0.0);
         for ( int i = 0; i < max_delay; i++ ) {
@@ -303,13 +303,13 @@ gpu_delayed_%(name)s.shrink_to_fit();
             std::cout << "pop%(id)s - init container for delayed %(name)s (max_delay = " << max_delay << " steps): " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
-        'clear': """
+        "clear": """
 for ( int i = 0; i < max_delay; i++ )
     cudaFree( gpu_delayed_%(name)s[i] );
 gpu_delayed_%(name)s.clear();
 gpu_delayed_%(name)s.shrink_to_fit();
 """,
-        'update': """
+        "update": """
             %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
             gpu_delayed_%(name)s.pop_back();
             gpu_delayed_%(name)s.push_front(last_%(name)s);
@@ -324,7 +324,7 @@ gpu_delayed_%(name)s.shrink_to_fit();
         #    to ensure correctness of results, we need transfer from host here. The corresponding
         #    gpu arrays gpu_%(name)s are not resetted at this point of time (they will be resetted
         #    if simulate() invoked.
-        'reset' : """
+        "reset": """
         // reset %(name)s
         for ( int i = 0; i < gpu_delayed_%(name)s.size(); i++ ) {
             cudaMemcpy( gpu_delayed_%(name)s[i], &%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice );
@@ -335,17 +335,17 @@ gpu_delayed_%(name)s.shrink_to_fit();
             std::cout << "pop%(id)s - reset delayed %(name)s failed: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
-        'resize': """
+        "resize": """
         std::cerr << "ProjStruct::update_max_delay() is not implemented for global variables. " << std::endl;
-"""
-    }
+""",
+    },
 }
 
 # Transfer of variables before and after a simulation
 #
 # Parameters:
 attribute_transfer = {
-    'HtoD_local': """
+    "HtoD_local": """
         // %(attr_name)s: local
         if ( %(attr_name)s_host_to_device )
         {
@@ -362,7 +362,7 @@ attribute_transfer = {
         #endif
         }
 """,
-    'HtoD_global': """
+    "HtoD_global": """
         // %(attr_name)s: global
         if ( %(attr_name)s_host_to_device )
         {
@@ -379,7 +379,7 @@ attribute_transfer = {
         #endif
         }
 """,
-    'DtoH_local':"""
+    "DtoH_local": """
         // %(attr_name)s: local
         if (attr_name.compare("%(attr_name)s") == 0)
         {
@@ -400,7 +400,7 @@ attribute_transfer = {
             return;
         }
 """,
-    'DtoH_global':"""
+    "DtoH_global": """
     // %(attr_name)s: global
         if (attr_name.compare("%(attr_name)s") == 0)
         {
@@ -420,7 +420,7 @@ attribute_transfer = {
         #endif
             return;
         }
-"""
+""",
 }
 
 # Definition for the usage of CUDA device random
@@ -431,23 +431,23 @@ attribute_transfer = {
 #    rd_name:
 #    rd_update:
 curand = {
-    'local': {
-        'decl': """
+    "local": {
+        "decl": """
     curandState* gpu_%(rd_name)s;
 """,
-        'init': """
+        "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
         init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
 """,
-	'clear': """
+        "clear": """
 cudaFree(gpu_%(rd_name)s);
 """,
     },
-    'global': {
-        'decl': """
+    "global": {
+        "decl": """
     curandState* gpu_%(rd_name)s;
 """,
-        'init': """
+        "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(curandState));
         init_curand_states(1, 1, gpu_%(rd_name)s, global_seed );
 #ifdef _DEBUG
@@ -456,13 +456,13 @@ cudaFree(gpu_%(rd_name)s);
             std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err_%(rd_name)s) << std::endl;
 #endif
 """,
-	'clear': ""
-    }
+        "clear": "",
+    },
 }
 
 spike_specific = {
-    'spike': {
-        'declare':"""
+    "spike": {
+        "declare": """
     // Structures for managing spikes
     std::vector<long int> last_spike;
     long int* gpu_last_spike;
@@ -471,7 +471,7 @@ spike_specific = {
     unsigned int spike_count;
     unsigned int* gpu_spike_count;
 """,
-        'init': """
+        "init": """
         // Spiking variables
         spiked = std::vector<int>(size, 0);
         cudaMalloc((void**)&gpu_spiked, size * sizeof(int));
@@ -485,13 +485,13 @@ spike_specific = {
         cudaMalloc((void**)&gpu_spike_count, sizeof(unsigned int));
         cudaMemcpy(gpu_spike_count, &spike_count, sizeof(unsigned int), cudaMemcpyHostToDevice);
 """,
-        'reset': """
+        "reset": """
         spiked = std::vector<int>(size, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
         spike_count = 0;
 """,
-        'clear': """
+        "clear": """
 // Spike events (host-side)
 spiked.clear();
 spiked.shrink_to_fit();
@@ -502,10 +502,10 @@ last_spike.shrink_to_fit();
 // Spike events (device-side)
 cudaFree(gpu_spiked);
 cudaFree(gpu_last_spike);
-"""
+""",
     },
-    'refractory': {
-        'declare': """
+    "refractory": {
+        "declare": """
     // Refractory period
     std::vector<int> refractory;
     int *gpu_refractory;
@@ -513,7 +513,7 @@ cudaFree(gpu_last_spike);
     std::vector<int> refractory_remaining;
     int *gpu_refractory_remaining;
 """,
-        'init': """
+        "init": """
         // Refractory period
         refractory = std::vector<int>(size, 0);
         cudaMalloc((void**)&gpu_refractory, size * sizeof(int));
@@ -523,18 +523,18 @@ cudaFree(gpu_last_spike);
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
-        'init_extern': """
+        "init_extern": """
         // Refractory period
         refractory_remaining = std::vector<int>(size, 0);
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
-        'reset': """
+        "reset": """
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
-"""
-    }
+""",
+    },
 }
 
 # Contains all codes related to the population update
@@ -542,8 +542,8 @@ cudaFree(gpu_last_spike);
 # 1st level distinguish 'local' and 'global' update
 # 2nd level distinguish 'device_kernel', 'invoke_kernel', 'header' and 'host_call' template
 population_update_kernel = {
-    'global': {
-        'device_kernel': """// Updating global variables of population %(id)s
+    "global": {
+        "device_kernel": """// Updating global variables of population %(id)s
 __global__ void cuPop%(id)s_global_step( %(add_args)s )
 {
 %(pre_loop)s
@@ -551,15 +551,15 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 %(global_eqs)s
 }
 """,
-        'invoke_kernel': """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s ) {
+        "invoke_kernel": """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s ) {
     cuPop%(id)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         // arguments
         %(add_args_call)s
     );
 }""",
-        'kernel_decl': """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s );
+        "kernel_decl": """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s );
 """,
-        'host_call': """
+        "host_call": """
         pop%(id)s_global_step(RunConfig(1, 1, 0, pop%(id)s->stream), %(add_args)s );
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
@@ -568,10 +568,10 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
             exit(0);
         }
     #endif
-"""
+""",
     },
-    'local': {
-        'device_kernel': """// Updating local variables of population %(id)s
+    "local": {
+        "device_kernel": """// Updating local variables of population %(id)s
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
     int tid = threadIdx.x + blockDim.x * blockIdx.x;
@@ -588,7 +588,7 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 %(post_loop)s
 }
 """,
-        'invoke_kernel': """
+        "invoke_kernel": """
 void pop%(id)s_local_step(RunConfig cfg, %(add_args)s ) {
     cuPop%(id)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         // arguments
@@ -596,8 +596,8 @@ void pop%(id)s_local_step(RunConfig cfg, %(add_args)s ) {
     );
 }
 """,
-        'kernel_decl': "void pop%(id)s_local_step(RunConfig cfg, %(add_args)s );\n",
-        'host_call': """
+        "kernel_decl": "void pop%(id)s_local_step(RunConfig cfg, %(add_args)s );\n",
+        "host_call": """
     #if defined (__pop%(id)s_nb__)
         pop%(id)s_local_step(RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s->stream), %(add_args)s );
     #else
@@ -611,12 +611,12 @@ void pop%(id)s_local_step(RunConfig cfg, %(add_args)s ) {
             exit(0);
         }
     #endif
-"""
-    }
+""",
+    },
 }
 
 spike_gather_kernel = {
-    'device_kernel': """
+    "device_kernel": """
 // gpu device kernel for population %(id)s
 __global__ void cu_pop%(id)s_spike_gather( unsigned int* num_events, const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike%(args)s )
 {
@@ -653,7 +653,7 @@ __global__ void cu_pop%(id)s_spike_gather( unsigned int* num_events, const long 
     }
 }
 """,
-    'invoke_kernel': """
+    "invoke_kernel": """
 void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike%(args)s ) {
     // Compute current events
     cu_pop%(id)s_spike_gather<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
@@ -664,12 +664,12 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, const long 
     );
 }
 """,
-    'kernel_decl': """
+    "kernel_decl": """
 void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s%(args)s );
 """,
     # As we use atomicAdd operations, multiple blocks are not
     # working correctly, consequently spawn only one block.
-    'host_call': """
+    "host_call": """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s->_active ) {
         // Reset old events
@@ -715,18 +715,17 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
         #endif
         }
     }
-"""
+""",
 }
 
 #
 # Final dictionary
 cuda_templates = {
-    'population_header': population_header,
-    'attr_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_delayed': attribute_delayed,
-    'attribute_transfer': attribute_transfer,
-    'rng': curand,
-
-    'spike_specific': spike_specific
+    "population_header": population_header,
+    "attr_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_delayed": attribute_delayed,
+    "attribute_transfer": attribute_transfer,
+    "rng": curand,
+    "spike_specific": spike_specific,
 }
