@@ -781,7 +781,7 @@ class Convolution(SpecificProjection):
             omp_code = """
         #pragma omp for private(sum, rk_pre, coord) %(psp_schedule)s""" % {
                 "psp_schedule": ""
-                if not "psp_schedule" in self._omp_config.keys()
+                if "psp_schedule" not in self._omp_config.keys()
                 else self._omp_config["psp_schedule"]
             }
 
@@ -948,8 +948,7 @@ class Convolution(SpecificProjection):
             "pre_variables_header": pre_variables_header,
             "pre_variables_invoke": pre_variables_invoke,
             "pre_variables_call": pre_variables_call,
-            "pre_variable": "pre_%(name)s" % pre_id_dict,
-            "convolve_code": convolve_code,
+            "pre_variable": "pre_%(name)s" % pre_id_dict
         }
 
         # Finalize the processing code
@@ -1135,7 +1134,6 @@ class Convolution(SpecificProjection):
                 code += tabify(
                     """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);"""
                     % {
-                        "id_proj": self.id,
                         "index": indices[dim],
                         "dim": dim,
                         "operator": "+",
@@ -1146,7 +1144,7 @@ class Convolution(SpecificProjection):
             else:
                 code += tabify(
                     """int %(index)s_pre = coord[%(dim)s];"""
-                    % {"id_proj": self.id, "index": indices[dim], "dim": dim},
+                    % {"index": indices[dim], "dim": dim},
                     1,
                 )
 
@@ -1160,7 +1158,6 @@ class Convolution(SpecificProjection):
                 """
                         % {
                             "index": indices[dim],
-                            "dim": dim,
                             "max_size": self.pre.geometry[dim] - 1,
                         },
                         dim,
@@ -1392,7 +1389,6 @@ class Convolution(SpecificProjection):
                 code += tabify(
                     """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);"""
                     % {
-                        "id_proj": self.id,
                         "index": indices[dim],
                         "dim": dim,
                         "operator": "+",
@@ -1403,7 +1399,7 @@ class Convolution(SpecificProjection):
             else:
                 code += tabify(
                     """int %(index)s_pre = coord[%(dim)s];"""
-                    % {"id_proj": self.id, "index": indices[dim], "dim": dim},
+                    % {"index": indices[dim], "dim": dim},
                     1,
                 )
 
@@ -1417,7 +1413,6 @@ class Convolution(SpecificProjection):
             """
                         % {
                             "index": indices[dim],
-                            "dim": dim,
                             "max_size": self.pre.geometry[dim] - 1,
                         },
                         1 + dim,
