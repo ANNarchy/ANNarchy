@@ -18,7 +18,10 @@ from ANNarchy.intern import Messages
 # ms->steps / steps->ms conversion
 ###################################
 
-def convert_ms_to_steps(values: int|float|list|np.ndarray, net_id=0) -> int | list| np.ndarray:
+
+def convert_ms_to_steps(
+    values: int | float | list | np.ndarray, net_id=0
+) -> int | list | np.ndarray:
     """
     Attributes such as synaptic delays or schedules in timed inputs are given by the user in milliseconds.
     For the simulation they need to be converted into a number of steps.
@@ -30,21 +33,26 @@ def convert_ms_to_steps(values: int|float|list|np.ndarray, net_id=0) -> int | li
         In ANNarchy we apply a rather simple rule: values stored on C++ side always refer to steps,
         while on Python side values refers to milliseconds.
     """
-    dt = ConfigManager().get('dt', net_id=net_id)
+    dt = ConfigManager().get("dt", net_id=net_id)
 
     if isinstance(values, (float, int)):
-        return int(np.rint(values/dt))
+        return int(np.rint(values / dt))
 
     elif isinstance(values, np.ndarray):
-        return np.rint(values/dt).astype(np.int32)
+        return np.rint(values / dt).astype(np.int32)
 
     elif isinstance(values, list):
-        return [int(np.rint(val/dt)) for val in values]
+        return [int(np.rint(val / dt)) for val in values]
 
     else:
-        raise ValueError("convert_ms_to_steps: expected either scalar, list or np.ndarray")
+        raise ValueError(
+            "convert_ms_to_steps: expected either scalar, list or np.ndarray"
+        )
 
-def convert_steps_to_ms(values: int|list|np.ndarray, net_id=0) -> float|list|np.ndarray:
+
+def convert_steps_to_ms(
+    values: int | list | np.ndarray, net_id=0
+) -> float | list | np.ndarray:
     """
     Reverse method to `convert_ms_to_steps`.
 
@@ -52,7 +60,7 @@ def convert_steps_to_ms(values: int|list|np.ndarray, net_id=0) -> float|list|np.
         In ANNarchy we apply a rather simple rule: values stored on C++ side always refer to steps,
         while on Python side values refers to milliseconds.
     """
-    dt = ConfigManager().get('dt', net_id=net_id)
+    dt = ConfigManager().get("dt", net_id=net_id)
 
     if isinstance(values, (float, int)):
         return float(values * dt)
@@ -64,13 +72,22 @@ def convert_steps_to_ms(values: int|list|np.ndarray, net_id=0) -> float|list|np.
         return [float(val * dt) for val in values]
 
     else:
-        raise ValueError("convert_steps_to_ms: expected either scalar, list or np.ndarray")
+        raise ValueError(
+            "convert_steps_to_ms: expected either scalar, list or np.ndarray"
+        )
+
 
 ###################################
 # Sparse matrices
 ###################################
 
-def sparse_random_matrix(pre: "Population", post: "Population", proba:float, weights:float|RandomDistribution) -> "scipy.sparse.lil_matrix":
+
+def sparse_random_matrix(
+    pre: "Population",
+    post: "Population",
+    proba: float,
+    weights: float | RandomDistribution,
+) -> "scipy.sparse.lil_matrix":
     """
     Returns a sparse lil-matrix for use in `Projection.from_sparse()`.
 
@@ -97,25 +114,31 @@ def sparse_random_matrix(pre: "Population", post: "Population", proba:float, wei
         return None
 
     from random import sample
+
     W = lil_matrix((pre.size, post.size))
 
     for i in range(pre.size):
-        k=np.random.binomial(post.size, proba,1)[0]
-        tmp = sample(range(post.size),k)
-        W.rows[i]=list(np.sort(tmp))
+        k = np.random.binomial(post.size, proba, 1)[0]
+        tmp = sample(range(post.size), k)
+        W.rows[i] = list(np.sort(tmp))
 
         if isinstance(weights, (int, float)):
-            W.data[i] = [weights]*k
+            W.data[i] = [weights] * k
 
         elif isinstance(weights, RandomDistribution):
             W.data[i] = weights.get_list_values(k)
 
         else:
-            raise ValueError("sparse_random_matrix expects either a float or RandomDistribution object.")
+            raise ValueError(
+                "sparse_random_matrix expects either a float or RandomDistribution object."
+            )
 
     return W
 
-def sparse_delays_from_weights(weights: "scipy.sparse.lil_matrix", delays: float | RandomDistribution) -> "scipy.sparse.lil_matrix":
+
+def sparse_delays_from_weights(
+    weights: "scipy.sparse.lil_matrix", delays: float | RandomDistribution
+) -> "scipy.sparse.lil_matrix":
     """
     Returns a sparse delay matrix with the same connectivity as the sparse matrix `weight_matrix`.
 
@@ -140,17 +163,21 @@ def sparse_delays_from_weights(weights: "scipy.sparse.lil_matrix", delays: float
 
     for r, c in zip(rows, cols):
         if isinstance(delays, (int, float)):
-            delay_matrix[r,c] = delays
+            delay_matrix[r, c] = delays
         elif isinstance(delays, RandomDistribution):
-            delay_matrix[r,c] = delays.get_value()
+            delay_matrix[r, c] = delays.get_value()
         else:
-            raise ValueError("sparse_random_matrix expects either a float or RandomDistribution object.")
+            raise ValueError(
+                "sparse_random_matrix expects either a float or RandomDistribution object."
+            )
 
     return delay_matrix
+
 
 ###################################
 ## Performance Measurement
 ###################################
+
 
 def timeit(func):
     """
@@ -166,15 +193,18 @@ def timeit(func):
     data = run(net, 1000)
     ```
     """
+
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         total_time = end_time - start_time
-        print(f'Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds')
+        print(f"Function {func.__name__}{args} {kwargs} took {total_time:.4f} seconds")
         return result
+
     return timeit_wrapper
+
 
 def compute_delivered_spikes(proj, pre_spike_events, post_spike_events):
     """
@@ -188,6 +218,7 @@ def compute_delivered_spikes(proj, pre_spike_events, post_spike_events):
     pre_throughput = compute_delivered_efferent_spikes(proj, pre_spike_events)
     post_throughput = compute_delivered_afferent_spikes(proj, post_spike_events)
     return pre_throughput + post_throughput
+
 
 def compute_delivered_efferent_spikes(proj, spike_events):
     """
@@ -206,6 +237,7 @@ def compute_delivered_efferent_spikes(proj, spike_events):
 
     return delivered_events
 
+
 def compute_delivered_afferent_spikes(proj, spike_events):
     """
     This function counts the number of delivered spikes for a given Projection and
@@ -222,7 +254,10 @@ def compute_delivered_afferent_spikes(proj, spike_events):
 
     return delivered_events
 
-def compute_delivered_spikes_per_second(proj, pre_spike_events, post_spike_events, time_in_seconds, scale_factor=(10**6)):
+
+def compute_delivered_spikes_per_second(
+    proj, pre_spike_events, post_spike_events, time_in_seconds, scale_factor=(10**6)
+):
     """
     This function implements a throughput metric for spiking neural networks.
 
@@ -241,6 +276,7 @@ def compute_delivered_spikes_per_second(proj, pre_spike_events, post_spike_event
     num_events = compute_delivered_spikes(proj, pre_spike_events, post_spike_events)
 
     return (num_events / time_in_seconds) / scale_factor
+
 
 def _rec_size_in_bytes(obj, seen):
     """

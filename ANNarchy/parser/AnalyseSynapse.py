@@ -3,14 +3,33 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
+import re
+
+from ANNarchy.core.Random import (
+    available_distributions,
+    distributions_arguments,
+    distributions_equivalents,
+)
 from ANNarchy.parser.Equation import Equation
-from ANNarchy.parser.StringManipulation import *
-from ANNarchy.parser.ITE import *
-from ANNarchy.parser.Extraction import *
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
+from ANNarchy.parser.Extraction import (
+    extract_parameters,
+    extract_variables,
+    extract_functions,
+    get_attributes,
+    extract_randomdist,
+    extract_pre_spike_variable,
+    extract_post_spike_variable,
+    extract_axon_spike_variable,
+    extract_globalops_synapse,
+    extract_prepost,
+    find_method,
+    extract_structural_plasticity,
+)
 from ANNarchy.parser.CoupledEquations import CoupledEquations
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+
 
 def analyse_synapse(synapse, net_id):
     """
@@ -75,145 +94,191 @@ def analyse_synapse(synapse, net_id):
 
     # Store basic information
     description = {
-        'object': 'synapse',
-        'type': synapse.type,
-        'raw_parameters': synapse.parameters,
-        'raw_equations': synapse.equations,
-        'raw_functions': synapse.functions
+        "object": "synapse",
+        "type": synapse.type,
+        "raw_parameters": synapse.parameters,
+        "raw_equations": synapse.equations,
+        "raw_functions": synapse.functions,
     }
 
     # Psps is what is actually summed over the incoming weights
     if synapse.psp:
-        description['raw_psp'] = synapse.psp
-    elif synapse.type == 'rate':
-        description['raw_psp'] = "w*pre.r"
+        description["raw_psp"] = synapse.psp
+    elif synapse.type == "rate":
+        description["raw_psp"] = "w*pre.r"
 
     # Spiking synapses additionally store information related to spike events
-    if synapse.type == 'spike':
-        description['raw_pre_spike'] = synapse.pre_spike
-        description['raw_post_spike'] = synapse.post_spike
-        description['raw_axon_spike'] = synapse.pre_axon_spike
+    if synapse.type == "spike":
+        description["raw_pre_spike"] = synapse.pre_spike
+        description["raw_post_spike"] = synapse.post_spike
+        description["raw_axon_spike"] = synapse.pre_axon_spike
 
     # Extract parameters and variables names
-    parameters = extract_parameters(synapse.parameters, synapse.extra_values, "synapse", net_id=net_id)
-    variables = extract_variables(synapse.equations, 'synapse', net_id=net_id)
+    parameters = extract_parameters(
+        synapse.parameters, synapse.extra_values, "synapse", net_id=net_id
+    )
+    variables = extract_variables(synapse.equations, "synapse", net_id=net_id)
 
     # Extract functions
-    functions = extract_functions(description=synapse.functions, local_global=False, net_id=net_id)
+    functions = extract_functions(
+        description=synapse.functions, local_global=False, net_id=net_id
+    )
 
     # Check the presence of w
-    description['plasticity'] = False
+    description["plasticity"] = False
     for var in parameters + variables:
-        if var['name'] == 'w':
+        if var["name"] == "w":
             break
     else:
         parameters.append(
             {
-                'name': 'w', 'bounds': {}, 'ctype': ConfigManager().get('precision', net_id),
-                'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'
+                "name": "w",
+                "bounds": {},
+                "ctype": ConfigManager().get("precision", net_id),
+                "init": 0.0,
+                "flags": [],
+                "eq": "w=0.0",
+                "locality": "local",
             }
         )
 
     # Find out a plasticity rule
     for var in variables:
-        if var['name'] == 'w':
-            description['plasticity'] = True
+        if var["name"] == "w":
+            description["plasticity"] = True
             break
 
     # Build lists of all attributes (param+var), which are local or global
-    attributes, local_var, global_var, semiglobal_var = get_attributes(parameters, variables, neuron=False)
+    attributes, local_var, global_var, semiglobal_var = get_attributes(
+        parameters, variables, neuron=False
+    )
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        Messages._error('Attributes must be declared only once.', attributes)
-
+        Messages._error("Attributes must be declared only once.", attributes)
 
     # Add this info to the description
-    description['parameters'] = parameters
-    description['variables'] = variables
-    description['functions'] = functions
-    description['attributes'] = attributes
-    description['local'] = local_var
-    description['semiglobal'] = semiglobal_var
-    description['global'] = global_var
-    description['global_operations'] = []
+    description["parameters"] = parameters
+    description["variables"] = variables
+    description["functions"] = functions
+    description["attributes"] = attributes
+    description["local"] = local_var
+    description["semiglobal"] = semiglobal_var
+    description["global"] = global_var
+    description["global_operations"] = []
 
     # Lists of global operations needed at the pre and post populations
-    description['pre_global_operations'] = []
-    description['post_global_operations'] = []
+    description["pre_global_operations"] = []
+    description["post_global_operations"] = []
 
     # Extract RandomDistribution objects
-    description['random_distributions'] = extract_randomdist(description, net_id=net_id)
+    description["random_distributions"] = extract_randomdist(description, net_id=net_id)
 
     # Extract event-driven info
-    if description['type'] == 'spike':
+    if description["type"] == "spike":
         # pre_spike event
-        description['pre_spike'] = extract_pre_spike_variable(description, net_id=net_id)
-        for var in description['pre_spike']:
-            if var['name'] in ['g_target']: # Already dealt with
+        description["pre_spike"] = extract_pre_spike_variable(
+            description, net_id=net_id
+        )
+        for var in description["pre_spike"]:
+            if var["name"] in ["g_target"]:  # Already dealt with
                 continue
-            for avar in description['variables']:
-                if var['name'] == avar['name']:
+            for avar in description["variables"]:
+                if var["name"] == avar["name"]:
                     break
-            else: # not defined already
-                description['variables'].append(
-                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
-                 'locality': var['locality'],
-                 'flags': [], 'transformed_eq': '', 'eq': '',
-                 'cpp': '', 'switch': '', 're_loop': '',
-                 'untouched': '', 'method':'explicit'}
+            else:  # not defined already
+                description["variables"].append(
+                    {
+                        "name": var["name"],
+                        "bounds": var["bounds"],
+                        "ctype": var["ctype"],
+                        "init": var["init"],
+                        "locality": var["locality"],
+                        "flags": [],
+                        "transformed_eq": "",
+                        "eq": "",
+                        "cpp": "",
+                        "switch": "",
+                        "re_loop": "",
+                        "untouched": "",
+                        "method": "explicit",
+                    }
                 )
-                description['local'].append(var['name'])
-                description['attributes'].append(var['name'])
+                description["local"].append(var["name"])
+                description["attributes"].append(var["name"])
 
         # post_spike event
-        description['post_spike'] = extract_post_spike_variable(description, net_id=net_id)
-        for var in description['post_spike']:
-            if var['name'] in ['g_target', 'w']: # Already dealt with
+        description["post_spike"] = extract_post_spike_variable(
+            description, net_id=net_id
+        )
+        for var in description["post_spike"]:
+            if var["name"] in ["g_target", "w"]:  # Already dealt with
                 continue
-            for avar in description['variables']:
-                if var['name'] == avar['name']:
+            for avar in description["variables"]:
+                if var["name"] == avar["name"]:
                     break
-            else: # not defined already
-                description['variables'].append(
-                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
-                 'locality': var['locality'],
-                 'flags': [], 'transformed_eq': '', 'eq': '',
-                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+            else:  # not defined already
+                description["variables"].append(
+                    {
+                        "name": var["name"],
+                        "bounds": var["bounds"],
+                        "ctype": var["ctype"],
+                        "init": var["init"],
+                        "locality": var["locality"],
+                        "flags": [],
+                        "transformed_eq": "",
+                        "eq": "",
+                        "cpp": "",
+                        "switch": "",
+                        "untouched": "",
+                        "method": "explicit",
+                    }
                 )
-                description['local'].append(var['name'])
-                description['attributes'].append(var['name'])
+                description["local"].append(var["name"])
+                description["attributes"].append(var["name"])
 
         # axonal spike event is handled like a normal spike event just a different source
-        description['pre_axon_spike'] = extract_axon_spike_variable(description, net_id=net_id)
-        for var in description['pre_axon_spike']:
-            if var['name'] in ['g_target', 'w']: # Already dealt with
+        description["pre_axon_spike"] = extract_axon_spike_variable(
+            description, net_id=net_id
+        )
+        for var in description["pre_axon_spike"]:
+            if var["name"] in ["g_target", "w"]:  # Already dealt with
                 continue
-            for avar in description['variables']:
-                if var['name'] == avar['name']:
+            for avar in description["variables"]:
+                if var["name"] == avar["name"]:
                     break
-            else: # not defined already
-                description['variables'].append(
-                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
-                 'locality': var['locality'],
-                 'flags': [], 'transformed_eq': '', 'eq': '',
-                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+            else:  # not defined already
+                description["variables"].append(
+                    {
+                        "name": var["name"],
+                        "bounds": var["bounds"],
+                        "ctype": var["ctype"],
+                        "init": var["init"],
+                        "locality": var["locality"],
+                        "flags": [],
+                        "transformed_eq": "",
+                        "eq": "",
+                        "cpp": "",
+                        "switch": "",
+                        "untouched": "",
+                        "method": "explicit",
+                    }
                 )
-                description['local'].append(var['name'])
-                description['attributes'].append(var['name'])
+                description["local"].append(var["name"])
+                description["attributes"].append(var["name"])
 
     # Variables names for the parser which should be left untouched
     untouched = {}
-    description['dependencies'] = {'pre': [], 'post': []}
+    description["dependencies"] = {"pre": [], "post": []}
 
     # The ODEs may be interdependent (implicit, midpoint), so they need to be passed explicitely to CoupledEquations
     concurrent_odes = []
 
     # Iterate over all variables
-    for variable in description['variables']:
+    for variable in description["variables"]:
         # Equation
-        eq = variable['transformed_eq']
-        if eq.strip() == '':
+        eq = variable["transformed_eq"]
+        if eq.strip() == "":
             continue
 
         # For ODEs, assignment and so on, we would like to count the number of floating operations (FLOPs)
@@ -223,24 +288,36 @@ def analyse_synapse(synapse, net_id):
         dependencies = []
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description, net_id=net_id)
-        description['pre_global_operations'] += global_ops['pre']
-        description['post_global_operations'] += global_ops['post']
+        eq, untouched_globs, global_ops = extract_globalops_synapse(
+            variable["name"], eq, description, net_id=net_id
+        )
+        description["pre_global_operations"] += global_ops["pre"]
+        description["post_global_operations"] += global_ops["post"]
         # Remove doubled entries
-        description['pre_global_operations'] = [i for n, i in enumerate(description['pre_global_operations']) if i not in description['pre_global_operations'][n + 1:]]
-        description['post_global_operations'] = [i for n, i in enumerate(description['post_global_operations']) if i not in description['post_global_operations'][n + 1:]]
+        description["pre_global_operations"] = [
+            i
+            for n, i in enumerate(description["pre_global_operations"])
+            if i not in description["pre_global_operations"][n + 1 :]
+        ]
+        description["post_global_operations"] = [
+            i
+            for n, i in enumerate(description["post_global_operations"])
+            if i not in description["post_global_operations"][n + 1 :]
+        ]
 
         # Extract pre- and post_synaptic variables
-        eq, untouched_var, prepost_dependencies = extract_prepost(variable['name'], eq, description, net_id=net_id)
+        eq, untouched_var, prepost_dependencies = extract_prepost(
+            variable["name"], eq, description, net_id=net_id
+        )
 
         # Store the pre-post dependencies at the synapse level
-        description['dependencies']['pre'] += prepost_dependencies['pre']
-        description['dependencies']['post'] += prepost_dependencies['post']
+        description["dependencies"]["pre"] += prepost_dependencies["pre"]
+        description["dependencies"]["post"] += prepost_dependencies["post"]
         # and also on the variable for checking
-        variable['prepost_dependencies'] = prepost_dependencies
+        variable["prepost_dependencies"] = prepost_dependencies
 
         # Extract if-then-else statements
-        eq, condition = extract_ite(variable['name'], eq, description)
+        eq, condition = extract_ite(variable["name"], eq, description)
 
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
@@ -251,220 +328,263 @@ def analyse_synapse(synapse, net_id):
                 untouched[name] = val
 
         # Save the tranformed equation
-        variable['transformed_eq'] = eq
+        variable["transformed_eq"] = eq
 
         # Find the numerical method if any
         method = find_method(variable)
 
         # Process the bounds
-        if 'min' in variable['bounds'].keys():
-            if isinstance(variable['bounds']['min'], str):
+        if "min" in variable["bounds"].keys():
+            if isinstance(variable["bounds"]["min"], str):
                 translator = Equation(
-                    variable['name'], variable['bounds']['min'],
+                    variable["name"],
+                    variable["bounds"]["min"],
                     description,
-                    type = 'return',
-                    untouched = untouched.keys(),
-                    net_id=net_id)
-                variable['bounds']['min'] = translator.parse().replace(';', '')
+                    type="return",
+                    untouched=untouched.keys(),
+                    net_id=net_id,
+                )
+                variable["bounds"]["min"] = translator.parse().replace(";", "")
                 dependencies += translator.dependencies()
 
-        if 'max' in variable['bounds'].keys():
-            if isinstance(variable['bounds']['max'], str):
+        if "max" in variable["bounds"].keys():
+            if isinstance(variable["bounds"]["max"], str):
                 translator = Equation(
-                    variable['name'], variable['bounds']['max'],
+                    variable["name"],
+                    variable["bounds"]["max"],
                     description,
-                    type = 'return',
-                    untouched = untouched.keys(),
-                    net_id=net_id)
-                variable['bounds']['max'] = translator.parse().replace(';', '')
+                    type="return",
+                    untouched=untouched.keys(),
+                    net_id=net_id,
+                )
+                variable["bounds"]["max"] = translator.parse().replace(";", "")
                 dependencies += translator.dependencies()
 
         # Analyse the equation
-        if condition == []: # Call Equation
+        if condition == []:  # Call Equation
             translator = Equation(
-                variable['name'], 
+                variable["name"],
                 eq,
                 description,
-                method = method,
-                untouched = untouched.keys(),
-                net_id=net_id)
+                method=method,
+                untouched=untouched.keys(),
+                net_id=net_id,
+            )
             code = translator.parse()
             dependencies += translator.dependencies()
             num_flops = translator.num_flops
 
-        else: # An if-then-else statement
-            code, deps = translate_ITE(variable['name'], eq, condition, description,
-                    untouched, net_id=net_id)
+        else:  # An if-then-else statement
+            code, deps = translate_ITE(
+                variable["name"], eq, condition, description, untouched, net_id=net_id
+            )
             dependencies += deps
 
         if isinstance(code, str):
             pre_loop = {}
             cpp_eq = code
             switch = None
-        else: # ODE
+        else:  # ODE
             pre_loop = code[0]
             cpp_eq = code[1]
             switch = code[2]
 
         # Replace untouched variables with their original name}
-        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
+        for prev, new in sorted(
+            list(untouched.items()), key=lambda key: len(key[0]), reverse=True
+        ):
             cpp_eq = cpp_eq.replace(prev, new)
 
         # Replace local functions
-        for f in description['functions']:
+        for f in description["functions"]:
             cpp_eq = re.sub(
-                r'([^\w]*)' + f['name'] + r'\(', 
-                r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()
+                r"([^\w]*)" + f["name"] + r"\(", r"\1" + f["name"] + "(", " " + cpp_eq
+            ).strip()
 
         # Store the result
-        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
-        variable['cpp'] = cpp_eq # the C++ equation
-        variable['switch'] = switch # switch value id ODE
-        variable['transformed_eq'] = eq # the equation with untouched terms
-        variable['untouched'] = untouched # may be needed later
-        variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies
-        variable['num_flops'] = num_flops
+        variable["pre_loop"] = (
+            pre_loop  # Things to be declared before the for loop (eg. dt)
+        )
+        variable["cpp"] = cpp_eq  # the C++ equation
+        variable["switch"] = switch  # switch value id ODE
+        variable["transformed_eq"] = eq  # the equation with untouched terms
+        variable["untouched"] = untouched  # may be needed later
+        variable["method"] = method  # may be needed later
+        variable["dependencies"] = dependencies
+        variable["num_flops"] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
-        if method in ['implicit', 'midpoint'] and switch is not None:
+        if method in ["implicit", "midpoint"] and switch is not None:
             concurrent_odes.append(variable)
 
     # After all variables are processed, do it again if they are concurrent
-    if len(concurrent_odes) > 1 :
+    if len(concurrent_odes) > 1:
         solver = CoupledEquations(description, concurrent_odes, net_id)
         new_eqs = solver.parse()
-        for idx, variable in enumerate(description['variables']):
+        for idx, variable in enumerate(description["variables"]):
             for new_eq in new_eqs:
-                if variable['name'] == new_eq['name']:
-                    description['variables'][idx] = new_eq
+                if variable["name"] == new_eq["name"]:
+                    description["variables"][idx] = new_eq
 
     # Translate the psp code if any
-    if 'raw_psp' in description.keys():
-        psp = {'eq' : description['raw_psp'].strip() }
+    if "raw_psp" in description.keys():
+        psp = {"eq": description["raw_psp"].strip()}
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description, net_id=net_id)
-        description['pre_global_operations'] += global_ops['pre']
-        description['post_global_operations'] += global_ops['post']
+        eq, untouched_globs, global_ops = extract_globalops_synapse(
+            "psp", " " + psp["eq"] + " ", description, net_id=net_id
+        )
+        description["pre_global_operations"] += global_ops["pre"]
+        description["post_global_operations"] += global_ops["post"]
 
         # Replace pre- and post_synaptic variables
-        eq, untouched, prepost_dependencies = extract_prepost('psp', eq, description, net_id=net_id)
-        description['dependencies']['pre'] += prepost_dependencies['pre']
-        description['dependencies']['post'] += prepost_dependencies['post']
+        eq, untouched, prepost_dependencies = extract_prepost(
+            "psp", eq, description, net_id=net_id
+        )
+        description["dependencies"]["pre"] += prepost_dependencies["pre"]
+        description["dependencies"]["post"] += prepost_dependencies["post"]
         for name, val in untouched_globs.items():
             if not name in untouched.keys():
                 untouched[name] = val
 
         # Extract if-then-else statements
-        eq, condition = extract_ite('psp', eq, description, split=False)
+        eq, condition = extract_ite("psp", eq, description, split=False)
 
         # Analyse the equation
         if condition == []:
-            translator = Equation('psp', eq,
-                                  description,
-                                  method = 'explicit',
-                                  untouched = untouched.keys(),
-                                  type='return',
-                                  net_id=net_id)
+            translator = Equation(
+                "psp",
+                eq,
+                description,
+                method="explicit",
+                untouched=untouched.keys(),
+                type="return",
+                net_id=net_id,
+            )
             code = translator.parse()
             deps = translator.dependencies()
         else:
-            code, deps = translate_ITE('psp', eq, condition, description, untouched, net_id=net_id)
+            code, deps = translate_ITE(
+                "psp", eq, condition, description, untouched, net_id=net_id
+            )
 
         # Replace untouched variables with their original name
-        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
+        for prev, new in sorted(
+            list(untouched.items()), key=lambda key: len(key[0]), reverse=True
+        ):
             code = code.replace(prev, new)
 
         # Store the result
-        psp['cpp'] = code
-        psp['dependencies'] = deps
-        description['psp'] = psp
+        psp["cpp"] = code
+        psp["dependencies"] = deps
+        description["psp"] = psp
 
     # Process event-driven info
-    if description['type'] == 'spike':
-        for variable in description['pre_spike'] + description['post_spike'] + description['pre_axon_spike']:
+    if description["type"] == "spike":
+        for variable in (
+            description["pre_spike"]
+            + description["post_spike"]
+            + description["pre_axon_spike"]
+        ):
             # Find plasticity
-            if variable['name'] == 'w':
-                description['plasticity'] = True
+            if variable["name"] == "w":
+                description["plasticity"] = True
 
             # Retrieve the equation
-            eq = variable['eq']
+            eq = variable["eq"]
 
             # Extract if-then-else statements
-            eq, condition = extract_ite(variable['name'], eq, description)
+            eq, condition = extract_ite(variable["name"], eq, description)
 
             # Extract pre- and post_synaptic variables
-            eq, untouched, prepost_dependencies = extract_prepost(variable['name'], eq, description, net_id=net_id)
+            eq, untouched, prepost_dependencies = extract_prepost(
+                variable["name"], eq, description, net_id=net_id
+            )
 
             # Update dependencies
-            description['dependencies']['pre'] += prepost_dependencies['pre']
-            description['dependencies']['post'] += prepost_dependencies['post']
+            description["dependencies"]["pre"] += prepost_dependencies["pre"]
+            description["dependencies"]["post"] += prepost_dependencies["post"]
             # and also on the variable for checking
-            variable['prepost_dependencies'] = prepost_dependencies
+            variable["prepost_dependencies"] = prepost_dependencies
 
             # Analyse the equation
             dependencies = []
             if condition == []:
-                translator = Equation(variable['name'],
-                                      eq,
-                                      description,
-                                      method = 'explicit',
-                                      untouched = untouched,
-                                      net_id=net_id)
+                translator = Equation(
+                    variable["name"],
+                    eq,
+                    description,
+                    method="explicit",
+                    untouched=untouched,
+                    net_id=net_id,
+                )
                 code = translator.parse()
                 dependencies += translator.dependencies()
             else:
-                code, deps = translate_ITE(variable['name'], eq, condition, description, untouched, net_id=net_id)
+                code, deps = translate_ITE(
+                    variable["name"],
+                    eq,
+                    condition,
+                    description,
+                    untouched,
+                    net_id=net_id,
+                )
                 dependencies += deps
 
-            if isinstance(code, list): # an ode in a pre/post statement
+            if isinstance(code, list):  # an ode in a pre/post statement
                 Messages._print(eq)
-                if variable in description['pre_spike']:
-                    Messages._error('It is forbidden to use ODEs in a pre_spike term.')
-                elif variable in description['posz_spike']:
-                    Messages._error('It is forbidden to use ODEs in a post_spike term.')
+                if variable in description["pre_spike"]:
+                    Messages._error("It is forbidden to use ODEs in a pre_spike term.")
+                elif variable in description["posz_spike"]:
+                    Messages._error("It is forbidden to use ODEs in a post_spike term.")
                 else:
-                    Messages._error('It is forbidden to use ODEs here.')
+                    Messages._error("It is forbidden to use ODEs here.")
 
             # Replace untouched variables with their original name
-            for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
+            for prev, new in sorted(
+                list(untouched.items()), key=lambda key: len(key[0]), reverse=True
+            ):
                 code = code.replace(prev, new)
 
             # Process the bounds
-            if 'min' in variable['bounds'].keys():
-                if isinstance(variable['bounds']['min'], str):
+            if "min" in variable["bounds"].keys():
+                if isinstance(variable["bounds"]["min"], str):
                     translator = Equation(
-                                    variable['name'],
-                                    variable['bounds']['min'],
-                                    description,
-                                    type = 'return',
-                                    untouched = untouched,
-                                    net_id=net_id)
-                    variable['bounds']['min'] = translator.parse().replace(';', '')
+                        variable["name"],
+                        variable["bounds"]["min"],
+                        description,
+                        type="return",
+                        untouched=untouched,
+                        net_id=net_id,
+                    )
+                    variable["bounds"]["min"] = translator.parse().replace(";", "")
                     dependencies += translator.dependencies()
 
-            if 'max' in variable['bounds'].keys():
-                if isinstance(variable['bounds']['max'], str):
+            if "max" in variable["bounds"].keys():
+                if isinstance(variable["bounds"]["max"], str):
                     translator = Equation(
-                                    variable['name'],
-                                    variable['bounds']['max'],
-                                    description,
-                                    type = 'return',
-                                    untouched = untouched,
-                                    net_id=net_id)
-                    variable['bounds']['max'] = translator.parse().replace(';', '')
+                        variable["name"],
+                        variable["bounds"]["max"],
+                        description,
+                        type="return",
+                        untouched=untouched,
+                        net_id=net_id,
+                    )
+                    variable["bounds"]["max"] = translator.parse().replace(";", "")
                     dependencies += translator.dependencies()
-
 
             # Store the result
-            variable['cpp'] = code # the C++ equation
-            variable['dependencies'] = dependencies
+            variable["cpp"] = code  # the C++ equation
+            variable["dependencies"] = dependencies
 
     # Structural plasticity
     if synapse.pruning:
-        description['pruning'] = extract_structural_plasticity(synapse.pruning, description, net_id=net_id)
+        description["pruning"] = extract_structural_plasticity(
+            synapse.pruning, description, net_id=net_id
+        )
     if synapse.creating:
-        description['creating'] = extract_structural_plasticity(synapse.creating, description, net_id=net_id)
+        description["creating"] = extract_structural_plasticity(
+            synapse.creating, description, net_id=net_id
+        )
 
     return description

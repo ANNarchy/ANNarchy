@@ -4,29 +4,28 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
+
 class test_RateTransmission(unittest.TestCase):
     """
     This class tests the functionality of the some transmission patterns
     between rate-coded *Projections*.
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Compile the network for this test
         """
-        neuron = Neuron(
-            equations="r = 1"
-        )
+        neuron = Neuron(equations="r = 1")
 
-        neuron2 = Neuron(
-            equations="r = sum(exc)"
-        )
+        neuron2 = Neuron(equations="r = sum(exc)")
 
         cls._network = Network()
         pop1 = cls._network.create(geometry=(3, 3), neuron=neuron)
@@ -35,16 +34,31 @@ class test_RateTransmission(unittest.TestCase):
         # One-to-one pattern, would raise an exception for dense pattern
         # and therefore we exclude this case
         if cls.storage_format != "dense":
-            cls._proj_one_2_one = cls._network.connect(pre=pop1, post=pop2, target="exc")
-            cls._proj_one_2_one.one_to_one(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+            cls._proj_one_2_one = cls._network.connect(
+                pre=pop1, post=pop2, target="exc"
+            )
+            cls._proj_one_2_one.one_to_one(
+                weights=0.1,
+                storage_format=cls.storage_format,
+                storage_order=cls.storage_order,
+            )
 
         # All-to-all pattern
         cls._proj_all_2_all = cls._network.connect(pre=pop1, post=pop2, target="exc")
-        cls._proj_all_2_all.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._proj_all_2_all.all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         # Fixed-number-pre pattern
         cls._proj_fnp = cls._network.connect(pre=pop1, post=pop2, target="exc")
-        cls._proj_fnp.fixed_number_pre(3, weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._proj_fnp.fixed_number_pre(
+            3,
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
@@ -93,7 +107,9 @@ class test_RateTransmission(unittest.TestCase):
 
         We test correctness of assigned ranks.
         """
-        self.assertTrue(self._proj_all_2_all.dendrite(3).pre_ranks == [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertTrue(
+            self._proj_all_2_all.dendrite(3).pre_ranks == [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        )
 
     def test_all_to_all_weights(self):
         """
@@ -102,8 +118,9 @@ class test_RateTransmission(unittest.TestCase):
 
         We test correctness of assigned weight values.
         """
-        numpy.testing.assert_allclose(self._proj_all_2_all.dendrite(3).w,
-                                      numpy.ones((9)) * 0.1)
+        numpy.testing.assert_allclose(
+            self._proj_all_2_all.dendrite(3).w, numpy.ones((9)) * 0.1
+        )
 
     def test_fnp_weights(self):
         """

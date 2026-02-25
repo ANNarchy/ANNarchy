@@ -4,66 +4,66 @@
 """
 
 attribute_decl = {
-    'local': """
+    "local": """
     // Local %(attr_type)s %(name)s
     hyb_local<%(type)s>* %(name)s;
 """,
-    'semiglobal': """
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector<%(type)s> %(name)s;
 """,
-    'global': """
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global': """
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(hyb_local<%(ctype)s>);
         size_in_bytes += (%(name)s->ell.capacity()) * sizeof(%(ctype)s);
         size_in_bytes += (%(name)s->coo.capacity()) * sizeof(%(ctype)s);
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>());
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local':  """
+    "local": """
         // %(name)s
         %(name)s->clear();
 """,
-    'semiglobal': "",
-    'global': "",
+    "semiglobal": "",
+    "global": "",
 }
 
 delay = {
     # A single value for all synapses
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay;
 
@@ -71,22 +71,22 @@ delay = {
     int get_dendrite_delay(int idx) { return delay; }
     void set_delay(int delay) { this->delay = delay; }
 """,
-        'init': """
+        "init": """
     delay = delays[0][0];
-"""
+""",
     },
     # An individual value for each synapse
-    'nonuniform_rate_coded': None,
+    "nonuniform_rate_coded": None,
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': None
+    "nonuniform_spiking": None,
 }
 
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
 hyb_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 // ELLPACK partition
@@ -121,19 +121,18 @@ for(int j = 0; j < nnz; j++, row_it++, col_it++) {
     %(post_prefix)s_sum_%(target)s%(coo_post_index)s += %(coo_psp)s;
 }
 """,
-    'max': "",
-    'min': "",
-    'mean': "",
+    "max": "",
+    "min": "",
+    "mean": "",
 }
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': delay,
-    
-    'rate_coded_sum': hyb_summation_operation,
-    'update_variables': ""
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "delay": delay,
+    "rate_coded_sum": hyb_summation_operation,
+    "update_variables": "",
 }

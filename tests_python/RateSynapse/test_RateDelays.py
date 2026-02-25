@@ -4,11 +4,13 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import numpy
 import unittest
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Synapse, DiscreteUniform, Uniform
+
 
 class test_NoDelay(unittest.TestCase):
     """
@@ -22,14 +24,13 @@ class test_NoDelay(unittest.TestCase):
 
     without any synaptic delay.
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Compile the network for this test
         """
-        neuron = Neuron(
-            parameters="r=0.0"
-        )
+        neuron = Neuron(parameters="r=0.0")
 
         out1 = Neuron(
             equations="""
@@ -52,20 +53,33 @@ class test_NoDelay(unittest.TestCase):
         # One-to-one pattern, would raise an exception for dense pattern
         # and therefore we exclude this case
         if cls.storage_format != "dense":
-            cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="one2one")
-            cls.net_proj.one_to_one(weights=Uniform(0,1),
-                                    storage_format=cls.storage_format,
-                                    storage_order=cls.storage_order)
+            cls.net_proj = cls._network.connect(
+                pre=cls.net_pop1, post=cls.net_pop2, target="one2one"
+            )
+            cls.net_proj.one_to_one(
+                weights=Uniform(0, 1),
+                storage_format=cls.storage_format,
+                storage_order=cls.storage_order,
+            )
 
-        cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="all2all")
-        cls.net_proj2.all_to_all(weights=Uniform(0,1),
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        cls.net_proj2 = cls._network.connect(
+            pre=cls.net_pop1, post=cls.net_pop3, target="all2all"
+        )
+        cls.net_proj2.all_to_all(
+            weights=Uniform(0, 1),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
-        cls.net_proj3 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="fnp")
-        cls.net_proj3.fixed_number_pre(5, weights=Uniform(0,1),
-                                       storage_format=cls.storage_format,
-                                       storage_order=cls.storage_order)
+        cls.net_proj3 = cls._network.connect(
+            pre=cls.net_pop1, post=cls.net_pop3, target="fnp"
+        )
+        cls.net_proj3.fixed_number_pre(
+            5,
+            weights=Uniform(0, 1),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
@@ -146,6 +160,7 @@ class test_UniformDelay(unittest.TestCase):
     computed and tested for the one2one patterns with a special focus on using
     uniform synaptic delays.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -183,19 +198,27 @@ class test_UniformDelay(unittest.TestCase):
         #     synapse.
 
         # A projection with uniform delay - default psp accesses local attribute r
-        cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff")
+        cls.net_proj = cls._network.connect(
+            pre=cls.net_pop1, post=cls.net_pop2, target="ff"
+        )
         cls.net_proj.fixed_number_pre(
-            1, weights=1.0, delays=10.0,
+            1,
+            weights=1.0,
+            delays=10.0,
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order
+            storage_order=cls.storage_order,
         )
 
         # A projection with uniform delay - default psp accesses global attribute r
-        cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff_glob", synapse=synapse_glob)
+        cls.net_proj2 = cls._network.connect(
+            pre=cls.net_pop1, post=cls.net_pop2, target="ff_glob", synapse=synapse_glob
+        )
         cls.net_proj2.fixed_number_pre(
-            1, weights=1.0, delays=10.0,
+            1,
+            weights=1.0,
+            delays=10.0,
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order
+            storage_order=cls.storage_order,
         )
 
         # Build up network
@@ -307,6 +330,7 @@ class test_NonUniformDelay(unittest.TestCase):
     computed and tested for the one2one patterns with a special focus on using
     non-uniform synaptic delays.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -336,9 +360,12 @@ class test_NonUniformDelay(unittest.TestCase):
         # A projection with non-uniform delay
         cls.net_proj = cls._network.connect(cls.net_pop1, cls.net_pop2, target="ff")
         cls.net_proj.fixed_number_pre(
-            1, weights=1.0, delays=DiscreteUniform(1, 5),
+            1,
+            weights=1.0,
+            delays=DiscreteUniform(1, 5),
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order)
+            storage_order=cls.storage_order,
+        )
 
         # Build up network
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
@@ -388,14 +415,13 @@ class test_SynapseOperations(unittest.TestCase):
     Next to the weighted sum across inputs we allow the application of global
     operations (min, max, mean).
     """
+
     @classmethod
     def setUpClass(cls):
         """
         Define and compile the network for this test.
         """
-        input_neuron = Neuron(
-            parameters="r=0.0"
-        )
+        input_neuron = Neuron(parameters="r=0.0")
 
         output_neuron = Neuron(
             equations="""
@@ -403,35 +429,41 @@ class test_SynapseOperations(unittest.TestCase):
             """
         )
 
-        syn_max = Synapse(
-            psp="pre.r * w",
-            operation="max"
-        )
+        syn_max = Synapse(psp="pre.r * w", operation="max")
 
-        syn_min = Synapse(
-            psp="pre.r * w",
-            operation="min"
-        )
+        syn_min = Synapse(psp="pre.r * w", operation="min")
 
-        syn_mean = Synapse(
-            psp="pre.r * w",
-            operation="mean"
-        )
+        syn_mean = Synapse(psp="pre.r * w", operation="mean")
 
         cls._network = Network()
 
         cls.net_pop1 = cls._network.create(geometry=(3, 3), neuron=input_neuron)
         cls.net_pop2 = cls._network.create(geometry=4, neuron=output_neuron)
 
-        proj1 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p1", synapse=syn_max)
-        proj1.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
-        proj2 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p2", synapse=syn_min)
-        proj2.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
-        proj3 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p3", synapse=syn_mean)
-        proj3.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj1 = cls._network.connect(
+            cls.net_pop1, cls.net_pop2, target="p1", synapse=syn_max
+        )
+        proj1.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
+        proj2 = cls._network.connect(
+            cls.net_pop1, cls.net_pop2, target="p2", synapse=syn_min
+        )
+        proj2.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
+        proj3 = cls._network.connect(
+            cls.net_pop1, cls.net_pop2, target="p3", synapse=syn_mean
+        )
+        proj3.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
@@ -454,7 +486,7 @@ class test_SynapseOperations(unittest.TestCase):
         with maximum across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_max = numpy.amax(pre_r) # weights=1.0
+        res_max = numpy.amax(pre_r)  # weights=1.0
 
         # set value
         self.net_pop1.r = pre_r
@@ -471,7 +503,7 @@ class test_SynapseOperations(unittest.TestCase):
         with minimum across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_min = numpy.amin(pre_r) # weights=1.0
+        res_min = numpy.amin(pre_r)  # weights=1.0
 
         # set value
         self.net_pop1.r = pre_r
@@ -488,7 +520,7 @@ class test_SynapseOperations(unittest.TestCase):
         with mean across pre-synaptic firing rate.
         """
         pre_r = numpy.random.random((3, 3))
-        res_mean = numpy.mean( pre_r ) # weights=1.0
+        res_mean = numpy.mean(pre_r)  # weights=1.0
 
         # set value
         self.net_pop1.r = pre_r
@@ -508,6 +540,7 @@ class test_SynapticAccess(unittest.TestCase):
     This particular test focuses on the usage of them in synaptic learning
     rules (for instance covariance).
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -525,16 +558,19 @@ class test_SynapticAccess(unittest.TestCase):
             """,
             equations="""
                 tau * dw/dt = (pre.r - mean(pre.r) ) * (post.r - mean(post.r) )
-            """
+            """,
         )
 
         cls._network = Network()
 
         pre = cls._network.create(geometry=6, neuron=neuron)
         cls.net_pop = cls._network.create(1, neuron)
-        proj = cls._network.connect(pre, cls.net_pop, "exc", synapse = cov)
-        proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj = cls._network.connect(pre, cls.net_pop, "exc", synapse=cov)
+        proj.all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+        )
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 

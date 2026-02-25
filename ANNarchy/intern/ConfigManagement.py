@@ -12,37 +12,38 @@ from ANNarchy.intern import Messages
 
 default_config = dict(
     # Simulation Control
-    dt = 1.0,
-    seed = None,
-    method = 'explicit',
-    structural_plasticity = False,
+    dt=1.0,
+    seed=None,
+    method="explicit",
+    structural_plasticity=False,
     # Parallel processing
-    num_threads = 1,
-    visible_cores = [],
-    paradigm = 'openmp',
+    num_threads=1,
+    visible_cores=[],
+    paradigm="openmp",
     # Datatype-related
-    precision = "double",
-    only_int_idx_type = True,
+    precision="double",
+    only_int_idx_type=True,
     # Logging
-    verbose = False,
-    suppress_warnings = False,
-    show_time = False,
-    trace_calls = None,
+    verbose=False,
+    suppress_warnings=False,
+    show_time=False,
+    trace_calls=None,
     # Performance-related
-    disable_parallel_rng = True,
-    use_seed_seq = True,
-    use_cpp_connectors = False,
-    disable_split_matrix = True,
-    disable_SIMD_SpMV = True,
-    disable_SIMD_Eq = False,
-    disable_bitmask = True,
+    disable_parallel_rng=True,
+    use_seed_seq=True,
+    use_cpp_connectors=False,
+    disable_split_matrix=True,
+    disable_SIMD_SpMV=True,
+    disable_SIMD_Eq=False,
+    disable_bitmask=True,
     # SpM formats
-    sparse_matrix_format = "default",
-    sparse_matrix_storage_order = "post_to_pre",
+    sparse_matrix_format="default",
+    sparse_matrix_storage_order="post_to_pre",
     # Other
-    debug = False,
-    disable_shared_library_time_offset = True
+    debug=False,
+    disable_shared_library_time_offset=True,
 )
+
 
 class ConfigManager:
     """
@@ -57,38 +58,42 @@ class ConfigManager:
         The class is implemented as singleton to ensure unique existance in the user space.
         One should not access the _config member directly but using the get/set methods.
     """
+
     _instance = None
-    
+
     def __new__(self, *args, **kwds):
         """
         Only the first call will create a new instance of this class.
         """
         if self._instance is None:
             self._instance = super().__new__(self, *args, **kwds)
-            self._config = { # dictionary because network ids can change
+            self._config = {  # dictionary because network ids can change
                 0: copy.deepcopy(default_config)
             }
 
             # This flags can not be configured through setup()
             self._performance_related_config_keys = [
-                'use_cpp_connectors', 'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq'
+                "use_cpp_connectors",
+                "disable_split_matrix",
+                "disable_SIMD_SpMV",
+                "disable_SIMD_Eq",
             ]
 
         return self._instance
-    
-    def register_network(self, net_id:int=0):
+
+    def register_network(self, net_id: int = 0):
         """
         Registers a network by copying the "magic" configuration of id 0.
         """
         self._config[net_id] = copy.deepcopy(self._config[0])
-    
-    def get_config(self, net_id:int=0):
+
+    def get_config(self, net_id: int = 0):
         """
         Returns the config for the given network.
         """
         return copy.deepcopy(self._config[net_id])
-    
-    def set_config(self, net_id:int, config):
+
+    def set_config(self, net_id: int, config):
         """
         Set the config for the given network.
         """
@@ -96,29 +101,29 @@ class ConfigManager:
             self.register_network(net_id)
         self._config[net_id].update(config)
 
-    
-    def get(self, key: str, net_id:int=0) -> str | float | bool:
+    def get(self, key: str, net_id: int = 0) -> str | float | bool:
         """
-        Returns the configuration for entry `key` in the network `net_id`. 
-        
+        Returns the configuration for entry `key` in the network `net_id`.
+
         If the key does not exist, a terminating exception is raised.
         """
         if key in self.keys():
             return self._config[net_id][key]
         else:
-            raise Messages.ANNarchyException(f"The requested argument '{key}' does not belong to global configuration keys.")
-        
+            raise Messages.ANNarchyException(
+                f"The requested argument '{key}' does not belong to global configuration keys."
+            )
 
-    def set(self, key: str, value: str | float | bool, net_id:int=0):
+    def set(self, key: str, value: str | float | bool, net_id: int = 0):
         """
-        Updates the configuration for entry *key* with a new *value*. 
+        Updates the configuration for entry *key* with a new *value*.
         If the key does not exist a terminating exception is raised.
         """
         if key in self.keys():
             self._config[net_id][key] = value
         else:
             raise KeyError
-        
+
     def keys(self) -> list:
         "Returns the list of keys that can be set with setup."
         return list(self._config[0].keys())
@@ -129,8 +134,8 @@ class ConfigManager:
 #############################################
 def setup(**keyValueArgs):
     """
-    The setup function is used to configure ANNarchy simulations. 
-    
+    The setup function is used to configure ANNarchy simulations.
+
     It takes various optional arguments. The most useful ones are:
 
     * `dt`: simulation step size in milliseconds (default: 1.0).
@@ -166,30 +171,54 @@ def setup(**keyValueArgs):
 
     """
     if len(NetworkManager().get_network(0).get_populations()) > 0:
-        if 'dt' in keyValueArgs:
-            Messages._warning('setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
-        if 'precision' in keyValueArgs:
-            Messages._warning('setup(): populations or projections have already been created at the global level. Changing precision now might lead to strange behaviors...')
+        if "dt" in keyValueArgs:
+            Messages._warning(
+                "setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)..."
+            )
+        if "precision" in keyValueArgs:
+            Messages._warning(
+                "setup(): populations or projections have already been created at the global level. Changing precision now might lead to strange behaviors..."
+            )
 
     config_manager = ConfigManager()
 
     for key in keyValueArgs:
         # sanity check: filter out performance flags
         if key in ConfigManager()._performance_related_config_keys:
-            Messages._error("Performance related flags can not be configured by setup()")
+            Messages._error(
+                "Performance related flags can not be configured by setup()"
+            )
 
         if key in ConfigManager().keys():
             ConfigManager().set(key, keyValueArgs[key], net_id=0)
         else:
-            Messages._warning('setup(): unknown key:', key)
+            Messages._warning("setup(): unknown key:", key)
 
-        if key == 'seed': # also seed numpy, but this is the old way
+        if key == "seed":  # also seed numpy, but this is the old way
             np.random.seed(keyValueArgs[key])
 
-        if key == 'sparse_matrix_format':
+        if key == "sparse_matrix_format":
             # check if this is a supported format
-            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
-                Messages._error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+            if keyValueArgs[key] not in [
+                "lil",
+                "csr",
+                "csr_vector",
+                "csr_scalar",
+                "dense",
+                "ell",
+                "ellr",
+                "sell",
+                "coo",
+                "bsr",
+                "hyb",
+                "auto",
+            ]:
+                Messages._error(
+                    "The value",
+                    keyValueArgs[key],
+                    "provided to sparse_matrix_format is not valid.",
+                )
+
 
 def _optimization_flags(**keyValueArgs):
     """
@@ -217,11 +246,13 @@ def _optimization_flags(**keyValueArgs):
     for key in keyValueArgs:
         # Sanity check: valid key?
         if key not in ConfigManager().keys():
-            Messages._warning('_optimization_flags() received unknown key:', key)
+            Messages._warning("_optimization_flags() received unknown key:", key)
             continue
 
         if key not in ConfigManager()._performance_related_config_keys:
-            Messages._warning(f"The key '{key}' does not belong to the performance related keys.")
+            Messages._warning(
+                f"The key '{key}' does not belong to the performance related keys."
+            )
             continue
 
         # Update global config
@@ -230,29 +261,37 @@ def _optimization_flags(**keyValueArgs):
         # Warning: use_cpp_connectors and disable_parallel_rng should be both activated
         if key == "use_cpp_connectors":
             if get_global_config(key) == True:
-                Messages._warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning(
+                    "use_cpp_connectors is an experimental feature, we greatly appreciate bug reports."
+                )
 
                 # check if the key is in the update list
-                if 'disable_parallel_rng' in keyValueArgs.keys():
-                    if keyValueArgs['disable_parallel_rng']:
-                        Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
+                if "disable_parallel_rng" in keyValueArgs.keys():
+                    if keyValueArgs["disable_parallel_rng"]:
+                        Messages._warning(
+                            "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
+                        )
                 # is it enabled by default?
-                elif get_global_config('disable_parallel_rng'):
-                    Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
+                elif get_global_config("disable_parallel_rng"):
+                    Messages._warning(
+                        "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
+                    )
                 # no conflict
                 else:
                     pass
 
+
 #############################################
 # Globally available functions (internal)
 #############################################
-def get_global_config(key: str) -> Union[str,float,bool]:
+def get_global_config(key: str) -> Union[str, float, bool]:
     """
     Returns a global configuration.
     """
     return ConfigManager().get(key, net_id=0)
 
-def _update_global_config(key: str, value: Union[str,float,bool]) -> None:
+
+def _update_global_config(key: str, value: Union[str, float, bool]) -> None:
     """
     Updates a global configuration flag.
 
@@ -260,6 +299,7 @@ def _update_global_config(key: str, value: Union[str,float,bool]) -> None:
           As user, please refer to *setup()* method.
     """
     return ConfigManager().set(key, value, net_id=0)
+
 
 def _check_paradigm(paradigm, net_id=0):
     """
@@ -271,9 +311,10 @@ def _check_paradigm(paradigm, net_id=0):
     2. "cuda"
     """
     try:
-        return paradigm == ConfigManager().get('paradigm', net_id)
+        return paradigm == ConfigManager().get("paradigm", net_id)
     except KeyError:
         Messages._error("Unknown paradigm")
+
 
 def _check_precision(precision, net_id=0):
     """
@@ -285,6 +326,6 @@ def _check_precision(precision, net_id=0):
     2. "double"
     """
     try:
-        return precision == ConfigManager().get('precision', net_id)
+        return precision == ConfigManager().get("precision", net_id)
     except KeyError:
         Messages._error("Unknown precision")

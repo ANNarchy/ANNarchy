@@ -10,6 +10,7 @@ from ANNarchy.core import Global
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
+
 class Spike2RatePopulation(Population):
     """
     Converts a population of spiking neurons into a population of rate-coded neurons.
@@ -20,7 +21,7 @@ class Spike2RatePopulation(Population):
 
     * ``window``: at each each time step t, the number of spikes in the last T milliseconds (defined by the parameter ``window``) is counted and divided by the interval.
 
-    * ``isi``: the inter-spike interval is computed for each new spike, and filtered out through an asymmetrical kernel function. 
+    * ``isi``: the inter-spike interval is computed for each new spike, and filtered out through an asymmetrical kernel function.
 
 
     The firing rate ``r`` of each neuron represents by default the firing rate in Hz. The output can be scaled with the parameter ``scaling``. For example, if you want that ``r = 1.0`` represents a firing rate of 100Hz, you can set ``scaling`` to 100.0. The default is 1.0.
@@ -32,14 +33,25 @@ class Spike2RatePopulation(Population):
         from ANNarchy.extensions.hybrid import Spike2RatePopulation
 
         pop2 = Spike2RatePopulation(
-            population=pop1, 
-            name='rate-coded', 
-            window=50.0, 
-            smooth=100.0, 
+            population=pop1,
+            name='rate-coded',
+            window=50.0,
+            smooth=100.0,
             scaling=100.0
         )
     """
-    def __init__(self, population, name=None, mode='window', window = 100.0, scaling=1.0, smooth=1.0, cut=3.0, copied=False):
+
+    def __init__(
+        self,
+        population,
+        name=None,
+        mode="window",
+        window=100.0,
+        scaling=1.0,
+        smooth=1.0,
+        cut=3.0,
+        copied=False,
+    ):
         """
         :param population: the Population to convert. Its neuron type must be rate-coded.
         :param name: the (optional) name of the hybrid population.
@@ -58,25 +70,37 @@ class Spike2RatePopulation(Population):
         self.cut = cut
         self.copied = copied
 
-        if not self.population.neuron_type.description['type'] == 'spike':
-            Messages._error('the population ' + self.population.name + ' must contain spiking neurons.')
-            
-        if self.mode == 'window':
+        if not self.population.neuron_type.description["type"] == "spike":
+            Messages._error(
+                "the population "
+                + self.population.name
+                + " must contain spiking neurons."
+            )
+
+        if self.mode == "window":
             self._code = self._create_window()
-        elif self.mode == 'adaptive':
+        elif self.mode == "adaptive":
             self._code = self._create_adaptive()
-        elif self.mode == 'isi':
+        elif self.mode == "isi":
             self._code = self._create_isi()
         else:
-            Messages._error('Spike2RatePopulation: Unknown method ' + self.mode)
-            
+            Messages._error("Spike2RatePopulation: Unknown method " + self.mode)
 
         self._specific = True
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
-        return Spike2RatePopulation(population=self.population, name=self.name, mode=self.mode, window=self.window, scaling=self.scaling, smooth=self.smooth, cut=self.cut, copied=True)
-    
+        return Spike2RatePopulation(
+            population=self.population,
+            name=self.name,
+            mode=self.mode,
+            window=self.window,
+            scaling=self.scaling,
+            smooth=self.smooth,
+            cut=self.cut,
+            copied=True,
+        )
+
     def generate(self):
         """
         return the corresponding code template
@@ -84,25 +108,29 @@ class Spike2RatePopulation(Population):
         return self._code
 
     def _create_isi(self):
-
         # Create the description, but it will not be used for generation
         Population.__init__(
-            self, 
-            geometry = self.population.geometry, 
-            name=self.name, 
-            neuron = Neuron(
+            self,
+            geometry=self.population.geometry,
+            name=self.name,
+            neuron=Neuron(
                 parameters="""
                     cut = %(cut)s : population
                     scaling = %(scaling)s : population
                     smooth = %(smooth)s : population
-                """ % {'cut': self.cut, 'scaling': self.scaling, 'smooth': self.smooth} ,
-                equations="r = 0.0"
+                """
+                % {"cut": self.cut, "scaling": self.scaling, "smooth": self.smooth},
+                equations="r = 0.0",
             ),
-            copied=self.copied
+            copied=self.copied,
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
+        omp_code = (
+            "#pragma omp for"
+            if ConfigManager().get("num_threads", self.net_id) > 1
+            else ""
+        )
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -189,30 +217,44 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id) }
+""" % {
+            "id": self.id,
+            "id_pre": self.population.id,
+            "omp_code": omp_code,
+            "size": self.size,
+            "float_prec": ConfigManager().get("precision", self.net_id),
+        }
 
         return code
 
     def _create_window(self):
-
         # Create the description, but it will not be used for generation
         Population.__init__(
-            self, 
-            geometry = self.population.geometry, 
-            name=self.name, 
-            neuron = Neuron(
+            self,
+            geometry=self.population.geometry,
+            name=self.name,
+            neuron=Neuron(
                 parameters="""
                     window = %(window)s : population
                     scaling = %(scaling)s : population
                     smooth = %(smooth)s : population
-                """ % {'window': self.window, 'scaling': self.scaling, 'smooth': self.smooth} ,
-                equations="r = 0.0"
-            ) ,
-            copied=self.copied
+                """
+                % {
+                    "window": self.window,
+                    "scaling": self.scaling,
+                    "smooth": self.smooth,
+                },
+                equations="r = 0.0",
+            ),
+            copied=self.copied,
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
+        omp_code = (
+            "#pragma omp for"
+            if ConfigManager().get("num_threads", self.net_id) > 1
+            else ""
+        )
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -299,30 +341,44 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {
+            "id": self.id,
+            "id_pre": self.population.id,
+            "omp_code": omp_code,
+            "size": self.size,
+            "float_prec": ConfigManager().get("precision", self.net_id),
+        }
 
         return code
 
     def _create_adaptive(self):
-
         # Create the description, but it will not be used for generation
         Population.__init__(
-            self, 
-            geometry = self.population.geometry, 
-            name=self.name, 
-            neuron = Neuron(
+            self,
+            geometry=self.population.geometry,
+            name=self.name,
+            neuron=Neuron(
                 parameters="""
                     window = %(window)s : population
                     scaling = %(scaling)s : population
                     smooth = %(smooth)s : population
-                """ % {'window': self.window, 'scaling': self.scaling, 'smooth': self.smooth} ,
-                equations="r = 0.0"
-            ) ,
-            copied=self.copied
+                """
+                % {
+                    "window": self.window,
+                    "scaling": self.scaling,
+                    "smooth": self.smooth,
+                },
+                equations="r = 0.0",
+            ),
+            copied=self.copied,
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for private(pop%(id)s_nb, pop%(id)s_out)" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
+        omp_code = (
+            "#pragma omp for private(pop%(id)s_nb, pop%(id)s_out)"
+            if ConfigManager().get("num_threads", self.net_id) > 1
+            else ""
+        )
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -424,9 +480,16 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {
+            "id": self.id,
+            "id_pre": self.population.id,
+            "omp_code": omp_code,
+            "size": self.size,
+            "float_prec": ConfigManager().get("precision", self.net_id),
+        }
 
         return code
+
 
 class Rate2SpikePopulation(Population):
     """
@@ -440,12 +503,15 @@ class Rate2SpikePopulation(Population):
 
         from ANNarchy.extensions.hybrid import Rate2SpikePopulation
         pop2 = Rate2SpikePopulation(
-            population=pop1, 
-            name='spiking', 
+            population=pop1,
+            name='spiking',
             scaling=100.0
         )
     """
-    def __init__(self, population, name=None, scaling=1.0, refractory=None, copied=False):
+
+    def __init__(
+        self, population, name=None, scaling=1.0, refractory=None, copied=False
+    ):
         """
         :param population: the Population to convert. Its neuron type must be spiking.
         :param name: the (optional) name of the hybrid population.
@@ -455,38 +521,56 @@ class Rate2SpikePopulation(Population):
         self.population = population
         self.refractory_init = refractory
 
-        if not self.population.neuron_type.description['type'] == 'rate':
-            Messages._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
-            
+        if not self.population.neuron_type.description["type"] == "rate":
+            Messages._error(
+                "the population "
+                + self.population.name
+                + " must contain rate-coded neurons."
+            )
 
         # Create the description, but it will not be used for generation
         Population.__init__(
-            self, 
-            geometry = self.population.geometry, 
-            name=name, 
-            neuron = Neuron(
+            self,
+            geometry=self.population.geometry,
+            name=name,
+            neuron=Neuron(
                 parameters="""
                     scaling = %(scaling)s : population
-                """ % {'scaling': scaling} ,
+                """
+                % {"scaling": scaling},
                 equations="""
                     p = Uniform(0.0, 1.0)
                     rates = p
                 """,
                 spike="rates>p",
-                refractory=refractory
-            ) ,
-            copied=self.copied
+                refractory=refractory,
+            ),
+            copied=self.copied,
         )
 
         self._specific = True
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
-        return Rate2SpikePopulation(population=self.population, name=self.name, scaling=self.scaling, refractory=self.refractory_init, copied=True)
+        return Rate2SpikePopulation(
+            population=self.population,
+            name=self.name,
+            scaling=self.scaling,
+            refractory=self.refractory_init,
+            copied=True,
+        )
 
     def generate(self):
-        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
-        omp_critical = "#pragma omp critical" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
+        omp_code = (
+            "#pragma omp for"
+            if ConfigManager().get("num_threads", self.net_id) > 1
+            else ""
+        )
+        omp_critical = (
+            "#pragma omp critical"
+            if ConfigManager().get("num_threads", self.net_id) > 1
+            else ""
+        )
 
         # Generate the code
         code = """#pragma once
@@ -583,6 +667,13 @@ struct PopStruct1{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id) }
+""" % {
+            "id": self.id,
+            "id_pre": self.population.id,
+            "omp_code": omp_code,
+            "omp_critical": omp_critical,
+            "size": self.size,
+            "float_prec": ConfigManager().get("precision", self.net_id),
+        }
 
         return code

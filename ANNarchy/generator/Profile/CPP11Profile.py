@@ -7,13 +7,20 @@ from ANNarchy.generator.Utils import tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager
 
 from .ProfileGenerator import ProfileGenerator
-from .ProfileTemplate import profile_base_template, cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
+from .ProfileTemplate import (
+    profile_base_template,
+    cpp11_profile_template,
+    cpp11_omp_profile_template,
+    cpp11_profile_header,
+)
+
 
 class CPP11Profile(ProfileGenerator):
     """
     Extent the generated code by profiling annotations using the C++11
     steady clock counter.
     """
+
     def __init__(self, annarchy_dir, net_id):
         ProfileGenerator.__init__(self, annarchy_dir, net_id)
 
@@ -22,71 +29,82 @@ class CPP11Profile(ProfileGenerator):
         Generate Profiling class code, called from Generator instance.
         """
         # Generate header for profiling
-        with open(self.annarchy_dir+'/generate/net'+str(self._net_id)+'/Profiling.hpp', 'w') as ofile:
+        with open(
+            self.annarchy_dir + "/generate/net" + str(self._net_id) + "/Profiling.hpp",
+            "w",
+        ) as ofile:
             ofile.write(self._generate_header())
 
     def generate_body_dict(self):
         """
         Creates a dictionary, contain profile code snippets.
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
+        if ConfigManager().get("num_threads", self._net_id) == 1:
             body_dict = {
-                'prof_include': cpp11_profile_template['include'],
-                'prof_step_pre': cpp11_profile_template['step_pre'],
-                'prof_step_post': cpp11_profile_template['step_post'],
-                'prof_run_pre': cpp11_profile_template['run_pre'],
-                'prof_run_post': cpp11_profile_template['run_post'],
-                'prof_proj_psp_pre': cpp11_profile_template['proj_psp_pre'],
-                'prof_proj_psp_post': cpp11_profile_template['proj_psp_post'],
-                'prof_proj_step_pre': cpp11_profile_template['proj_step_pre'],
-                'prof_proj_step_post': cpp11_profile_template['proj_step_post'],
-                'prof_proj_post_event_pre': cpp11_profile_template['proj_post_event_pre'],
-                'prof_proj_post_event_post': cpp11_profile_template['proj_post_event_post'],
-                'prof_neur_step_pre': cpp11_profile_template['neur_step_pre'],
-                'prof_neur_step_post': cpp11_profile_template['neur_step_post'],
-                'prof_rng_pre': cpp11_profile_template['rng_pre'],
-                'prof_rng_post': cpp11_profile_template['rng_post'],
-                'prof_record_pre': cpp11_profile_template['record_pre'],
-                'prof_record_post': cpp11_profile_template['record_post'],
-                'prof_global_ops_pre': cpp11_profile_template['global_op_pre'],
-                'prof_global_ops_post': cpp11_profile_template['global_op_post']
+                "prof_include": cpp11_profile_template["include"],
+                "prof_step_pre": cpp11_profile_template["step_pre"],
+                "prof_step_post": cpp11_profile_template["step_post"],
+                "prof_run_pre": cpp11_profile_template["run_pre"],
+                "prof_run_post": cpp11_profile_template["run_post"],
+                "prof_proj_psp_pre": cpp11_profile_template["proj_psp_pre"],
+                "prof_proj_psp_post": cpp11_profile_template["proj_psp_post"],
+                "prof_proj_step_pre": cpp11_profile_template["proj_step_pre"],
+                "prof_proj_step_post": cpp11_profile_template["proj_step_post"],
+                "prof_proj_post_event_pre": cpp11_profile_template[
+                    "proj_post_event_pre"
+                ],
+                "prof_proj_post_event_post": cpp11_profile_template[
+                    "proj_post_event_post"
+                ],
+                "prof_neur_step_pre": cpp11_profile_template["neur_step_pre"],
+                "prof_neur_step_post": cpp11_profile_template["neur_step_post"],
+                "prof_rng_pre": cpp11_profile_template["rng_pre"],
+                "prof_rng_post": cpp11_profile_template["rng_post"],
+                "prof_record_pre": cpp11_profile_template["record_pre"],
+                "prof_record_post": cpp11_profile_template["record_post"],
+                "prof_global_ops_pre": cpp11_profile_template["global_op_pre"],
+                "prof_global_ops_post": cpp11_profile_template["global_op_post"],
             }
         else:
             body_dict = {
-                'prof_include': cpp11_omp_profile_template['include'],
-                'prof_step_pre': cpp11_omp_profile_template['step_pre'],
-                'prof_step_post': cpp11_omp_profile_template['step_post'],
-                'prof_run_pre': cpp11_omp_profile_template['run_pre'],
-                'prof_run_post': cpp11_omp_profile_template['run_post'],
-                'prof_proj_psp_pre': cpp11_omp_profile_template['proj_psp_pre'],
-                'prof_proj_psp_post': cpp11_omp_profile_template['proj_psp_post'],
-                'prof_proj_post_event_pre': cpp11_omp_profile_template['proj_post_event_pre'],
-                'prof_proj_post_event_post': cpp11_omp_profile_template['proj_post_event_post'],
-                'prof_proj_step_pre': cpp11_omp_profile_template['proj_step_pre'],
-                'prof_proj_step_post': cpp11_omp_profile_template['proj_step_post'],
-                'prof_neur_step_pre': cpp11_omp_profile_template['neur_step_pre'],
-                'prof_neur_step_post': cpp11_omp_profile_template['neur_step_post'],
-                'prof_rng_pre': cpp11_omp_profile_template['rng_pre'],
-                'prof_rng_post': cpp11_omp_profile_template['rng_post'],
-                'prof_record_pre': cpp11_omp_profile_template['record_pre'],
-                'prof_record_post': cpp11_omp_profile_template['record_post'],
-                'prof_global_ops_pre': cpp11_omp_profile_template['global_op_pre'],
-                'prof_global_ops_post': cpp11_omp_profile_template['global_op_post']
+                "prof_include": cpp11_omp_profile_template["include"],
+                "prof_step_pre": cpp11_omp_profile_template["step_pre"],
+                "prof_step_post": cpp11_omp_profile_template["step_post"],
+                "prof_run_pre": cpp11_omp_profile_template["run_pre"],
+                "prof_run_post": cpp11_omp_profile_template["run_post"],
+                "prof_proj_psp_pre": cpp11_omp_profile_template["proj_psp_pre"],
+                "prof_proj_psp_post": cpp11_omp_profile_template["proj_psp_post"],
+                "prof_proj_post_event_pre": cpp11_omp_profile_template[
+                    "proj_post_event_pre"
+                ],
+                "prof_proj_post_event_post": cpp11_omp_profile_template[
+                    "proj_post_event_post"
+                ],
+                "prof_proj_step_pre": cpp11_omp_profile_template["proj_step_pre"],
+                "prof_proj_step_post": cpp11_omp_profile_template["proj_step_post"],
+                "prof_neur_step_pre": cpp11_omp_profile_template["neur_step_pre"],
+                "prof_neur_step_post": cpp11_omp_profile_template["neur_step_post"],
+                "prof_rng_pre": cpp11_omp_profile_template["rng_pre"],
+                "prof_rng_post": cpp11_omp_profile_template["rng_post"],
+                "prof_record_pre": cpp11_omp_profile_template["record_pre"],
+                "prof_record_post": cpp11_omp_profile_template["record_post"],
+                "prof_global_ops_pre": cpp11_omp_profile_template["global_op_pre"],
+                "prof_global_ops_post": cpp11_omp_profile_template["global_op_post"],
             }
 
         return body_dict
 
     def generate_include(self):
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            return cpp11_profile_template['include']
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            return cpp11_profile_template["include"]
         else:
-            return cpp11_omp_profile_template['include']
+            return cpp11_omp_profile_template["include"]
 
     def generate_init_network(self):
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            return cpp11_profile_template['init']
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            return cpp11_profile_template["init"]
         else:
-            return cpp11_omp_profile_template['init']
+            return cpp11_omp_profile_template["init"]
 
     def generate_init_population(self, pop):
         """
@@ -104,7 +122,7 @@ class CPP11Profile(ProfileGenerator):
         measure_rng = prof_ptr->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
         measure_delay = prof_ptr->register_function("pop", "%(name)s", %(id)s, "delay", "%(label)s");
         measure_sc = prof_ptr->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
-""" % {'name': pop.name, 'id': pop.id, 'label': pop.name}
+""" % {"name": pop.name, "id": pop.id, "label": pop.name}
 
         return declare, init
 
@@ -122,13 +140,17 @@ class CPP11Profile(ProfileGenerator):
         else:
             target = proj.target[0]
             for tar in proj.target[1:]:
-                target += "_"+tar
+                target += "_" + tar
 
         init = """        // Profiling
         measure_psp = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
         measure_step = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
         measure_pe = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
-""" % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
+""" % {
+            "id_proj": proj.id,
+            "name": proj.name,
+            "label": proj.pre.name + "_" + proj.post.name + "_" + target,
+        }
 
         return declare, init
 
@@ -136,12 +158,12 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate the computesum compuation code
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['compute_psp']['before']
-            prof_end = cpp11_profile_template['compute_psp']['after']
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["compute_psp"]["before"]
+            prof_end = cpp11_profile_template["compute_psp"]["after"]
         else:
-            prof_begin = cpp11_omp_profile_template['compute_psp']['before']
-            prof_end = cpp11_omp_profile_template['compute_psp']['after']
+            prof_begin = cpp11_omp_profile_template["compute_psp"]["before"]
+            prof_end = cpp11_omp_profile_template["compute_psp"]["after"]
 
         prof_code = """
         // first run, measuring average time
@@ -149,9 +171,9 @@ class CPP11Profile(ProfileGenerator):
 %(code)s
 %(prof_end)s
 """ % {
-        'code': code,
-        'prof_begin': tabify(prof_begin, 2),
-        'prof_end': tabify(prof_end,2)
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
         }
 
         return prof_code
@@ -160,44 +182,54 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate the computesum compuation code
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['compute_psp']['before'] % {'name': 'proj'+str(proj.id)}
-            prof_end = cpp11_profile_template['compute_psp']['after'] % {'name': 'proj'+str(proj.id)}
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["compute_psp"]["before"] % {
+                "name": "proj" + str(proj.id)
+            }
+            prof_end = cpp11_profile_template["compute_psp"]["after"] % {
+                "name": "proj" + str(proj.id)
+            }
         else:
-            prof_begin = cpp11_omp_profile_template['compute_psp']['before'] % {'name': 'proj'+str(proj.id)}
-            prof_end = cpp11_omp_profile_template['compute_psp']['after'] % {'name': 'proj'+str(proj.id)}
+            prof_begin = cpp11_omp_profile_template["compute_psp"]["before"] % {
+                "name": "proj" + str(proj.id)
+            }
+            prof_end = cpp11_omp_profile_template["compute_psp"]["after"] % {
+                "name": "proj" + str(proj.id)
+            }
 
         prof_code = """
         // first run, measuring average time
 %(prof_begin)s
 %(code)s
 %(prof_end)s
-""" % {'code': code,
-       'prof_begin': tabify(prof_begin, 2),
-       'prof_end': tabify(prof_end,2)
-       }
+""" % {
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
+        }
         return prof_code
 
     def annotate_update_synapse(self, proj, code):
         """
         annotate the update synapse code, generated by ProjectionGenerator.update_synapse()
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:        
-            prof_begin = cpp11_profile_template['update_synapse']['before']
-            prof_end = cpp11_profile_template['update_synapse']['after']
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["update_synapse"]["before"]
+            prof_end = cpp11_profile_template["update_synapse"]["after"]
         else:
-            prof_begin = cpp11_omp_profile_template['update_synapse']['before']
-            prof_end = cpp11_omp_profile_template['update_synapse']['after']
+            prof_begin = cpp11_omp_profile_template["update_synapse"]["before"]
+            prof_end = cpp11_omp_profile_template["update_synapse"]["after"]
 
         prof_code = """
 // first run, measuring average time
 %(prof_begin)s
 %(code)s
 %(prof_end)s
-""" % {'code': code,
-       'prof_begin': tabify(prof_begin, 2),
-       'prof_end': tabify(prof_end,2)
-       }
+""" % {
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
+        }
 
         return prof_code
 
@@ -205,23 +237,26 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate the post-event code
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['post_event']['before']
-            prof_end = cpp11_profile_template['post_event']['after']
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["post_event"]["before"]
+            prof_end = cpp11_profile_template["post_event"]["after"]
         else:
-            prof_begin = cpp11_omp_profile_template['post_event']['before']
-            prof_end = cpp11_omp_profile_template['post_event']['after']
+            prof_begin = cpp11_omp_profile_template["post_event"]["before"]
+            prof_end = cpp11_omp_profile_template["post_event"]["after"]
 
         prof_dict = {
-            'code': code,
-            'prof_begin': tabify(prof_begin,2),
-            'prof_end': tabify(prof_end,2)
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
         }
-        prof_code = """
+        prof_code = (
+            """
 %(prof_begin)s
 %(code)s
 %(prof_end)s
-""" % prof_dict
+"""
+            % prof_dict
+        )
 
         return prof_code
 
@@ -229,45 +264,65 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate the update neuron code
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:        
-            prof_begin = cpp11_profile_template['update_neuron']['before'] % {'name': pop.name}
-            prof_end = cpp11_profile_template['update_neuron']['after'] % {'name': pop.name}
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["update_neuron"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_profile_template["update_neuron"]["after"] % {
+                "name": pop.name
+            }
         else:
-            prof_begin = cpp11_omp_profile_template['update_neuron']['before'] % {'name': pop.name}
-            prof_end = cpp11_omp_profile_template['update_neuron']['after'] % {'name': pop.name}
+            prof_begin = cpp11_omp_profile_template["update_neuron"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_omp_profile_template["update_neuron"]["after"] % {
+                "name": pop.name
+            }
 
         prof_code = """
         // first run, measuring average time
 %(prof_begin)s
 %(code)s
 %(prof_end)s
-""" % {'code': code,
-       'prof_begin': tabify(prof_begin, 2),
-       'prof_end': tabify(prof_end,2)
-       }
+""" % {
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
+        }
         return prof_code
 
     def annotate_spike_cond(self, pop, code):
         """
         annotate the spike condition code
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['spike_gather']['before'] % {'name': pop.name}
-            prof_end = cpp11_profile_template['spike_gather']['after'] % {'name': pop.name}
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["spike_gather"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_profile_template["spike_gather"]["after"] % {
+                "name": pop.name
+            }
         else:
-            prof_begin = cpp11_omp_profile_template['spike_gather']['before'] % {'name': pop.name}
-            prof_end = cpp11_omp_profile_template['spike_gather']['after'] % {'name': pop.name}
+            prof_begin = cpp11_omp_profile_template["spike_gather"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_omp_profile_template["spike_gather"]["after"] % {
+                "name": pop.name
+            }
 
         prof_dict = {
-            'code': code,
-            'prof_begin': tabify(prof_begin,2),
-            'prof_end': tabify(prof_end,2)
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
         }
-        prof_code = """
+        prof_code = (
+            """
 %(prof_begin)s
 %(code)s
 %(prof_end)s
-""" % prof_dict
+"""
+            % prof_dict
+        )
 
         return prof_code
 
@@ -275,17 +330,25 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate update rng kernel (only for CPUs available)
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['update_rng']['before'] % {'name': pop.name}
-            prof_end = cpp11_profile_template['update_rng']['after'] % {'name': pop.name}
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["update_rng"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_profile_template["update_rng"]["after"] % {
+                "name": pop.name
+            }
         else:
-            prof_begin = cpp11_omp_profile_template['update_rng']['before'] % {'name': pop.name}
-            prof_end = cpp11_omp_profile_template['update_rng']['after'] % {'name': pop.name}
+            prof_begin = cpp11_omp_profile_template["update_rng"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_omp_profile_template["update_rng"]["after"] % {
+                "name": pop.name
+            }
 
         prof_dict = {
-            'code': code,
-            'prof_begin': tabify(prof_begin,2),
-            'prof_end': tabify(prof_end,2)
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
         }
         prof_code = """
 %(prof_begin)s
@@ -298,17 +361,25 @@ class CPP11Profile(ProfileGenerator):
         """
         annotate update delay kernel (only for CPUs available)
         """
-        if ConfigManager().get('num_threads', self._net_id) == 1:
-            prof_begin = cpp11_profile_template['update_delay']['before'] % {'name': pop.name}
-            prof_end = cpp11_profile_template['update_delay']['after'] % {'name': pop.name}
+        if ConfigManager().get("num_threads", self._net_id) == 1:
+            prof_begin = cpp11_profile_template["update_delay"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_profile_template["update_delay"]["after"] % {
+                "name": pop.name
+            }
         else:
-            prof_begin = cpp11_omp_profile_template['update_delay']['before'] % {'name': pop.name}
-            prof_end = cpp11_omp_profile_template['update_delay']['after'] % {'name': pop.name}
+            prof_begin = cpp11_omp_profile_template["update_delay"]["before"] % {
+                "name": pop.name
+            }
+            prof_end = cpp11_omp_profile_template["update_delay"]["after"] % {
+                "name": pop.name
+            }
 
         prof_dict = {
-            'code': code,
-            'prof_begin': tabify(prof_begin,2),
-            'prof_end': tabify(prof_end,2)
+            "code": code,
+            "prof_begin": tabify(prof_begin, 2),
+            "prof_end": tabify(prof_end, 2),
         }
         prof_code = """
 %(prof_begin)s
@@ -327,20 +398,27 @@ class CPP11Profile(ProfileGenerator):
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
         """ % {
-            'paradigm': ConfigManager().get('paradigm', self._net_id),
-            'num_threads': ConfigManager().get('num_threads', self._net_id)
+            "paradigm": ConfigManager().get("paradigm", self._net_id),
+            "num_threads": ConfigManager().get("num_threads", self._net_id),
         }
-        config = ConfigManager().get('paradigm', self._net_id) + '_'  + str(ConfigManager().get('num_threads', self._net_id)) + 'threads'
+        config = (
+            ConfigManager().get("paradigm", self._net_id)
+            + "_"
+            + str(ConfigManager().get("num_threads", self._net_id))
+            + "threads"
+        )
 
         timer_import = "#include <chrono>"
-        timer_start = "std::chrono::time_point<std::chrono::steady_clock> _profiler_start;"
+        timer_start = (
+            "std::chrono::time_point<std::chrono::steady_clock> _profiler_start;"
+        )
         timer_init = "_profiler_start = std::chrono::steady_clock::now();"
         return profile_base_template % {
-            'timer_import': timer_import,
-            'timer_start_decl': timer_start,
-            'timer_init': timer_init,
-            'config': config,
-            'result_file': "results_profile_out.xml",
-            'config_xml': config_xml,
-            'measurement_class': cpp11_profile_header
+            "timer_import": timer_import,
+            "timer_start_decl": timer_start,
+            "timer_init": timer_init,
+            "config": config,
+            "result_file": "results_profile_out.xml",
+            "config_xml": config_xml,
+            "measurement_class": cpp11_profile_header,
         }

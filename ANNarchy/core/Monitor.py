@@ -23,7 +23,8 @@ import h5py
 # objects/functions that should be available by "from ANNarchy import *"
 __all__ = ["Monitor"]
 
-class Monitor :
+
+class Monitor:
     """
     Object allowing to record variables from `Population`, `PopulationView`, `Dendrite` or `Projection` instances.
 
@@ -61,24 +62,28 @@ class Monitor :
     ```
     """
 
-    def __init__(self,
-                 obj: Any,
-                 variables:list=[],
-                 period:float=None,
-                 period_offset:float=None,
-                 start:bool=True,
-                 name:str=None,
-                 net_id:int=0):
-
-
+    def __init__(
+        self,
+        obj: Any,
+        variables: list = [],
+        period: float = None,
+        period_offset: float = None,
+        start: bool = True,
+        name: str = None,
+        net_id: int = 0,
+    ):
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
         self.cyInstance = None
         self.net_id = net_id
 
         # Check type of the object
-        if not isinstance(self.object, (Population, Projection, PopulationView, Dendrite)):
-            Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
+        if not isinstance(
+            self.object, (Population, Projection, PopulationView, Dendrite)
+        ):
+            Messages._error(
+                "Monitor: the object must be a Population, PopulationView, Dendrite or Projection object"
+            )
 
         # dt is saved in the network
         self.dt = NetworkManager().get_network(net_id=net_id).dt
@@ -87,11 +92,11 @@ class Monitor :
         self.name = name
         if self.name is None:
             if isinstance(self.object, (Population, Projection)):
-                self.name = 'Monitor_'+obj.name
+                self.name = "Monitor_" + obj.name
             elif isinstance(self.object, PopulationView):
-                self.name = 'Monitor_'+obj.population.name
+                self.name = "Monitor_" + obj.population.name
             elif isinstance(self.object, Dendrite):
-                self.name = 'Monitor_'+obj.proj.name
+                self.name = "Monitor_" + obj.proj.name
 
         # Variables to record
         if not isinstance(variables, list):
@@ -105,10 +110,16 @@ class Monitor :
                 continue
 
             if var in self.object.parameters:
-                Messages._error('Parameters are not recordable')
+                Messages._error("Parameters are not recordable")
 
-            if not var in self.object.variables and var not in ['spike', 'axon_spike'] and not var.startswith('sum('):
-                Messages._error('Monitor: the object does not have an attribute named', var)
+            if (
+                not var in self.object.variables
+                and var not in ["spike", "axon_spike"]
+                and not var.startswith("sum(")
+            ):
+                Messages._error(
+                    "Monitor: the object does not have an attribute named", var
+                )
 
         # Period
         if not period:
@@ -122,13 +133,17 @@ class Monitor :
         else:
             # Check validity
             if period_offset >= period:
-                Messages._error("Monitor(): value of period_offset must be smaller than period.")
+                Messages._error(
+                    "Monitor(): value of period_offset must be smaller than period."
+                )
             else:
                 self._period_offset = period_offset
 
         # Warn users when recording projections all the time
         if isinstance(self.object, Projection) and self._period == self.dt:
-            Messages._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
+            Messages._warning(
+                "Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!"
+            )
 
         # Start
         self._start = start
@@ -138,21 +153,21 @@ class Monitor :
         # Add the monitor to the global variable
         self.id = NetworkManager().get_network(net_id=net_id)._add_monitor(self)
 
-        if NetworkManager().get_network(net_id=net_id).compiled: # Already compiled
+        if NetworkManager().get_network(net_id=net_id).compiled:  # Already compiled
             self._init_monitoring()
 
     def _copy(self, net_id=None):
         "Returns a copy of the monitor when creating networks. Internal use only."
 
         return Monitor(
-                obj=self.object,
-                variables=self._variables,
-                period=self._period,
-                period_offset=self._period_offset,
-                start=self._start,
-                name=self.name,
-                net_id=self.net_id if net_id is None else net_id,
-            )
+            obj=self.object,
+            variables=self._variables,
+            period=self._period,
+            period_offset=self._period_offset,
+            start=self._start,
+            name=self.name,
+            net_id=self.net_id if net_id is None else net_id,
+        )
 
     # Extend the period attribute
     @property
@@ -161,13 +176,16 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period * ConfigManager().get('dt', net_id=self.net_id)
+            return self.cyInstance.period * ConfigManager().get(
+                "dt", net_id=self.net_id
+            )
+
     @period.setter
     def period(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period = int(val/ConfigManager().get('dt', self.net_id))
+            self.cyInstance.period = int(val / ConfigManager().get("dt", self.net_id))
 
     # Extend the period_offset attribute
     @property
@@ -176,14 +194,18 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period_offset * ConfigManager().get('dt', self.net_id)
+            return self.cyInstance.period_offset * ConfigManager().get(
+                "dt", self.net_id
+            )
 
     @period_offset.setter
     def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period_offset = int(val/ConfigManager().get('dt', self.net_id))
+            self.cyInstance.period_offset = int(
+                val / ConfigManager().get("dt", self.net_id)
+            )
 
     # Extend the variables attribute
     @property
@@ -195,14 +217,13 @@ class Monitor :
     def variables(self, val):
         Messages._error("Modifying of a Monitors variable list is not allowed")
 
-
-
-    def get(self,
-            variables:str | list[str]=None,
-            keep:bool=False,
-            reshape:bool=True,
-            force_dict:bool=False
-        ) -> dict:
+    def get(
+        self,
+        variables: str | list[str] = None,
+        keep: bool = False,
+        reshape: bool = True,
+        force_dict: bool = False,
+    ) -> dict:
         """
         Returns the recorded variables and empties the buffer.
 
@@ -229,9 +250,9 @@ class Monitor :
         for var in variables:
             name = var
             # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
+            if var.startswith("sum("):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
+                name = "_sum_" + target
 
             # Retrieve the data
             data[var] = self._return_variable(name, keep, reshape)
@@ -239,18 +260,16 @@ class Monitor :
             # Update stopping time
             self._update_stopping_time(var, keep)
 
-        if not force_dict and len(variables)==1:
+        if not force_dict and len(variables) == 1:
             return data[variables[0]]
         else:
             return data
-
-
 
     def _size_in_bytes(self) -> int:
         """
         Returns the size of allocated memory on C++ side. This is only valid if compile() was invoked.
         """
-        if hasattr(self.cyInstance, 'size_in_bytes'):
+        if hasattr(self.cyInstance, "size_in_bytes"):
             return self.cyInstance.size_in_bytes()
 
     def _clear(self):
@@ -259,7 +278,7 @@ class Monitor :
 
         Warning: should be only called by the net deconstructor (in the context of parallel_run).
         """
-        if hasattr(self.cyInstance, 'clear'):
+        if hasattr(self.cyInstance, "clear"):
             self.cyInstance.clear()
 
     def _add_variable(self, var):
@@ -270,22 +289,22 @@ class Monitor :
             self._variables.append(var)
 
         self._recorded_variables[var] = {
-            'start': [Global.get_current_step(self.net_id)],
-            'stop': [None],
+            "start": [Global.get_current_step(self.net_id)],
+            "stop": [None],
         }
 
         self._last_recorded_variables[var] = {
-            'start': [Global.get_current_step(self.net_id)],
-            'stop': [None],
+            "start": [Global.get_current_step(self.net_id)],
+            "stop": [None],
         }
-
 
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
         # Start recording dependent on the recorded object
         from ANNarchy.extensions.bold import BoldMonitor
+
         if isinstance(self, BoldMonitor):
-            self._start_bold_monitor() # pylint: disable=no-member
+            self._start_bold_monitor()  # pylint: disable=no-member
         elif isinstance(self.object, (Population, PopulationView)):
             self._start_population()
         elif isinstance(self.object, (Dendrite, Projection)):
@@ -300,12 +319,17 @@ class Monitor :
             self.ranks = [-1]
 
         # Create the wrapper
-        period = int(self._period/ConfigManager().get('dt', self.net_id))
-        period_offset = int(self._period_offset/ConfigManager().get('dt', self.net_id))
+        period = int(self._period / ConfigManager().get("dt", self.net_id))
+        period_offset = int(
+            self._period_offset / ConfigManager().get("dt", self.net_id)
+        )
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the instance
-        self.cyInstance = getattr(NetworkManager().get_network(net_id=self.net_id).instance, 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
+        self.cyInstance = getattr(
+            NetworkManager().get_network(net_id=self.net_id).instance,
+            "PopRecorder" + str(self.object.id) + "_wrapper",
+        )(self.ranks, period, period_offset, offset)
 
         # Add variables
         for var in self._variables:
@@ -322,18 +346,23 @@ class Monitor :
             self.ranks = self.object.post_rank
             self.idx = [self.object.idx]
             proj_id = self.object.proj.id
-        else: # Projection
+        else:  # Projection
             self.ranks = [-1]
             self.idx = self.object.post_ranks
             proj_id = self.object.id
 
         # Compute the period and offset
-        period = int(self._period/ConfigManager().get('dt', self.net_id))
-        period_offset = int(self._period_offset / ConfigManager().get('dt', self.net_id))
+        period = int(self._period / ConfigManager().get("dt", self.net_id))
+        period_offset = int(
+            self._period_offset / ConfigManager().get("dt", self.net_id)
+        )
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
-        self.cyInstance = getattr(NetworkManager().get_network(net_id=self.net_id).instance, 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
+        self.cyInstance = getattr(
+            NetworkManager().get_network(net_id=self.net_id).instance,
+            "ProjRecorder" + str(proj_id) + "_wrapper",
+        )(self.idx, period, period_offset, offset)
 
         # Add the variables
         for var in self._variables:
@@ -343,7 +372,7 @@ class Monitor :
         if self._start:
             self.start()
 
-    def start(self, variables:list=None, period:float=None) -> None:
+    def start(self, variables: list = None, period: float = None) -> None:
         """
         Starts recording the variable.
 
@@ -364,30 +393,45 @@ class Monitor :
 
         if period:
             self._period = period
-            self.cyInstance.period = int(self._period/ConfigManager().get('dt', self.net_id))
+            self.cyInstance.period = int(
+                self._period / ConfigManager().get("dt", self.net_id)
+            )
             self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
             name = var
             # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
+            if var.startswith("sum("):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
+                name = "_sum_" + target
             try:
-                setattr(self.cyInstance, 'record_'+name, True)
+                setattr(self.cyInstance, "record_" + name, True)
             except:
-                obj_desc = ''
+                obj_desc = ""
                 if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population ' + self.object.name
+                    obj_desc = "population " + self.object.name
                 elif isinstance(self.object, Projection):
-                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                    obj_desc = (
+                        "projection between "
+                        + self.object.pre.name
+                        + " and "
+                        + self.object.post.name
+                    )
                 else:
-                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
+                    obj_desc = (
+                        "dendrite between "
+                        + self.object.proj.pre.name
+                        + " and "
+                        + self.object.proj.post.name
+                    )
                     if var in self.object.proj.parameters:
-                        Messages._print('\t', var, 'is a parameter, its value is constant')
+                        Messages._print(
+                            "\t", var, "is a parameter, its value is constant"
+                        )
 
-                Messages._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
-
+                Messages._warning(
+                    "Monitor: " + var + " can not be recorded (" + obj_desc + ")"
+                )
 
     def pause(self) -> None:
         "Pauses the recording."
@@ -395,23 +439,36 @@ class Monitor :
         for var in self.variables:
             name = var
             # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
+            if var.startswith("sum("):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
+                name = "_sum_" + target
             try:
-                setattr(self.cyInstance, 'record_'+name, False)
+                setattr(self.cyInstance, "record_" + name, False)
             except:
-                obj_desc = ''
+                obj_desc = ""
                 if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population ' + self.object.name
+                    obj_desc = "population " + self.object.name
                 elif isinstance(self.object, Projection):
-                    obj_desc = 'projection between ' + self.object.pre.name+' and '+self.object.post.name
+                    obj_desc = (
+                        "projection between "
+                        + self.object.pre.name
+                        + " and "
+                        + self.object.post.name
+                    )
                 else:
-                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Messages._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+                    obj_desc = (
+                        "dendrite between "
+                        + self.object.proj.pre.name
+                        + " and "
+                        + self.object.proj.post.name
+                    )
+                Messages._warning(
+                    "Monitor:" + var + " can not be recorded (" + obj_desc + ")"
+                )
 
-            self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-
+            self._recorded_variables[var]["stop"][-1] = Global.get_current_step(
+                self.net_id
+            )
 
     def resume(self) -> None:
         "Resumes the recording."
@@ -419,23 +476,37 @@ class Monitor :
         for var in self.variables:
             name = var
             # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
+            if var.startswith("sum("):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
+                name = "_sum_" + target
             try:
-                setattr(self.cyInstance, 'record_'+name, True)
+                setattr(self.cyInstance, "record_" + name, True)
             except:
-                obj_desc = ''
+                obj_desc = ""
                 if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population '+self.object.name
+                    obj_desc = "population " + self.object.name
                 elif isinstance(self.object, Projection):
-                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                    obj_desc = (
+                        "projection between "
+                        + self.object.pre.name
+                        + " and "
+                        + self.object.post.name
+                    )
                 else:
-                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Messages._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+                    obj_desc = (
+                        "dendrite between "
+                        + self.object.proj.pre.name
+                        + " and "
+                        + self.object.proj.post.name
+                    )
+                Messages._warning(
+                    "Monitor:" + var + " can not be recorded (" + obj_desc + ")"
+                )
 
-            self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
-            self._recorded_variables[var]['stop'].append(None)
+            self._recorded_variables[var]["start"].append(
+                Global.get_current_step(self.net_id)
+            )
+            self._recorded_variables[var]["stop"].append(None)
 
     def stop(self) -> None:
         """
@@ -450,14 +521,24 @@ class Monitor :
             self.cyInstance = None
 
         except:
-            obj_desc = ''
+            obj_desc = ""
             if isinstance(self.object, (Population, PopulationView)):
-                obj_desc = 'population '+self.object.name
+                obj_desc = "population " + self.object.name
             elif isinstance(self.object, Projection):
-                obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+                obj_desc = (
+                    "projection between "
+                    + self.object.pre.name
+                    + " and "
+                    + self.object.post.name
+                )
             else:
-                obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-            Messages._warning('Monitor:' + obj_desc + 'cannot be stopped')
+                obj_desc = (
+                    "dendrite between "
+                    + self.object.proj.pre.name
+                    + " and "
+                    + self.object.proj.post.name
+                )
+            Messages._warning("Monitor:" + obj_desc + "cannot be stopped")
 
     def reset(self) -> None:
         """
@@ -470,17 +551,19 @@ class Monitor :
             # Reinitializes the timings
             self._add_variable(var)
 
-
     def _return_variable(self, name, keep, reshape):
-        """ Returns the value of a variable with the given name. """
+        """Returns the value of a variable with the given name."""
 
         if isinstance(self.object, PopulationView):
             return self._get_population(self.object, name, keep)
 
         elif isinstance(self.object, Population):
-            if not reshape or name == 'spike':
+            if not reshape or name == "spike":
                 return self._get_population(self.object, name, keep)
-            return np.reshape(self._get_population(self.object, name, keep), (-1,) + self.object.geometry)
+            return np.reshape(
+                self._get_population(self.object, name, keep),
+                (-1,) + self.object.geometry,
+            )
 
         elif isinstance(self.object, Projection):
             return self._get_dendrite(self.object, name, keep)
@@ -492,21 +575,32 @@ class Monitor :
         return None
 
     def _update_stopping_time(self, var, keep):
-
-        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-        self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
-        self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
+        self._recorded_variables[var]["stop"][-1] = Global.get_current_step(self.net_id)
+        self._last_recorded_variables[var]["start"] = self._recorded_variables[var][
+            "start"
+        ]
+        self._last_recorded_variables[var]["stop"] = self._recorded_variables[var][
+            "stop"
+        ]
 
         if not keep:
-            self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
-            self._recorded_variables[var]['stop'] = [None]
+            self._recorded_variables[var]["start"] = [
+                Global.get_current_step(self.net_id)
+            ]
+            self._recorded_variables[var]["stop"] = [None]
 
     def __getitem__(self, key):
         # Implement the logic to retrieve the item by key
         return self.get(key)
 
-    def save(self, filename:str, variables:str | list[str]=None,
-             keep:bool=False, reshape:bool=False, force_dict:bool=False) -> None:
+    def save(
+        self,
+        filename: str,
+        variables: str | list[str] = None,
+        keep: bool = False,
+        reshape: bool = False,
+        force_dict: bool = False,
+    ) -> None:
         """
         Saves the recorded variables as a Numpy array (first dimension is time, second is neuron index).
 
@@ -530,12 +624,14 @@ class Monitor :
         ## Save single variables as numpy array
         if filename.endswith(".npy"):
             if len(variables) == 1:
-                Messages._error('Monitor.save: Saving with numpy only possible for single variables.')
+                Messages._error(
+                    "Monitor.save: Saving with numpy only possible for single variables."
+                )
             name = variables[0]
             # Sums of inputs for rate-coded populations
-            if name.startswith('sum('):
+            if name.startswith("sum("):
                 target = re.findall(r"\(([\w]+)\)", name)[0]
-                name = '_sum_' + target
+                name = "_sum_" + target
 
             # Retrieve the data
             np.save(filename, self._return_variable(name, keep, reshape))
@@ -544,13 +640,13 @@ class Monitor :
             self._update_stopping_time(variables[0], keep)
         elif filename.endswith(".hdf5"):
             ## Save as multiple variables as h5py File
-            with h5py.File(filename, 'w') as data:
+            with h5py.File(filename, "w") as data:
                 for var in variables:
                     name = var
                     # Sums of inputs for rate-coded populations
-                    if var.startswith('sum('):
+                    if var.startswith("sum("):
                         target = re.findall(r"\(([\w]+)\)", var)[0]
-                        name = '_sum_' + target
+                        name = "_sum_" + target
 
                     # Retrieve the data
                     data["/" + var] = self._return_variable(name, keep, reshape)
@@ -558,17 +654,19 @@ class Monitor :
                     # Update stopping time
                     self._update_stopping_time(var, keep)
         else:
-            Messages._error('Monitor.save: File type not recognized (Must be .hdf5 or .npy).')
+            Messages._error(
+                "Monitor.save: File type not recognized (Must be .hdf5 or .npy)."
+            )
 
     def _get_population(self, pop, name, keep):
         try:
             data = getattr(self.cyInstance, name)
             if not keep:
-                getattr(self.cyInstance, 'clear_' + name)()
+                getattr(self.cyInstance, "clear_" + name)()
         except:
             data = []
 
-        if name not in ['spike', 'axon_spike']:
+        if name not in ["spike", "axon_spike"]:
             return np.array(data)
         else:
             return data
@@ -577,13 +675,13 @@ class Monitor :
         try:
             data = getattr(self.cyInstance, name)
             if not keep:
-                getattr(self.cyInstance, 'clear_' + name)()
+                getattr(self.cyInstance, "clear_" + name)()
         except:
             data = []
 
         return np.array(data, dtype=object)
 
-    def times(self, variables:list[str]=None) -> dict:
+    def times(self, variables: list[str] = None) -> dict:
         """
         Returns the start and stop times (in ms) of the recorded variables as a dictionary.
 
@@ -601,7 +699,7 @@ class Monitor :
         for var in variables:
             # check for spelling mistakes
             if not var in self._variables:
-                Messages._warning("Variable '"+str(var)+"' is not monitored.")
+                Messages._warning("Variable '" + str(var) + "' is not monitored.")
                 continue
 
             t[var] = deepcopy(self._last_recorded_variables[var])
@@ -611,7 +709,7 @@ class Monitor :
     ###############################
     ### Spike visualisation stuff
     ###############################
-    def raster_plot(self, spikes:dict=None) -> tuple:
+    def raster_plot(self, spikes: dict = None) -> tuple:
         """
         Returns two numpy arrays representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
@@ -638,18 +736,19 @@ class Monitor :
 
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
         """
-        times = []; ranks=[]
-        if not 'spike' in self._variables:
-            Messages._error('Monitor: spike was not recorded')
+        times = []
+        ranks = []
+        if not "spike" in self._variables:
+            Messages._error("Monitor: spike was not recorded")
 
         # Get data
         if spikes is None:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
-            elif 'axon_spike' in spikes.keys():
-                data = spikes['axon_spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
+            elif "axon_spike" in spikes.keys():
+                data = spikes["axon_spike"]
             else:
                 data = spikes
 
@@ -661,7 +760,9 @@ class Monitor :
 
         return self.dt * np.array(times), np.array(ranks)
 
-    def histogram(self, spikes=None, bins=None, per_neuron=False, recording_window=None):
+    def histogram(
+        self, spikes=None, bins=None, per_neuron=False, recording_window=None
+    ):
         """
         Returns a histogram for the recorded spikes in the population.
 
@@ -677,21 +778,29 @@ class Monitor :
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
         :param bins: the bin size in ms (default: dt).
         """
-        if not 'spike' in self._variables:
-            Messages._error('Monitor: spike was not recorded')
+        if not "spike" in self._variables:
+            Messages._error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
-        return histogram(data, bins=bins, per_neuron=per_neuron, recording_window=recording_window, dt=self.dt)
+        return histogram(
+            data,
+            bins=bins,
+            per_neuron=per_neuron,
+            recording_window=recording_window,
+            dt=self.dt,
+        )
 
-    def inter_spike_interval(self, spikes:dict=None, ranks:list[int]=None, per_neuron:bool=False) -> list:
+    def inter_spike_interval(
+        self, spikes: dict = None, ranks: list[int] = None, per_neuron: bool = False
+    ) -> list:
         """
         Computes the inter-spike intervals (ISI) for the recorded spikes in the population.
 
@@ -710,16 +819,20 @@ class Monitor :
         """
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
-        return inter_spike_interval(data, ranks=ranks, per_neuron=per_neuron, dt=self.dt)
+        return inter_spike_interval(
+            data, ranks=ranks, per_neuron=per_neuron, dt=self.dt
+        )
 
-    def coefficient_of_variation(self, spikes:dict=None, ranks:list[int]=None) -> list:
+    def coefficient_of_variation(
+        self, spikes: dict = None, ranks: list[int] = None
+    ) -> list:
         """
         Computes the coefficient of variation for the recorded spikes in the population.
 
@@ -737,16 +850,16 @@ class Monitor :
         """
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
         return coefficient_of_variation(data, ranks=ranks, dt=self.dt)
 
-    def mean_fr(self, spikes:dict=None) -> float:
+    def mean_fr(self, spikes: dict = None) -> float:
         """
         Computes the mean firing rate in the population during the recordings.
 
@@ -761,35 +874,39 @@ class Monitor :
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         """
-        if not 'spike' in self._variables:
-            Messages._error('Monitor: spike was not recorded')
+        if not "spike" in self._variables:
+            Messages._error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
-
         # Compute the duration of the recordings
-        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
+        duration = (
+            self._last_recorded_variables["spike"]["stop"][-1]
+            - self._last_recorded_variables["spike"]["start"][-1]
+        )
 
         # Number of neurons
-        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
+        neurons = (
+            self.object.ranks
+            if isinstance(self.object, PopulationView)
+            else range(self.object.size)
+        )
 
         # Compute fr
         fr = 0
         for neuron in neurons:
             fr += len(data[neuron])
 
-        return fr/float(len(neurons))/duration/self.dt*1000.0
+        return fr / float(len(neurons)) / duration / self.dt * 1000.0
 
-
-
-    def smoothed_rate(self, spikes:dict=None, smooth:float=0.) -> np.ndarray:
+    def smoothed_rate(self, spikes: dict = None, smooth: float = 0.0) -> np.ndarray:
         """
         Computes the smoothed firing rate of the recorded spiking neurons.
 
@@ -807,29 +924,30 @@ class Monitor :
         :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
         """
-        if not 'spike' in self._variables:
-            Messages._error('Monitor: spike was not recorded')
+        if not "spike" in self._variables:
+            Messages._error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
         import ANNarchy.cython_ext.Transformations as Transformations
+
         return Transformations.smoothed_rate(
             {
-                'data': data,
-                'start': self._last_recorded_variables['spike']['start'][-1],
-                'stop': self._last_recorded_variables['spike']['stop'][-1]
+                "data": data,
+                "start": self._last_recorded_variables["spike"]["start"][-1],
+                "stop": self._last_recorded_variables["spike"]["stop"][-1],
             },
-            smooth
+            smooth,
         )
 
-    def population_rate(self, spikes:dict=None, smooth:float=0.) -> np.ndarray:
+    def population_rate(self, spikes: dict = None, smooth: float = 0.0) -> np.ndarray:
         """
         Computes a smoothed firing rate for the population of recorded neurons.
 
@@ -851,26 +969,27 @@ class Monitor :
         :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
         """
-        if not 'spike' in self._variables:
-            Messages._error('Monitor: spike was not recorded')
+        if not "spike" in self._variables:
+            Messages._error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
-            data = self.get('spike')
+            data = self.get("spike")
         else:
-            if 'spike' in spikes.keys():
-                data = spikes['spike']
+            if "spike" in spikes.keys():
+                data = spikes["spike"]
             else:
                 data = spikes
 
         import ANNarchy.cython_ext.Transformations as Transformations
+
         return Transformations.population_rate(
             {
-                'data': data,
-                'start': self._last_recorded_variables['spike']['start'][-1],
-                'stop': self._last_recorded_variables['spike']['stop'][-1]
+                "data": data,
+                "start": self._last_recorded_variables["spike"]["start"][-1],
+                "stop": self._last_recorded_variables["spike"]["stop"][-1],
             },
-            smooth
+            smooth,
         )
 
 
@@ -890,18 +1009,20 @@ def get_size(obj, seen=None):
     if isinstance(obj, dict):
         size += sum([get_size(v, seen) for v in obj.values()])
         size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__dict__'):
+    elif hasattr(obj, "__dict__"):
         size += get_size(obj.__dict__, seen)
-    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+    elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, bytearray)):
         size += sum([get_size(i, seen) for i in obj])
     return size
 
-class MemoryStats :
+
+class MemoryStats:
     """
     Create memory statistics for the main objects in ANNarchy. The current implementation
     focusses on the C++ simulation core. But this module could be further extended to measure
     also the Python objects.
     """
+
     def __init__(self):
         pass
 
@@ -911,39 +1032,64 @@ class MemoryStats :
         the size_in_bytes() methods implemented by the C++ modules.
         """
         for pop in NetworkManager().get_network(net_id=net_id).get_populations():
-            if hasattr(pop, 'size_in_bytes'):
+            if hasattr(pop, "size_in_bytes"):
                 print(pop.name, ":", self._human_readable_bytes(pop._size_in_bytes()))
             else:
-                Messages._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
+                Messages._warning(
+                    "MemoryStats.print_cpp(): the object",
+                    pop,
+                    "does not have a size_in_bytes() function.",
+                )
 
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
-            if hasattr(proj, 'size_in_bytes'):
-                print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj._size_in_bytes()))
+            if hasattr(proj, "size_in_bytes"):
+                print(
+                    proj.pre.name,
+                    "->",
+                    proj.post.name,
+                    "(",
+                    proj.target,
+                    "):",
+                    self._human_readable_bytes(proj._size_in_bytes()),
+                )
             else:
-                Messages._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
+                Messages._warning(
+                    "MemoryStats.print_cpp(): the object",
+                    proj,
+                    "does not have a size_in_bytes() function.",
+                )
 
         for mon in NetworkManager().get_network(net_id=net_id).get_monitors():
-            if hasattr(proj, 'size_in_bytes'):
-                print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon._size_in_bytes()))
+            if hasattr(proj, "size_in_bytes"):
+                print(
+                    "Monitor on",
+                    mon.object.name,
+                    ":",
+                    self._human_readable_bytes(mon._size_in_bytes()),
+                )
             else:
-                Messages._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
+                Messages._warning(
+                    "MemoryStats.print_cpp(): the object",
+                    mon,
+                    "does not have a size_in_bytes() function.",
+                )
 
     def _human_readable_bytes(self, num):
         """
         All cpp functions return there size in bytes *num* as long int. This function
         divides this by 1024 until the result is lower than the next unit.
         """
-        for x in ['bytes','KB','MB','GB']:
+        for x in ["bytes", "KB", "MB", "GB"]:
             if num < 1024.0:
                 return "%3.2f %s" % (num, x)
             num /= 1024.0
-        return "%3.1f%s" % (num, 'TB')
+        return "%3.1f%s" % (num, "TB")
 
 
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
-def raster_plot(spikes:dict, dt:float=1.0) -> tuple:
+def raster_plot(spikes: dict, dt: float = 1.0) -> tuple:
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
@@ -951,7 +1097,7 @@ def raster_plot(spikes:dict, dt:float=1.0) -> tuple:
     :param dt: the time step size in ms (default: 1.0ms).
     """
     times = []
-    ranks=[]
+    ranks = []
 
     # Compute raster
     for n in spikes.keys():
@@ -962,7 +1108,13 @@ def raster_plot(spikes:dict, dt:float=1.0) -> tuple:
     return dt * np.array(times), np.array(ranks)
 
 
-def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt:float=1.0):
+def histogram(
+    spikes: dict,
+    bins: float = None,
+    per_neuron: bool = False,
+    recording_window: tuple = None,
+    dt: float = 1.0,
+):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -970,9 +1122,9 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     :param bins: the bin size in ms (default: dt).
     """
     if bins is None:
-        bins =  dt
+        bins = dt
 
-    bin_step = int(bins/dt)
+    bin_step = int(bins / dt)
 
     # Compute the duration of the recordings
     t_maxes = []
@@ -992,31 +1144,34 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     duration = t_max - t_min
 
     # Number of bins
-    nb_bins = int(duration/bin_step)
-    #print(t_min, t_max, duration, nb_bins)
+    nb_bins = int(duration / bin_step)
+    # print(t_min, t_max, duration, nb_bins)
 
     if per_neuron:
-        max_rank = np.amax([x for x in spikes.keys()])+1
+        max_rank = np.amax([x for x in spikes.keys()]) + 1
         # Initialize histogram
-        histo = [ [0 for _ in range(nb_bins+1)] for _ in range(max_rank) ]
+        histo = [[0 for _ in range(nb_bins + 1)] for _ in range(max_rank)]
 
         # Compute per step histogram
         for neuron in spikes.keys():
             for t in spikes[neuron]:
-                histo[neuron][int((t-t_min)/float(bin_step))] += 1
+                histo[neuron][int((t - t_min) / float(bin_step))] += 1
 
     else:
         # Initialize histogram
-        histo = [0 for t in range(nb_bins+1)]
+        histo = [0 for t in range(nb_bins + 1)]
 
         # Compute per step histogram
         for neuron in spikes.keys():
             for t in spikes[neuron]:
-                histo[int((t-t_min)/float(bin_step))] += 1
+                histo[int((t - t_min) / float(bin_step))] += 1
 
     return np.array(histo)
 
-def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False, dt:float=1.0):
+
+def inter_spike_interval(
+    spikes: dict, ranks: list = None, per_neuron: bool = False, dt: float = 1.0
+):
     """
     Computes the inter-spike interval (ISI) for the recorded spike events of a population.
 
@@ -1037,9 +1192,9 @@ def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False, dt
                 continue
 
         # compute time difference between spike events
-        tmp_isi=[]
-        for idx in range(len(spike_events)-1):
-            tmp_isi.append((spike_events[idx+1]-spike_events[idx])*dt)
+        tmp_isi = []
+        for idx in range(len(spike_events) - 1):
+            tmp_isi.append((spike_events[idx + 1] - spike_events[idx]) * dt)
 
         isi[neuron_rank] = tmp_isi
 
@@ -1051,7 +1206,10 @@ def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False, dt
             res.extend(val)
         return res
 
-def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False, dt=1.0):
+
+def coefficient_of_variation(
+    spikes: dict, ranks: list = None, per_neuron: bool = False, dt=1.0
+):
     """
     Computes the coefficient of variation of the inter-spike intervals for the recorded spike events of a population.
 
@@ -1063,7 +1221,7 @@ def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False
     isi_cv = {}
     for neuron_rank, values in isi_per_neuron.items():
         if len(values) < 2:
-            continue     # no meaningful mean/std possible
+            continue  # no meaningful mean/std possible
 
         # suppress unwanted neurons
         if ranks is not None:
@@ -1080,7 +1238,8 @@ def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False
             res.append(val)
         return res
 
-def population_rate(spikes:dict, smooth:float=0.0):
+
+def population_rate(spikes: dict, smooth: float = 0.0):
     """
     Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
@@ -1095,7 +1254,8 @@ def population_rate(spikes:dict, smooth:float=0.0):
     t_maxes = []
     t_mines = []
     for neuron in spikes.keys():
-        if len(spikes[neuron]) == 0 : continue
+        if len(spikes[neuron]) == 0:
+            continue
         t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
@@ -1103,16 +1263,13 @@ def population_rate(spikes:dict, smooth:float=0.0):
     t_min = np.min(t_mines)
 
     import ANNarchy.cython_ext.Transformations as Transformations
+
     return Transformations.population_rate(
-        {
-            'data': spikes,
-            'start':t_min,
-            'stop': t_max
-        },
-        smooth
+        {"data": spikes, "start": t_min, "stop": t_max}, smooth
     )
 
-def smoothed_rate(spikes:dict, smooth:float=0.):
+
+def smoothed_rate(spikes: dict, smooth: float = 0.0):
     """
     Computes the smoothed firing rate of the recorded spiking neurons.
 
@@ -1125,7 +1282,8 @@ def smoothed_rate(spikes:dict, smooth:float=0.):
     t_maxes = []
     t_mines = []
     for neuron in spikes.keys():
-        if len(spikes[neuron]) == 0 : continue
+        if len(spikes[neuron]) == 0:
+            continue
         t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
@@ -1133,14 +1291,11 @@ def smoothed_rate(spikes:dict, smooth:float=0.):
     t_min = np.min(t_mines)
 
     import ANNarchy.cython_ext.Transformations as Transformations
+
     return Transformations.smoothed_rate(
-        {
-            'data': spikes,
-            'start': t_min,
-            'stop': t_max
-        },
-        smooth
+        {"data": spikes, "start": t_min, "stop": t_max}, smooth
     )
+
 
 def mean_fr(spikes, duration=None, dt=1.0):
     """
@@ -1152,12 +1307,12 @@ def mean_fr(spikes, duration=None, dt=1.0):
 
     """
     if duration is None:
-
         # Compute the duration of the recordings
         t_maxes = []
         t_mines = []
         for neuron in spikes.keys():
-            if len(spikes[neuron]) == 0 : continue
+            if len(spikes[neuron]) == 0:
+                continue
             t_maxes.append(np.max(spikes[neuron]))
             t_mines.append(np.min(spikes[neuron]))
 
@@ -1172,4 +1327,4 @@ def mean_fr(spikes, duration=None, dt=1.0):
     for neuron in spikes:
         fr += len(spikes[neuron])
 
-    return fr/float(nb_neurons)/duration/dt*1000.0
+    return fr / float(nb_neurons) / duration / dt * 1000.0

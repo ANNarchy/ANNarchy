@@ -4,10 +4,12 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Neuron, Synapse, Network
+
 
 class test_Locality(unittest.TestCase):
     """
@@ -15,6 +17,7 @@ class test_Locality(unittest.TestCase):
     variables/parameters: synaptic, postsynaptic, projection. This test should
     verify, that these keywords does not lead to compiler errors.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -38,11 +41,11 @@ class test_Locality(unittest.TestCase):
 
         pre = cls._network.create(geometry=3, neuron=neuron)
         post = cls._network.create(geometry=1, neuron=neuron)
-        proj = cls._network.connect(pre, post, "exc", synapse = syn)
+        proj = cls._network.connect(pre, post, "exc", synapse=syn)
         proj.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
-            storage_order=cls.storage_order
+            storage_order=cls.storage_order,
         )
 
     def test_compile(self):
@@ -50,6 +53,7 @@ class test_Locality(unittest.TestCase):
         Tests if the network description is compilable.
         """
         self._network.compile(silent=True, directory=TARGET_FOLDER)
+
 
 class test_AccessPSP(unittest.TestCase):
     """
@@ -59,6 +63,7 @@ class test_AccessPSP(unittest.TestCase):
 
     Other statements like mean(pre.r) are covered by test_GlobalOperation.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -83,19 +88,19 @@ class test_AccessPSP(unittest.TestCase):
 
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
-        proj1 = cls._network.connect(pre, post, "exc", synapse = syn)
+        proj1 = cls._network.connect(pre, post, "exc", synapse=syn)
         proj1.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
-            force_multiple_weights=True
+            force_multiple_weights=True,
         )
-        proj2 = cls._network.connect(post, pre, "exc", synapse = syn)
+        proj2 = cls._network.connect(post, pre, "exc", synapse=syn)
         proj2.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
-            force_multiple_weights=True
+            force_multiple_weights=True,
         )
 
     def test_compile(self):
@@ -104,10 +109,12 @@ class test_AccessPSP(unittest.TestCase):
         """
         self._network.compile(silent=True, directory=TARGET_FOLDER)
 
+
 class test_ModifiedPSP(unittest.TestCase):
     """
     Test modified psp statements
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -125,7 +132,7 @@ class test_ModifiedPSP(unittest.TestCase):
             """,
             psp="""
                 w*pos(reversal-pre.r)
-            """
+            """,
         )
 
         cls._network = Network()
@@ -135,12 +142,12 @@ class test_ModifiedPSP(unittest.TestCase):
 
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
-        proj = cls._network.connect(pre, post, "exc", synapse = ReversedSynapse)
+        proj = cls._network.connect(pre, post, "exc", synapse=ReversedSynapse)
         proj.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
-            force_multiple_weights=True
+            force_multiple_weights=True,
         )
 
     def test_compile(self):

@@ -211,35 +211,35 @@ attribute_template = {
     void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
 %(global_set)s
     }
-"""
+""",
 }
 
 attribute_acc = {
     #
     # Local attributes
     #
-    'local_get_all': """
+    "local_get_all": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable_all<%(type)s>(%(name)s);
         }
 """,
-    'local_get_row': """
+    "local_get_row": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
         }
 """,
-    'local_get_single': """
+    "local_get_single": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
         }
 """,
-    'local_set_all': """
+    "local_set_all": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_all<%(type)s>(%(name)s, value);
@@ -247,7 +247,7 @@ attribute_acc = {
             return;
         }
 """,
-    'local_set_row': """
+    "local_set_row": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
@@ -255,7 +255,7 @@ attribute_acc = {
             return;
         }
 """,
-    'local_set_single': """
+    "local_set_single": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
@@ -266,21 +266,21 @@ attribute_acc = {
     #
     # Semiglobal attributes
     #
-    'semiglobal_get_all': """
+    "semiglobal_get_all": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_vector_variable_all<%(type)s>(%(name)s);
         }
 """,
-    'semiglobal_get_single': """
+    "semiglobal_get_single": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_vector_variable<%(type)s>(%(name)s, rk_post);
         }
 """,
-    'semiglobal_set_all': """
+    "semiglobal_set_all": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable_all<%(type)s>(%(name)s, value);
@@ -288,7 +288,7 @@ attribute_acc = {
             return;
         }
 """,
-    'semiglobal_set_single': """
+    "semiglobal_set_single": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable<%(type)s>(%(name)s, rk_post, value);
@@ -299,21 +299,21 @@ attribute_acc = {
     #
     # Global attributes
     #
-    'global_get': """
+    "global_get": """
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return %(name)s;
         }
 """,
-    'global_set': """
+    "global_set": """
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
             %(write_dirty_flag)s
             return;
         }
-"""
+""",
 }
 
 # Definition for the usage of CUDA device random
@@ -324,11 +324,11 @@ attribute_acc = {
 #    rd_name:
 #    rd_update:
 curand = {
-    'local': {
-        'decl': """
+    "local": {
+        "decl": """
     curandState* gpu_%(rd_name)s;
 """,
-        'init': """
+        "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
         init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
     #ifdef _DEBUG
@@ -337,13 +337,13 @@ curand = {
             std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
     #endif
 
-"""
+""",
     },
-    'global': {
-        'decl': """
+    "global": {
+        "decl": """
     curandState* gpu_%(rd_name)s;
 """,
-        'init': """
+        "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
         init_curand_states( size, gpu_%(rd_name)s, global_seed );
     #ifdef _DEBUG
@@ -351,8 +351,8 @@ curand = {
         if ( err != cudaSuccess )
             std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
     #endif
-"""
-    }
+""",
+    },
 }
 
 cuda_stream = """
@@ -362,8 +362,8 @@ cuda_stream = """
 
 # some base stuff
 cuda_templates = {
-    'projection_header': projection_header,
-    'attr_acc': attribute_acc,
-    'accessor_template': attribute_template,
-    'rng': curand
+    "projection_header": projection_header,
+    "attr_acc": attribute_acc,
+    "accessor_template": attribute_template,
+    "rng": curand,
 }

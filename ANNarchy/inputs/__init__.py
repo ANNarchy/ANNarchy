@@ -13,31 +13,31 @@ from .DecodingProjection import DecodingProjection
 # For reporting
 input_type_list = (
     InputArray,
-    PoissonPopulation, 
-    SpikeSourceArray, 
+    PoissonPopulation,
+    SpikeSourceArray,
     TimedArray,
-    HomogeneousCorrelatedSpikeTrains, 
+    HomogeneousCorrelatedSpikeTrains,
     TimedPoissonPopulation,
-    DecodingProjection, 
-    CurrentInjection
+    DecodingProjection,
+    CurrentInjection,
 )
 input_name_list = [
-    "Input Array", 
-    "Poisson distribution", 
-    "Spike source", 
+    "Input Array",
+    "Poisson distribution",
+    "Spike source",
     "Timed Array",
     "Homogeneous correlated spike trains",
-    "Scheduled Poisson distribution", 
+    "Scheduled Poisson distribution",
 ]
 
 # Classes exported by the ANNarchy.inputs sub-module.
 __all__ = [
-    'InputArray',
-    'PoissonPopulation', 
-    'SpikeSourceArray', 
-    'TimedArray',
-    'HomogeneousCorrelatedSpikeTrains', 
-    'TimedPoissonPopulation',
-    'DecodingProjection', 
-    'CurrentInjection'
+    "InputArray",
+    "PoissonPopulation",
+    "SpikeSourceArray",
+    "TimedArray",
+    "HomogeneousCorrelatedSpikeTrains",
+    "TimedPoissonPopulation",
+    "DecodingProjection",
+    "CurrentInjection",
 ]

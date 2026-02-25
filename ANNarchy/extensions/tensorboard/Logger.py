@@ -11,7 +11,9 @@ try:
     from tensorboardX import SummaryWriter
 except Exception as e:
     print(e)
-    Messages._error("tensorboard extension: please install tensorboardX (pip install tensorboardX).")
+    Messages._error(
+        "tensorboard extension: please install tensorboardX (pip install tensorboardX)."
+    )
 
 import os
 import socket
@@ -21,7 +23,7 @@ import numpy as np
 
 class Logger(object):
     """
-    Logger class to use tensorboard to visualize ANNarchy simulations. Requires the `tensorboardX` package (pip install tensorboardX). 
+    Logger class to use tensorboard to visualize ANNarchy simulations. Requires the `tensorboardX` package (pip install tensorboardX).
 
     The Logger class is a thin wrapper around tensorboardX.SummaryWriter, which you could also use directly. The doc is available at <https://tensorboardx.readthedocs.io/>. Tensorboard can read any logging data, as long as they are saved in the right format (tfevents), so it is not limited to tensorflow. TensorboardX has been developed to allow the use of tensorboard with pytorch.
 
@@ -46,8 +48,8 @@ class Logger(object):
     logger.close()
     ```
 
-    By default, the logs will be written in a subfolder of ``./runs/`` (which will be created in the current directory). 
-    The subfolder is a combination of the current datetime and of the hostname, e.g. ``./runs/Apr22_12-11-22_machine``. 
+    By default, the logs will be written in a subfolder of ``./runs/`` (which will be created in the current directory).
+    The subfolder is a combination of the current datetime and of the hostname, e.g. ``./runs/Apr22_12-11-22_machine``.
     You can control these two elements by passing arguments to ``Logger()``:
 
     ```python
@@ -56,7 +58,7 @@ class Logger(object):
 
     The ``add_*`` methods allow you to log various structures, such as scalars, images, histograms, figures, etc.
 
-    A tag should be given to each plot. In the example above, the figure with the accuracy will be labelled "Accuracy" in tensorboard. 
+    A tag should be given to each plot. In the example above, the figure with the accuracy will be labelled "Accuracy" in tensorboard.
     You can also group plots together with tags such as "Global performance/Accuracy", "Global performance/Error rate", "Neural activity/Population 1", etc.
 
     After (or while) logging data within your simulation, run `tensorboard` in the terminal by specifying the log directory:
@@ -74,9 +76,8 @@ class Logger(object):
     :param logdir: path (absolute or relative) to the logging directory. Subfolders will be created for each individual run. The default is "runs/"
     :param experiment: name of the subfolder for the current run. By default, it is a combination of the current time and the hostname (e.g. Apr22_12-11-22_machine). If you reuse an experiment name, the data will be appended.
     """
-    
-    def __init__(self, logdir:str="runs/", experiment:str=None):
 
+    def __init__(self, logdir: str = "runs/", experiment: str = None):
         self.logdir = logdir
         self.experiment = experiment
 
@@ -85,23 +86,31 @@ class Logger(object):
             os.makedirs(self.logdir)
 
         if not experiment:
-            current_time = datetime.now().strftime('%b%d_%H-%M-%S')
-            self.currentlogdir=os.path.join(
-                self.logdir, current_time + '_' + socket.gethostname())
+            current_time = datetime.now().strftime("%b%d_%H-%M-%S")
+            self.currentlogdir = os.path.join(
+                self.logdir, current_time + "_" + socket.gethostname()
+            )
         else:
             self.currentlogdir = self.logdir + "/" + self.experiment
 
         print("Logging in", self.currentlogdir)
-    
+
         self._create_summary_writer()
 
     def _create_summary_writer(self):
-
-         self._summary = SummaryWriter(self.currentlogdir, comment="", purge_step=None, max_queue=10, flush_secs=10, filename_suffix='', write_to_disk=True)
+        self._summary = SummaryWriter(
+            self.currentlogdir,
+            comment="",
+            purge_step=None,
+            max_queue=10,
+            flush_secs=10,
+            filename_suffix="",
+            write_to_disk=True,
+        )
 
     # Logging methods
-        
-    def add_scalar(self, tag:str, value:float, step:int=None):
+
+    def add_scalar(self, tag: str, value: float, step: int = None):
         """
         Logs a single scalar value, e.g. a success rate at various stages of learning.
 
@@ -119,10 +128,12 @@ class Logger(object):
         :param value: value.
         :param step: time index.
         """
-        
-        self._summary.add_scalar(tag=tag, scalar_value=value, global_step=step, walltime=None)
-        
-    def add_scalars(self, tag:str, value:dict, step:int=None):
+
+        self._summary.add_scalar(
+            tag=tag, scalar_value=value, global_step=step, walltime=None
+        )
+
+    def add_scalars(self, tag: str, value: dict, step: int = None):
         """
         Logs multiple scalar values to be displayed in the same figure, e.g. several metrics or neural activities.
 
@@ -135,8 +146,8 @@ class Logger(object):
                 act1 = pop.r[0]
                 act2 = pop.r[1]
                 logger.add_scalars(
-                    "Accuracy", 
-                    {'First neuron': act1, 'Second neuron': act2}, 
+                    "Accuracy",
+                    {'First neuron': act1, 'Second neuron': act2},
                     trial)
         ```
 
@@ -144,13 +155,17 @@ class Logger(object):
         :param value: dictionary of values.
         :param step: time index.
         """
-        
-        self._summary.add_scalars(main_tag=tag, tag_scalar_dict=value, global_step=step, walltime=None)
-        
-    def add_image(self, tag:str, img: np.ndarray, step:int=None, equalize:bool=False):
+
+        self._summary.add_scalars(
+            main_tag=tag, tag_scalar_dict=value, global_step=step, walltime=None
+        )
+
+    def add_image(
+        self, tag: str, img: np.ndarray, step: int = None, equalize: bool = False
+    ):
         """
         Logs an image.
-        
+
         The image must be a numpy array of size (height, width) for monochrome images or (height, width, 3) for colored images. The values should either be integers between 0 and 255 or floats between 0 and 1. The parameter ``equalize`` forces the values to be between 0 and 1 by equalizing using the min/max values.
 
         Example::
@@ -168,30 +183,53 @@ class Logger(object):
         :param step: time index.
         :param equalize: rescales the pixels between 0 and 1 using the min and max values of the array.
         """
-        if img.ndim ==2:
-            if equalize:  
-                img = img.astype(np.float)              
-                img = (img - img.min())/(img.max() - img.min())
+        if img.ndim == 2:
+            if equalize:
+                img = img.astype(np.float)
+                img = (img - img.min()) / (img.max() - img.min())
 
-            self._summary.add_image(tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats='HW')
-        
+            self._summary.add_image(
+                tag=tag,
+                img_tensor=img,
+                global_step=step,
+                walltime=None,
+                dataformats="HW",
+            )
+
         elif img.ndim == 3:
             if not img.shape[2] == 3:
-                Messages._error("Logger.add_image: color images must be of shape (H, W, 3).")
-            
-            if equalize:   
-                img = np.array(img).astype(np.float)         
-                img = (img - img.min())/(img.max() - img.min())
+                Messages._error(
+                    "Logger.add_image: color images must be of shape (H, W, 3)."
+                )
 
-            self._summary.add_image(tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats='HWC')
+            if equalize:
+                img = np.array(img).astype(np.float)
+                img = (img - img.min()) / (img.max() - img.min())
+
+            self._summary.add_image(
+                tag=tag,
+                img_tensor=img,
+                global_step=step,
+                walltime=None,
+                dataformats="HWC",
+            )
 
         else:
-            Messages._error("Logger.add_image: images must be of shape (H, W) or (H, W, 3).")
-        
-    def add_images(self, tag:str, img:np.array, step:int=None, equalize:bool=False, equalize_per_image:bool=False):
+            Messages._error(
+                "Logger.add_image: images must be of shape (H, W) or (H, W, 3)."
+            )
+
+    def add_images(
+        self,
+        tag: str,
+        img: np.array,
+        step: int = None,
+        equalize: bool = False,
+        equalize_per_image: bool = False,
+    ):
         """
         Logs a set of images (e.g. receptive fields).
-       
+
         The numpy array must be of size (number, height, width) for monochrome images or (number, height, width, 3) for colored images. The values should either be integers between 0 and 255 or floats between 0 and 1. The parameter ``equalize`` forces the values to be between 0 and 1 by equalizing using the min/max values.
 
         Example:
@@ -209,28 +247,32 @@ class Logger(object):
         :param step: time index.
         :param equalize: rescales the pixels between 0 and 1 using the min and max values of the array.
         :param equalize_per_image: whether the rescaling should be using the global min/max values of the array, or per image. Has no effect if equalize of False.
- 
+
         """
         if img.ndim == 3:
             img = np.expand_dims(img, axis=3)
-        
-        if equalize:   
-            img = np.array(img).astype(np.float) 
-            if not equalize_per_image:        
-                img = (img - img.min())/(img.max() - img.min())
+
+        if equalize:
+            img = np.array(img).astype(np.float)
+            if not equalize_per_image:
+                img = (img - img.min()) / (img.max() - img.min())
             else:
                 for i in range(img.shape[0]):
-                    img[i,...] = (img[i,...] - img[i,...].min())/(img[i,...].max() - img[i,...].min())
-        
-        self._summary.add_images(tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats='NHWC')
-        
-    def add_parameters(self, params:dict, metrics:dict):
+                    img[i, ...] = (img[i, ...] - img[i, ...].min()) / (
+                        img[i, ...].max() - img[i, ...].min()
+                    )
+
+        self._summary.add_images(
+            tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats="NHWC"
+        )
+
+    def add_parameters(self, params: dict, metrics: dict):
         """
         Logs parameters of a simulation.
 
-        This should be run only once per simulation, generally at the end. 
-        This allows to compare different runs of the same network using 
-        different parameter values and study how they influence the global output metrics, 
+        This should be run only once per simulation, generally at the end.
+        This allows to compare different runs of the same network using
+        different parameter values and study how they influence the global output metrics,
         such as accuracy, error rate, reaction speed, etc.
 
         Example:
@@ -244,10 +286,10 @@ class Logger(object):
         :param params: dictionary of parameters.
         :param metrics: dictionary of metrics.
         """
-        
+
         self._summary.add_hparams(params, metrics)
 
-    def add_histogram(self, tag:str, hist: list | np.ndarray, step:int=None):
+    def add_histogram(self, tag: str, hist: list | np.ndarray, step: int = None):
         """
         Logs an histogram.
 
@@ -269,7 +311,9 @@ class Logger(object):
 
         self._summary.add_histogram(tag, hist, step)
 
-    def add_figure(self, tag:str, figure: list | np.ndarray, step:int=None, close:bool=True):
+    def add_figure(
+        self, tag: str, figure: list | np.ndarray, step: int = None, close: bool = True
+    ):
         """
         Logs a Matplotlib figure.
 
@@ -292,6 +336,7 @@ class Logger(object):
 
         import matplotlib.pyplot as plt
         import matplotlib.backends.backend_agg as plt_backend_agg
+
         canvas = plt_backend_agg.FigureCanvasAgg(figure)
         canvas.draw()
         data = np.frombuffer(canvas.buffer_rgba(), dtype=np.uint8)
@@ -301,12 +346,12 @@ class Logger(object):
         if close:
             plt.close(figure)
         self._summary.add_image(tag, image_chw, step)
-    
+
     # Resource management
     def flush(self):
         "Forces the logged data to be flushed to disk."
         self._summary.flush()
-        
+
     def close(self):
         "Closes the logger."
         self._summary.close()

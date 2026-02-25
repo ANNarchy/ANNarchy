@@ -246,35 +246,35 @@ attribute_template = {
     void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
 %(global_set)s
     }
-"""
+""",
 }
 
 attribute_acc = {
     #
     # Local attributes
     #
-    'local_get_all': """
+    "local_get_all": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable_all<%(type)s>(%(name)s);
         }
 """,
-    'local_get_row': """
+    "local_get_row": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
         }
 """,
-    'local_get_single': """
+    "local_get_single": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
         }
 """,
-    'local_set_all': """
+    "local_set_all": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_all<%(type)s>(%(name)s, value);
@@ -282,7 +282,7 @@ attribute_acc = {
             return;
         }
 """,
-    'local_set_row': """
+    "local_set_row": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
@@ -290,7 +290,7 @@ attribute_acc = {
             return;
         }
 """,
-    'local_set_single': """
+    "local_set_single": """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
@@ -301,21 +301,21 @@ attribute_acc = {
     #
     # Semiglobal attributes
     #
-    'semiglobal_get_all': """
+    "semiglobal_get_all": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_vector_variable_all<%(type)s>(%(name)s);
         }
 """,
-    'semiglobal_get_single': """
+    "semiglobal_get_single": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return get_vector_variable<%(type)s>(%(name)s, rk_post);
         }
 """,
-    'semiglobal_set_all': """
+    "semiglobal_set_all": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable_all<%(type)s>(%(name)s, value);
@@ -323,7 +323,7 @@ attribute_acc = {
             return;
         }
 """,
-    'semiglobal_set_single': """
+    "semiglobal_set_single": """
         // Semiglobal %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable<%(type)s>(%(name)s, rk_post, value);
@@ -334,21 +334,21 @@ attribute_acc = {
     #
     # Global attributes
     #
-    'global_get': """
+    "global_get": """
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(read_dirty_flag)s
             return %(name)s;
         }
 """,
-    'global_set': """
+    "global_set": """
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
             %(write_dirty_flag)s
             return;
         }
-"""
+""",
 }
 
 # Definition for the usage of C++11 STL template random
@@ -359,35 +359,35 @@ attribute_acc = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
-    'local': {
-        'decl': """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
+    "local": {
+        "decl": """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
     """,
-        'init': """
+        "init": """
         %(rd_name)s = std::vector<%(type)s>(size, 0.0);
         dist_%(rd_name)s = %(rd_init)s;
     """,
-        'update': """
+        "update": """
                 %(rd_name)s[i] = dist_%(rd_name)s(rng);
-    """
+    """,
     },
-    'global': {
-        'decl': """    %(type)s %(rd_name)s;
+    "global": {
+        "decl": """    %(type)s %(rd_name)s;
     %(template)s dist_%(rd_name)s;
     """,
-        'init': """
+        "init": """
         %(rd_name)s = 0.0;
         dist_%(rd_name)s = %(rd_init)s;
     """,
-        'update': """
+        "update": """
             %(rd_name)s = dist_%(rd_name)s(rng);
-    """
-    }
+    """,
+    },
 }
 
 single_thread_templates = {
-    'projection_header': projection_header,
-    'attr_acc': attribute_acc,
-    'accessor_template': attribute_template,
-    'rng': cpp_11_rng
+    "projection_header": projection_header,
+    "attr_acc": attribute_acc,
+    "accessor_template": attribute_template,
+    "rng": cpp_11_rng,
 }

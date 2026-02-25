@@ -27,6 +27,7 @@ BaseTemplates:
         * _PV suffix: a specialized implementation for PopulationViews
 
 """
+
 from . import LIL as LIL_SingleThread
 from . import COO as COO_SingleThread
 from . import DIA as DIA_SingleThread
@@ -47,8 +48,13 @@ __all__ = [
     "COO_SingleThread",
     "DIA_SingleThread",
     "BSR_SingleThread",
-    "CSR_SingleThread", "CSR_T_SingleThread",
-    "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread",
+    "CSR_SingleThread",
+    "CSR_T_SingleThread",
+    "ELL_SingleThread",
+    "ELLR_SingleThread",
+    "SELL_SingleThread",
     "HYB_SingleThread",
-    "Dense_SingleThread", "Dense_PV_SingleThread", "Dense_T_SingleThread"
+    "Dense_SingleThread",
+    "Dense_PV_SingleThread",
+    "Dense_T_SingleThread",
 ]

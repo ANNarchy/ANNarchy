@@ -12,6 +12,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
 
+
 class TimedArray(SpecificPopulation):
     """
     Data structure holding sequential inputs for a rate-coded network.
@@ -90,19 +91,22 @@ class TimedArray(SpecificPopulation):
     :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
 
     """
-    def __init__(self,
-                 rates:np.ndarray=None,
-                 geometry:int|tuple=None,
-                 schedule:float=0.,
-                 period:float=-1.,
-                 name:str=None,
-                 copied:bool=False,
-                 net_id:int=0,
-                 ):
 
+    def __init__(
+        self,
+        rates: np.ndarray = None,
+        geometry: int | tuple = None,
+        schedule: float = 0.0,
+        period: float = -1.0,
+        name: str = None,
+        copied: bool = False,
+        net_id: int = 0,
+    ):
         # Sanity check
         if rates is None and geometry is None:
-            Messages._error("TimedArray: either *rates* or *geometry* argument must be set.")
+            Messages._error(
+                "TimedArray: either *rates* or *geometry* argument must be set."
+            )
 
         # Geometry of the population
         if rates is not None:
@@ -110,22 +114,28 @@ class TimedArray(SpecificPopulation):
                 geometry = rates.shape[1:]
             else:
                 if geometry != rates.shape[1:]:
-                    Messages._warning("TimedArray: mismatch between *rates* and *geometry* dimensions detected.")
+                    Messages._warning(
+                        "TimedArray: mismatch between *rates* and *geometry* dimensions detected."
+                    )
 
         # Create input neuron type
         neuron = Neuron(
             parameters="",
             equations="r = 0.0",
             name="Timed Array",
-            description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(geometry, schedule, period)
+            description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(
+                geometry, schedule, period
+            ),
         )
 
         # Register Population
-        super().__init__(geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        super().__init__(
+            geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id
+        )
 
-        self.init['schedule'] = schedule
-        self.init['rates'] = rates
-        self.init['period'] = period
+        self.init["schedule"] = schedule
+        self.init["rates"] = rates
+        self.init["period"] = period
 
         if rates is not None:
             self.update(rates=rates, period=period, schedule=schedule)
@@ -141,7 +151,13 @@ class TimedArray(SpecificPopulation):
     def r(self, new_r):
         Messages._error("The value of r is defined through the '*'rates' argument.")
 
-    def update(self, rates:np.ndarray, schedule:float=None, period:float=None, reset:bool=False) -> None:
+    def update(
+        self,
+        rates: np.ndarray,
+        schedule: float = None,
+        period: float = None,
+        reset: bool = False,
+    ) -> None:
         """
         Set a new array of inputs.
 
@@ -201,9 +217,9 @@ class TimedArray(SpecificPopulation):
         if isinstance(schedule, (int, float)):
             # schedule step size must be at least one step
             if float(schedule) <= 0.0:
-                schedule = ConfigManager().get('dt', self.net_id)
+                schedule = ConfigManager().get("dt", self.net_id)
 
-            tmp = [ float(schedule*i) for i in range(rates.shape[0])]
+            tmp = [float(schedule * i) for i in range(rates.shape[0])]
             if not np.allclose(tmp, self.schedule):
                 # got a new schedule, we need to reset blocks
                 if self.initialized:
@@ -218,10 +234,14 @@ class TimedArray(SpecificPopulation):
             self.schedule = schedule
 
         if len(self.schedule) > rates.shape[0]:
-            Messages._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
+            Messages._error(
+                "TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter."
+            )
 
         if len(self.schedule) < rates.shape[0]:
-            Messages._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
+            Messages._warning(
+                "TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect."
+            )
 
         self.rates = np.array(rates)
         self.period = period
@@ -235,20 +255,33 @@ class TimedArray(SpecificPopulation):
             period=self.period,
             name=self.name,
             copied=True,
-            net_id=self.net_id if net_id is None else net_id)
+            net_id=self.net_id if net_id is None else net_id,
+        )
 
     def _generate(self):
         # calls the required _generate_[paradigm]
         super()._generate()
 
         # CUDA requires extra accessors for HtoD / DtoH - transfers
-        used_cuda = ConfigManager().get('paradigm', self.net_id) == "cuda"
-        cuda_acc = f".def_rw(\"r_host_to_device\", &PopStruct{self.id}::r_host_to_device)\n" if used_cuda else ""
-        cuda_acc += f"\t\t.def(\"host_to_device\", &PopStruct{self.id}::device_to_host)\n" if used_cuda else ""
-        cuda_acc += f"\t\t.def(\"device_to_host\", &PopStruct{self.id}::device_to_host)\n" if used_cuda else ""
+        used_cuda = ConfigManager().get("paradigm", self.net_id) == "cuda"
+        cuda_acc = (
+            f'.def_rw("r_host_to_device", &PopStruct{self.id}::r_host_to_device)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'\t\t.def("host_to_device", &PopStruct{self.id}::device_to_host)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'\t\t.def("device_to_host", &PopStruct{self.id}::device_to_host)\n'
+            if used_cuda
+            else ""
+        )
 
         # Nanobind wrapper is almost the same for all paradigms.
-        self._specific_template['wrapper'] = f"""
+        self._specific_template["wrapper"] = f"""
     // TimedArray
     nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
         // Constructor
@@ -284,16 +317,16 @@ class TimedArray(SpecificPopulation):
         """
         adjust code templates for the specific population for single thread and openMP.
         """
-        self._specific_template['declare_additional'] = """
+        self._specific_template["declare_additional"] = """
     // Custom local parameters of a TimedArray
     std::vector< int > _schedule; // List of times where new inputs should be set
     std::vector< std::vector< %(float_prec)s > > _buffer; // buffer holding the data
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['access_additional'] = """
+        self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
@@ -307,25 +340,24 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['init_additional'] = """
+        self._specific_template["init_additional"] = """
         // Initialize counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
 
-        self._specific_template['reset_additional'] ="""
+        self._specific_template["reset_additional"] = """
         _t = 0;
         _block = 0;
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-
-        self._specific_template['update_variables'] = """
+        self._specific_template["update_variables"] = """
         if(_active) {
         #ifdef _DEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
@@ -371,9 +403,9 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
-""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['size_in_bytes'] = """
+        self._specific_template["size_in_bytes"] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 
@@ -381,22 +413,22 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
     def _generate_omp(self):
         """
         adjust code templates for the specific population for single thread and openMP.
         """
-        self._specific_template['declare_additional'] = """
+        self._specific_template["declare_additional"] = """
     // Custom local parameters of a TimedArray
     std::vector< int > _schedule; // List of times where new inputs should be set
     std::vector< std::vector< %(float_prec)s > > _buffer; // buffer holding the data
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['access_additional'] = """
+        self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
@@ -410,28 +442,27 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['init_additional'] = """
+        self._specific_template["init_additional"] = """
         // Initialize counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
 
-        self._specific_template['reset_additional'] ="""
+        self._specific_template["reset_additional"] = """
         _t = 0;
         _block = 0;
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
-
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
         # HD (28th Jun. 24): contrary to the single-thread codes, where we use 'return' to escape the function
         #                    execution, OpenMP does not allow 'return'/'continue' in the execution block. Therefore,
         #                    we need to use the if-else tree.
-        self._specific_template['update_variables'] = """
+        self._specific_template["update_variables"] = """
         if(_active){
             #pragma omp single
             {
@@ -477,9 +508,9 @@ class TimedArray(SpecificPopulation):
                 _t++;
             }
         }
-""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['size_in_bytes'] = """
+        self._specific_template["size_in_bytes"] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 
@@ -487,7 +518,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
     def _generate_cuda(self):
         """
@@ -495,27 +526,27 @@ class TimedArray(SpecificPopulation):
         """
 
         # Don't allocate/free gpu_r, its just a reference to _gpu_buffer
-        self._specific_template['init_parameters_variables'] = """
+        self._specific_template["init_parameters_variables"] = """
         r = std::vector<%(float_prec)s>(size, static_cast<%(float_prec)s>(0.0));
         gpu_r = nullptr;    // will be set by update() / set_buffer()
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
-        self._specific_template['clear_container'] = ""
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+        self._specific_template["clear_container"] = ""
 
         # Disable write access to gpu_r
-        self._specific_template['host_device_transfer'] = ""
+        self._specific_template["host_device_transfer"] = ""
 
         #
         # Code for handling the buffer and schedule parameters
-        self._specific_template['declare_additional'] = """
+        self._specific_template["declare_additional"] = """
     // Custom local parameter timed array
     std::vector< int > _schedule;
     std::vector< %(float_prec)s* > _gpu_buffer;
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['access_additional'] = """
+        self._specific_template["access_additional"] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) {
     #ifdef _DEBUG
@@ -615,16 +646,16 @@ class TimedArray(SpecificPopulation):
         _period = period;
     }
     int get_period() { return _period; }
-""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
 
-        self._specific_template['init_additional'] = """
+        self._specific_template["init_additional"] = """
         // counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
 
-        self._specific_template['reset_additional'] = """
+        self._specific_template["reset_additional"] = """
         // counters
         _t = 0;
         _block = 0;
@@ -633,12 +664,12 @@ class TimedArray(SpecificPopulation):
 """
 
         # there is no GPU-side computation
-        self._specific_template['update_variable_body'] = ""
-        self._specific_template['update_variable_invoke'] = ""
-        self._specific_template['update_variable_header'] = ""
+        self._specific_template["update_variable_body"] = ""
+        self._specific_template["update_variable_invoke"] = ""
+        self._specific_template["update_variable_header"] = ""
 
         # we switch the GPU buffer which is read out in each time step
-        self._specific_template['update_variables'] = """
+        self._specific_template["update_variables"] = """
         if(_active) {
         #ifdef _DEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
@@ -688,15 +719,15 @@ class TimedArray(SpecificPopulation):
             std::cout << "]" << std::endl;
         #endif
         }
-""" % {'id': self.id}
+""" % {"id": self.id}
 
         # call the switch of CPU-buffers (host-side)
-        self._specific_template['update_variable_call'] = f"""
+        self._specific_template["update_variable_call"] = f"""
     // host side update of neurons
     pop{self.id}->update();
 """
 
-        self._specific_template['size_in_bytes'] = """
+        self._specific_template["size_in_bytes"] = """
         // r
         size_in_bytes += sizeof(std::vector<%(float_prec)s>);
         size_in_bytes += r.capacity() * sizeof(%(float_prec)s);
@@ -708,68 +739,74 @@ class TimedArray(SpecificPopulation):
         // gpu_buffer
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
     def _instantiate(self, module):
         # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
+        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
+            self.size, self.max_delay
+        )
 
     def __setattr__(self, name, value):
-        if name == 'schedule':
+        if name == "schedule":
             if self.initialized:
                 val_int = convert_ms_to_steps(np.atleast_1d(value), self.net_id)
-                self.cyInstance.set_schedule( val_int )
+                self.cyInstance.set_schedule(val_int)
             else:
-                self.init['schedule'] = value
-        elif name == 'rates':
+                self.init["schedule"] = value
+        elif name == "rates":
             if self.initialized:
                 if value is None:
-                    return # nothing to do
+                    return  # nothing to do
 
                 if len(value.shape) > 2:
                     if value.shape[1:] != self.geometry:
-                        Messages._error("TimedArray: mismatch between *rates* argument (", value.shape[1:], ") and stored geometry (", self.geometry, ").")
+                        Messages._error(
+                            "TimedArray: mismatch between *rates* argument (",
+                            value.shape[1:],
+                            ") and stored geometry (",
+                            self.geometry,
+                            ").",
+                        )
 
                     # we need to flatten the provided data
-                    flat_values = value.reshape( (value.shape[0], self.size) )
-                    self.cyInstance.set_rates( flat_values )
+                    flat_values = value.reshape((value.shape[0], self.size))
+                    self.cyInstance.set_rates(flat_values)
                 else:
-                    self.cyInstance.set_rates( value )
+                    self.cyInstance.set_rates(value)
             else:
-                self.init['rates'] = value
+                self.init["rates"] = value
         elif name == "period":
             if self.initialized:
                 self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
             else:
-                self.init['period'] = value
+                self.init["period"] = value
         else:
             Population.__setattr__(self, name, value)
 
     def __getattr__(self, name):
-        if name == 'schedule':
+        if name == "schedule":
             if self.initialized:
                 return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
             else:
-                return self.init['schedule']
-        elif name == 'rates':
+                return self.init["schedule"]
+        elif name == "rates":
             if self.initialized:
                 if len(self.geometry) > 1:
                     # unflatten the data
                     flat_values = self.cyInstance.get_rates()
-                    values = np.zeros( tuple( [len(self.schedule)] + list(self.geometry) ) )
+                    values = np.zeros(tuple([len(self.schedule)] + list(self.geometry)))
                     for x in range(len(self.schedule)):
-                        values[x] = np.reshape( flat_values[x], self.geometry)
+                        values[x] = np.reshape(flat_values[x], self.geometry)
                     return values
                 else:
                     return self.cyInstance.get_rates()
             else:
-                return self.init['rates']
-        elif name == 'period':
+                return self.init["rates"]
+        elif name == "period":
             if self.initialized:
                 return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
             else:
-                return self.init['period']
+                return self.init["period"]
         else:
             return Population.__getattribute__(self, name)
-
-

@@ -4,16 +4,14 @@
 """
 
 pooling_template_omp = {
-    'include_additional': '#include <limits>',
-
+    "include_additional": "#include <limits>",
     # Declare the connectivity matrix
-    'declare_connectivity_matrix': """
+    "declare_connectivity_matrix": """
     // connectivity data
     std::vector< std::vector<int> > pre_coords;
     """,
-
     # Accessors for the connectivity matrix
-    'access_connectivity_matrix': """
+    "access_connectivity_matrix": """
     // Accessor to connectivity data
     std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
@@ -21,20 +19,17 @@ pooling_template_omp = {
         return v;
     }
 """,
-
     # Variables for the psp code
-    'psp_prefix': """
+    "psp_prefix": """
         int rk_pre;
         %(float_prec)s sum=%(sum_default)s;
     """,
-
     # Override the monitor to avoid recording the weights
-    'monitor_class':"",
-    'monitor_export': "",
-    'monitor_wrapper': "",
-
+    "monitor_class": "",
+    "monitor_export": "",
+    "monitor_wrapper": "",
     # Clear connectivity
-    'clear': """
+    "clear": """
         // pre-coords sub-lists
         for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             it->clear();
@@ -44,14 +39,12 @@ pooling_template_omp = {
         pre_coords.clear();
         pre_coords.shrink_to_fit();
 """,
-
     # No additional variables
-    'declare_parameters_variables': "",
-    'access_parameters_variables': "",
-    'export_parameters_variables': "",
-
+    "declare_parameters_variables": "",
+    "access_parameters_variables": "",
+    "export_parameters_variables": "",
     # nanobind wrapper
-    'wrapper': """
+    "wrapper": """
     // Pooling ProjStruct%(id_proj)s
     nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
         // Constructor
@@ -71,21 +64,18 @@ pooling_template_omp = {
         .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
-
 }
 
 pooling_template_cuda = {
-    'include_additional': '#include <cfloat>\n#include "VecTransformation.hpp"',
-
+    "include_additional": '#include <cfloat>\n#include "VecTransformation.hpp"',
     # Declare the connectivity matrix
-    'declare_connectivity_matrix': """
+    "declare_connectivity_matrix": """
     std::vector< std::vector<int> > pre_coords;
     int *gpu_pre_coords = nullptr;
     bool pre_coords_dirty = false;
     """,
-
     # Accessors for the connectivity matrix
-    'access_connectivity_matrix': """
+    "access_connectivity_matrix": """
     // Accessor to connectivity data
     std::vector<int> get_post_ranks() {
         std::vector<int> v(pre_coords.size());
@@ -93,10 +83,9 @@ pooling_template_cuda = {
         return v;
     }
 """,
-    'init_connectivity_matrix': "",
-
+    "init_connectivity_matrix": "",
     # nanobind wrapper
-    'wrapper': """
+    "wrapper": """
     // Pooling ProjStruct%(id_proj)s
     nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
         // Constructor
@@ -119,11 +108,9 @@ pooling_template_cuda = {
         .def("size_in_bytes", &ProjStruct%(id_proj)s::size_in_bytes)
         .def("clear", &ProjStruct%(id_proj)s::clear);
 """,
-
-
     # This template concerns only the connectivity where
     # no read-back is required
-    'host_device_transfer': """
+    "host_device_transfer": """
         if (pre_coords_dirty) {
         #ifdef _DEBUG
             std::cout << "ProjStruct%(id_proj)s (pooling): update device coords." << std::endl;
@@ -152,15 +139,13 @@ pooling_template_cuda = {
             pre_coords_dirty = false;
         }
 """,
-    'device_host_transfer': "",
-
+    "device_host_transfer": "",
     # Override the monitor to avoid recording the weights
-    'monitor_class':"",
-    'monitor_export': "",
-    'monitor_wrapper': "",
-
+    "monitor_class": "",
+    "monitor_export": "",
+    "monitor_wrapper": "",
     # Memory management
-    'clear': """
+    "clear": """
     // pre-coords sub-lists (host-side)
     for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
         it->clear();
@@ -175,20 +160,20 @@ pooling_template_cuda = {
         cudaFree(gpu_pre_coords);
         gpu_pre_coords = nullptr;
     }
-"""
+""",
 }
 
 cuda_op_code = {
-    'min': """if ( local_r < local_res ) local_res = local_r;""",
-    'max': """if ( local_r > local_res ) local_res = local_r;""",
-    'mean': "local_res += local_r;"
+    "min": """if ( local_r < local_res ) local_res = local_r;""",
+    "max": """if ( local_r > local_res ) local_res = local_r;""",
+    "mean": "local_res += local_r;",
 }
 
 #
 # For really small kernels it turns out to be beneficial
 # to perform the operation with a single thread per block.
 cuda_pooling_code_2d_small_extent = {
-    'psp_body': """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
+    "psp_body": """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -230,16 +215,16 @@ cuda_pooling_code_2d_small_extent = {
     }
 };
 """,
-    'psp_invoke': """
+    "psp_invoke": """
 void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_centers, const int* centers, const %(float_prec)s* %(pre_var)s) {
     cu_pooling_proj%(id_proj)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
         psp, num_centers, centers, %(pre_var_invoke)s
     );
 }
 """,
-    'psp_header': """void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_centers, const int* centers, const %(float_prec)s* %(pre_var)s);
+    "psp_header": """void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_centers, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
-    'psp_call': """
+    "psp_call": """
     int coords_per_block = floor(32.0 / static_cast<%(float_prec)s>(%(col_extent)s));
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
@@ -248,8 +233,8 @@ void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
-    'reduce_code': {
-        'max': """
+    "reduce_code": {
+        "max": """
     if ( tid %% %(col_extent)s == 0 ) {
         for(int y = 1; y < %(col_extent)s; y++)
             sdata[tid] = max(sdata[tid], sdata[tid+y]);
@@ -257,14 +242,14 @@ void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_
         psp[coord_idx] = sdata[tid];
     }
 """,
-    }
+    },
 }
 
 #
 # Pooling implementation where a warp handles a row
 # at once.
 cuda_pooling_code_2d = {
-    'psp_body': """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
+    "psp_body": """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -310,18 +295,18 @@ cuda_pooling_code_2d = {
     }
 }
 """,
-    'psp_invoke': """
+    "psp_invoke": """
 void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int shared_size, const int* centers, const %(float_prec)s* %(pre_var)s) {
     cu_pooling_proj%(id_proj)s<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         psp, shared_size, centers, r
     );
 }
 """,
-    'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int shared_size, const int* centers, const %(float_prec)s* %(pre_var)s);
+    "psp_header": """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int shared_size, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     # Technically, we could use more than warp-size threads.
     # But as we often have small extents it is not required (HD: 27. Nov. 2020)
-    'psp_call': """
+    "psp_call": """
     auto tpb = 32;
     auto shared_size = min(32, tpb);
     auto smem_size = 2 * shared_size * sizeof(%(float_prec)s);
@@ -329,8 +314,8 @@ void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int share
 """,
     # The reduction stage is responsible to fuse the
     # several local results within the warp to the final result
-    'reduce_code': {
-        'min': """if (tid < 16)
+    "reduce_code": {
+        "min": """if (tid < 16)
 {
     volatile %(float_prec)s* smem = sdata;
 
@@ -348,7 +333,7 @@ if (tid == 0)
     psp[bIdx] = sdata[0];
 }
 """,
-        'max': """if (tid < 16)
+        "max": """if (tid < 16)
 {
     volatile %(float_prec)s* smem = sdata;
 
@@ -366,7 +351,7 @@ if (tid == 0)
     psp[bIdx] = sdata[0];
 }
 """,
-        'mean': """if (tid < 16)
+        "mean": """if (tid < 16)
 {
     volatile %(float_prec)s* smem = sdata;
 
@@ -383,12 +368,12 @@ if (tid == 0)
 {
     psp[bIdx] = sdata[0] / static_cast<%(float_prec)s>(%(row_extent)s * %(col_extent)s);
 }
-"""
-    }
+""",
+    },
 }
 
 cuda_pooling_code_3d = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
+    "psp_body": """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
 
     int x_coords = centers[3*bIdx];
@@ -423,13 +408,13 @@ cuda_pooling_code_3d = {
     %(final_result)s
 }
 """,
-    'psp_invoke': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s) {
+    "psp_invoke": """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s) {
     pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>(psp, centers, %(pre_var)s);
 }
 """,
-    'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s);
+    "psp_header": """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
-    'psp_call': """
+    "psp_call": """
     if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
         pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s->stream), pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 
@@ -440,5 +425,5 @@ cuda_pooling_code_3d = {
         }
     #endif
     }
-"""
+""",
 }

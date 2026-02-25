@@ -4,70 +4,64 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 #############################################
@@ -75,8 +69,8 @@ attribute_cpp_delete = {
 #############################################
 delay = {
     # A single value for all synapses
-    'uniform': {
-        'declare': """
+    "uniform": {
+        "declare": """
     // Uniform delay
     int delay ;
     
@@ -84,13 +78,13 @@ delay = {
     int get_dendrite_delay(int idx) { return delay; }
     void set_delay(int delay) { this->delay = delay; }
 """,
-    'init': """
+        "init": """
         delay = delays[0][0];
 """,
     },
     # An individual value for each synapse
-    'nonuniform_rate_coded': {
-        'declare': """
+    "nonuniform_rate_coded": {
+        "declare": """
     std::vector<int> delay;
     int max_delay;
 
@@ -98,29 +92,29 @@ delay = {
     void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
 """,
-        'init': """
+        "init": """
     delay = init_variable<int>(1);
     update_variable_all<int>(delay, delays);
 """,
-        'reset': ""
+        "reset": "",
     },
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': {
-        'declare': """
+    "nonuniform_spiking": {
+        "declare": """
     std::vector<int> delay;
     int max_delay;
     int idx_delay;
     std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
-        'init': """
+        "init": """
     delay = init_variable<int>(1);
     update_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = %(pre_prefix)smax_delay;
 """,
-        'reset': """
+        "reset": """
         while(!_delayed_spikes.empty()) {
             auto elem = _delayed_spikes.back();
             elem.clear();
@@ -130,15 +124,15 @@ delay = {
         idx_delay = 0;
         max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
-"""
-    }
+""",
+    },
 }
 
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
 ellr_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
@@ -160,8 +154,8 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 # For details on single_weight: see lil_summation_operation_avx_single_weight
 ###############################################################################
 continuous_transmission_avx_single_weight = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX__
         if (_transmission && %(post_prefix)s_active) {
             %(size_type)s _s, _stop;
@@ -213,8 +207,8 @@ continuous_transmission_avx_single_weight = {
 # Optimized kernel for default rate-coded continuous transmission using AVX
 ###############################################################################
 continuous_transmission_avx = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX__
         if (_transmission && %(post_prefix)s_active) {
             %(size_type)s _s, _stop;
@@ -263,7 +257,7 @@ continuous_transmission_avx = {
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
 """,
-        'float': """
+        "float": """
     #ifdef __AVX__
         if (_transmission && %(post_prefix)s_active) {
             %(size_type)s _s, _stop;
@@ -313,13 +307,13 @@ continuous_transmission_avx = {
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
-"""
+""",
     }
 }
 
 continuous_transmission_avx512 = {
-    'sum' : {
-        'double': """
+    "sum": {
+        "double": """
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s* __restrict__ _idx = col_idx_.data();
@@ -371,7 +365,7 @@ continuous_transmission_avx512 = {
 # Rate-coded synaptic plasticity
 ###############################################################
 update_variables = {
-    'local': """
+    "local": """
 // Check periodicity
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
@@ -396,30 +390,27 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': delay,
-    
-    'rate_coded_sum': ellr_summation_operation,
-    'vectorized_default_psp': {
-        'avx': {
-            'single_w': continuous_transmission_avx_single_weight,
-            'multi_w': continuous_transmission_avx
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "delay": delay,
+    "rate_coded_sum": ellr_summation_operation,
+    "vectorized_default_psp": {
+        "avx": {
+            "single_w": continuous_transmission_avx_single_weight,
+            "multi_w": continuous_transmission_avx,
         },
-        'avx512': {
-            'multi_w': continuous_transmission_avx512
-        }
+        "avx512": {"multi_w": continuous_transmission_avx512},
     },
-    'update_variables': update_variables
+    "update_variables": update_variables,
 }
 
 conn_ids = {
-    'local_index': '[j]',
-    'semiglobal_index': '[i]',
-    'global_index': '',
-    'post_index': '[rk_post]',
-    'pre_index': '[rk_pre]',
-    'delay_u' : '[delay-1]' # uniform delay
+    "local_index": "[j]",
+    "semiglobal_index": "[i]",
+    "global_index": "",
+    "post_index": "[rk_post]",
+    "pre_index": "[rk_pre]",
+    "delay_u": "[delay-1]",  # uniform delay
 }

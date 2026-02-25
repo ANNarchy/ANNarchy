@@ -6,6 +6,7 @@
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 
+
 class InputArray(SpecificPopulation):
     """
     Population holding static inputs for a rate-coded network.
@@ -33,36 +34,44 @@ class InputArray(SpecificPopulation):
     :param geometry: shape of the population, either an integer or a tuple.
     :param name: optional name of the population.
     """
-    def __init__(self, geometry: int|tuple=None, name:str=None, copied:bool=False, net_id=0):
 
+    def __init__(
+        self,
+        geometry: int | tuple = None,
+        name: str = None,
+        copied: bool = False,
+        net_id=0,
+    ):
         # Does nothing except declaring r as a variable to allow recording.
         neuron = Neuron(
             parameters="",
             equations="r=r",
             name="Input Array",
-            description="Input array source."
+            description="Input array source.",
         )
 
         # Register Population
-        super().__init__(geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
+        super().__init__(
+            geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id
+        )
 
     def _generate_st(self):
         """
         Adjust code templates for the specific population for single thread and openMP.
         """
-        self._specific_template['update_variables'] = ""
+        self._specific_template["update_variables"] = ""
 
     def _generate_omp(self):
         """
         Adjust code templates for the specific population for single thread and openMP.
         """
-        self._specific_template['update_variables'] = ""
+        self._specific_template["update_variables"] = ""
 
     def _generate_cuda(self):
         """
         Code generation if the CUDA paradigm is set.
         """
-        self._specific_template['update_variable_body'] = ""
-        self._specific_template['update_variable_invoke'] = ""
-        self._specific_template['update_variable_header'] = ""
-        self._specific_template['update_variable_call'] = ""
+        self._specific_template["update_variable_body"] = ""
+        self._specific_template["update_variable_invoke"] = ""
+        self._specific_template["update_variable_header"] = ""
+        self._specific_template["update_variable_call"] = ""

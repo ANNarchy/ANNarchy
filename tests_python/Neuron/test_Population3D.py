@@ -4,6 +4,7 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
@@ -11,15 +12,10 @@ from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron, Uniform
 
 # neuron defintions common used for test cases
-neuron = Neuron(
-    parameters = """tau = 10""",
-    equations = """r += t/tau"""
-)
+neuron = Neuron(parameters="""tau = 10""", equations="""r += t/tau""")
 
-neuron2 = Neuron(
-    parameters = "tau = 10: population",
-    equations = "r += t/tau : init = 1.0"
-)
+neuron2 = Neuron(parameters="tau = 10: population", equations="r += t/tau : init = 1.0")
+
 
 class test_Population3D(unittest.TestCase):
     """
@@ -30,6 +26,7 @@ class test_Population3D(unittest.TestCase):
         * coordinate transformations
 
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -64,7 +61,9 @@ class test_Population3D(unittest.TestCase):
         """
         self.assertSequenceEqual(self._population_1.coordinates_from_rank(2), (0, 0, 2))
         self.assertSequenceEqual(self._population_1.coordinates_from_rank(6), (0, 2, 0))
-        self.assertSequenceEqual(self._population_1.coordinates_from_rank(18), (2, 0, 0))
+        self.assertSequenceEqual(
+            self._population_1.coordinates_from_rank(18), (2, 0, 0)
+        )
 
     def test_rank_from_coordinates(self):
         """
@@ -84,10 +83,14 @@ class test_Population3D(unittest.TestCase):
         directly access.  As population has the size 27 there should be 27
         entries with value 10.
         """
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+            ],
+        )
 
     def test_get_tau2(self):
         """
@@ -95,10 +98,14 @@ class test_Population3D(unittest.TestCase):
         method.  As population has the size 27 there should be 27 entries with
         value 10.
         """
-        numpy.testing.assert_allclose(self._population_1.get('tau'),
-                        [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.get("tau"),
+            [
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+            ],
+        )
 
     def test_get_neuron_tau(self):
         """
@@ -112,20 +119,28 @@ class test_Population3D(unittest.TestCase):
         Assigned a new value, all instances will change.
         """
         self._population_1.tau = 5.0
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
-                         [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
-                         [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+            ],
+        )
 
     def test_set_tau_2(self):
         """
         Assigned a new value, all instances will change.
         """
-        self._population_1.set({'tau' : 5.0})
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
-                         [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
-                         [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]]])
+        self._population_1.set({"tau": 5.0})
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+            ],
+        )
 
     def test_set_tau_popview(self):
         """
@@ -133,10 +148,14 @@ class test_Population3D(unittest.TestCase):
         One can use *PopulationView* to update more specific.
         """
         self._population_1[0:3, 1, 1:3].tau = 5.0
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]],
-                         [[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]],
-                         [[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[10.0, 10.0, 10.0], [10.0, 5.0, 5.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 5.0, 5.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 5.0, 5.0], [10.0, 10.0, 10.0]],
+            ],
+        )
 
     def test_get_tau_population(self):
         """
@@ -149,9 +168,15 @@ class test_Population3D(unittest.TestCase):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(
+            self._population_1.attributes, ["tau", "r"], "failed listing attributes"
+        )
+        self.assertEqual(
+            self._population_1.parameters, ["tau"], "failed listing parameters"
+        )
+        self.assertEqual(
+            self._population_1.variables, ["r"], "failed listing variables"
+        )
 
     #
     # Variables
@@ -161,19 +186,27 @@ class test_Population3D(unittest.TestCase):
         By default all variables are initialized with zero, which is tested
         here by retrieving *r* directly.
         """
-        numpy.testing.assert_allclose(self._population_1.r,
-                        [[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                         [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                         [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.r,
+            [
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            ],
+        )
 
     def test_get_r2(self):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        numpy.testing.assert_allclose(self._population_1.get('r'),
-                        [[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                         [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                         [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.get("r"),
+            [
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            ],
+        )
 
     def test_get_neuron_r(self):
         """
@@ -187,31 +220,43 @@ class test_Population3D(unittest.TestCase):
         By default all variables are initialized with zero, we now modified
         this with init = 1.0 and test it.
         """
-        numpy.testing.assert_allclose(self._population_2.r,
-                        [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
+        numpy.testing.assert_allclose(
+            self._population_2.r,
+            [
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+            ],
+        )
 
     def test_set_r(self):
         """
         Test the setting of the variable *r* by direct access.
         """
         self._population_1.r = 1.0
-        numpy.testing.assert_allclose(self._population_1.r,
-                        [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.r,
+            [
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+            ],
+        )
 
     def test_set_r_2(self):
         """
         Here we set only a change the variable of a selected field of neurons.
         The rest should stay the same.
         """
-        self._population_1[0:3, 1, 1:3].r=2.0
-        numpy.testing.assert_allclose(self._population_1.r,
-                        [[[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]],
-                         [[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]],
-                         [[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]]])
+        self._population_1[0:3, 1, 1:3].r = 2.0
+        numpy.testing.assert_allclose(
+            self._population_1.r,
+            [
+                [[0.0, 0.0, 0.0], [0.0, 2.0, 2.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 2.0, 2.0], [0.0, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 2.0, 2.0], [0.0, 0.0, 0.0]],
+            ],
+        )
 
     def test_set_r_uniform(self):
         """
@@ -219,21 +264,28 @@ class test_Population3D(unittest.TestCase):
         method assigns a random value (within a chosen interval) to the
         variable of each neuron.
         """
-        self._population_1.r=Uniform(0.0, 1.0).get_values(27)
-        self.assertTrue(any(self._population_1[0:3, 0:3, 0:3].r >= 0.0) and all(self._population_1[0:3, 0:3, 0:3].r <= 1.0))
+        self._population_1.r = Uniform(0.0, 1.0).get_values(27)
+        self.assertTrue(
+            any(self._population_1[0:3, 0:3, 0:3].r >= 0.0)
+            and all(self._population_1[0:3, 0:3, 0:3].r <= 1.0)
+        )
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self._population_1.set({'r': 1.0})
-        numpy.testing.assert_allclose(self._population_1.r,
-                        [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
-                         [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
+        self._population_1.set({"r": 1.0})
+        numpy.testing.assert_allclose(
+            self._population_1.r,
+            [
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+                [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+            ],
+        )
 
     #
-    #Reset-Test
+    # Reset-Test
     #
     def test_reset(self):
         """
@@ -241,13 +293,21 @@ class test_Population3D(unittest.TestCase):
         *setUp()* function.
         """
         self._population_1.tau = 5.0
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]],
-                         [[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]],
-                         [[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+                [[5.0, 5.0, 5.0], [5.0, 5.0, 5.0], [5.0, 5.0, 5.0]],
+            ],
+        )
 
         self._network.reset()
-        numpy.testing.assert_allclose(self._population_1.tau,
-                        [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
-                         [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
+        numpy.testing.assert_allclose(
+            self._population_1.tau,
+            [
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+                [[10.0, 10.0, 10.0], [10.0, 10.0, 10.0], [10.0, 10.0, 10.0]],
+            ],
+        )

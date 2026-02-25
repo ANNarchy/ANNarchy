@@ -4,81 +4,75 @@
 """
 
 attribute_decl = {
-    'local':
-"""
+    "local": """
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s ;
 """,
-    'global':
-"""
+    "global": """
     // Global %(attr_type)s %(name)s
     %(type)s  %(name)s ;
-"""
+""",
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    "local": """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable< %(type)s >(%(init)s);
 """,
-    'semiglobal':
-"""
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable< %(type)s >(%(init)s);
 """,
-    'global':
-"""
+    "global": """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
-"""
+""",
 }
 
 attribute_cpp_size = {
-    'local': """
+    "local": """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
 """,
-    'semiglobal': """
+    "semiglobal": """
         // Semiglobal %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global': """
+    "global": """
         // Global
         size_in_bytes += sizeof(%(ctype)s);
-"""
+""",
 }
 
 attribute_cpp_delete = {
-    'local': """
+    "local": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'semiglobal': """
+    "semiglobal": """
         // %(name)s
         %(name)s.clear();
         %(name)s.shrink_to_fit();
 """,
-    'global': ""
+    "global": "",
 }
 
 delay = {
     # A single value for all synapses
-    'uniform': None,
+    "uniform": None,
     # An individual value for each synapse
-    'nonuniform_rate_coded': None,
+    "nonuniform_rate_coded": None,
     # An individual value for each synapse and a
     # buffer for spike events
-    'nonuniform_spiking': {
-        'declare': """
+    "nonuniform_spiking": {
+        "declare": """
     std::vector<int> delay;
     int max_delay;
     int idx_delay;
@@ -91,14 +85,14 @@ delay = {
     int get_max_delay() { return max_delay; }
     void set_max_delay(int max_delay) { this->max_delay = max_delay; }
 """,
-        'init': """
+        "init": """
     delay = init_matrix_variable<int>(1);
     update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = %(pre_prefix)smax_delay;
 """,
-        'reset': """
+        "reset": """
         while(!_delayed_spikes.empty()) {
             auto elem = _delayed_spikes.back();
             elem.clear();
@@ -108,25 +102,25 @@ delay = {
         idx_delay = 0;
         max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
-"""
-    }    
+""",
+    },
 }
 
 event_driven = {
-    'declare': """
+    "declare": """
     std::vector<long> _last_event;
 """,
-    'cpp_init': """
+    "cpp_init": """
         // Event-driven
         _last_event = init_matrix_variable<long>(-10000);
 """,
-    'pyx_struct': """
+    "pyx_struct": """
         vector[vector[long]] _last_event
 """,
 }
 
 csr_summation_operation = {
-    'sum' : """
+    "sum": """
 %(pre_copy)s
 
 %(omp_code)s
@@ -141,7 +135,7 @@ for(int i = 0; i < _col_ptr.size()-1; i++) {
 }
 
 update_variables = {
-    'local': """
+    "local": """
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
 
@@ -163,7 +157,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+    "global": """
 if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
 
@@ -174,7 +168,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     %(semiglobal)s
     }
 }
-"""
+""",
 }
 
 spiking_summation_fixed_delay_inner_loop = """// Event-based summation
@@ -226,7 +220,7 @@ if (_transmission && %(post_prefix)s_active) {
 } // active
 """
 
-spiking_post_event =  """
+spiking_post_event = """
 if(_transmission && %(post_prefix)s_active){
     #pragma omp for
     for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
@@ -248,28 +242,27 @@ if(_transmission && %(post_prefix)s_active){
 
 conn_templates = {
     # accessors
-    'delay': delay,
-    'attribute_decl': attribute_decl,
-    'attribute_cpp_init': attribute_cpp_init,
-    'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
-    'event_driven': event_driven,
-
-    #operations
-    'rate_coded_sum': csr_summation_operation,
-    'spiking_sum_fixed_delay': {
-        'inner_loop': spiking_summation_fixed_delay_inner_loop,
-        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    "delay": delay,
+    "attribute_decl": attribute_decl,
+    "attribute_cpp_init": attribute_cpp_init,
+    "attribute_cpp_size": attribute_cpp_size,
+    "attribute_cpp_delete": attribute_cpp_delete,
+    "event_driven": event_driven,
+    # operations
+    "rate_coded_sum": csr_summation_operation,
+    "spiking_sum_fixed_delay": {
+        "inner_loop": spiking_summation_fixed_delay_inner_loop,
+        "outer_loop": spiking_summation_fixed_delay_outer_loop,
     },
-    'spiking_sum_variable_delay': None,
-    'update_variables': update_variables,
-    'post_event': spiking_post_event
+    "spiking_sum_variable_delay": None,
+    "update_variables": update_variables,
+    "post_event": spiking_post_event,
 }
 
 conn_ids = {
-    'local_index': '[inv_idx_[j]]',
-    'semiglobal_index': '[rk_post]',
-    'global_index': '',
-    'post_index': '[rk_post]',
-    'pre_index': '[row_idx_[j]]',
+    "local_index": "[inv_idx_[j]]",
+    "semiglobal_index": "[rk_post]",
+    "global_index": "",
+    "post_index": "[rk_post]",
+    "pre_index": "[row_idx_[j]]",
 }

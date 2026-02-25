@@ -8,7 +8,8 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
-class Synapse :
+
+class Synapse:
     """
     Base class to define a synapse model.
 
@@ -65,24 +66,24 @@ class Synapse :
     """
 
     # Default name and description for reporting
-    _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
+    _default_names = {"rate": "Rate-coded synapse", "spike": "Spiking synapse"}
 
-    def __init__(self,
-                 parameters:str|dict="",
-                 equations:str|list="",
-                 psp:str=None,
-                 operation:str='sum',
-                 pre_spike:str|list=None,
-                 post_spike:str|list=None,
-                 pre_axon_spike:str=None,
-                 functions:str=None,
-                 pruning:str=None,
-                 creating:str=None,
-                 name:str=None,
-                 description:str=None,
-                 extra_values:dict={} ):
-
-
+    def __init__(
+        self,
+        parameters: str | dict = "",
+        equations: str | list = "",
+        psp: str = None,
+        operation: str = "sum",
+        pre_spike: str | list = None,
+        post_spike: str | list = None,
+        pre_axon_spike: str = None,
+        functions: str = None,
+        pruning: str = None,
+        creating: str = None,
+        name: str = None,
+        description: str = None,
+        extra_values: dict = {},
+    ):
         # Store the parameters and equations
         self.parameters = parameters
         self.equations = equations
@@ -97,27 +98,32 @@ class Synapse :
         self.creating = creating
 
         # Type of the synapse TODO: smarter
-        self.type = 'spike' if pre_spike else 'rate'
+        self.type = "spike" if pre_spike else "rate"
 
         # Check the operation
-        if self.type == 'spike' and self.operation != 'sum':
-            Messages._error('Spiking synapses can only perform a sum of presynaptic potentials.')
+        if self.type == "spike" and self.operation != "sum":
+            Messages._error(
+                "Spiking synapses can only perform a sum of presynaptic potentials."
+            )
 
-        if not self.operation in ['sum', 'min', 'max', 'mean']:
-            Messages._error('The only operations permitted are: sum (default), min, max, mean.')
+        if not self.operation in ["sum", "min", "max", "mean"]:
+            Messages._error(
+                "The only operations permitted are: sum (default), min, max, mean."
+            )
 
         # Sanity check
         if self.pre_axon_spike and self.post_spike:
-            Messages._error("The usage of axonal spike events is currently not allowed for plastic connections.")
-
+            Messages._error(
+                "The usage of axonal spike events is currently not allowed for plastic connections."
+            )
 
         # Description
         self.description = None
 
         # Reporting
-        if not hasattr(self, '_instantiated') : # User-defined
+        if not hasattr(self, "_instantiated"):  # User-defined
             GlobalObjectManager().add_synapse_type(synapse=self)
-        elif len(self._instantiated) == 0: # First instantiation of the class
+        elif len(self._instantiated) == 0:  # First instantiation of the class
             GlobalObjectManager().add_synapse_type(synapse=self)
         self._rk_synapses_type = GlobalObjectManager().num_synapse_types()
 
@@ -129,7 +135,7 @@ class Synapse :
         if description:
             self.short_description = description
         else:
-            if self.type == 'spike':
+            if self.type == "spike":
                 self.short_description = "User-defined spiking synapse."
             else:
                 self.short_description = "User-defined rate-coded synapse."
@@ -140,38 +146,58 @@ class Synapse :
             self.description = analyse_synapse(self, net_id)
 
     def __add__(self, synapse):
-        Messages._error('adding synapse models is not implemented yet.')
+        Messages._error("adding synapse models is not implemented yet.")
 
-        #self._variables.update(synapse.variables)
+        # self._variables.update(synapse.variables)
 
     def __repr__(self):
-        if self.type == 'rate':
-            text= """Rate-coded synapse.
+        if self.type == "rate":
+            text = (
+                """Rate-coded synapse.
 
 Parameters:
-""" + str(self.parameters) + """
+"""
+                + str(self.parameters)
+                + """
 Equations of the variables:
-""" + str(self.equations) + """
+"""
+                + str(self.equations)
+                + """
 
-""" + """
+"""
+                + """
 Synaptic transmission (psp):
 
-""" + "\tw*pre.r" if self.psp == None else str(self.psp)
+"""
+                + "\tw*pre.r"
+                if self.psp == None
+                else str(self.psp)
+            )
 
         else:
-            text= """Spiking synapse.
+            text = (
+                """Spiking synapse.
 
 Parameters:
-""" + str(self.parameters) + """
+"""
+                + str(self.parameters)
+                + """
 Equations of the variables:
-""" + str(self.equations) + """
+"""
+                + str(self.equations)
+                + """
 pre-synaptic spike:
-""" + str(self.pre_spike) + """
+"""
+                + str(self.pre_spike)
+                + """
 post-synaptic spike:
-""" + str(self.post_spike)
+"""
+                + str(self.post_spike)
+            )
 
         return text
 
     def __str__(self):
         import pprint
-        return pprint.pformat( self, depth=4 ) #TODO
+
+        return pprint.pformat(self, depth=4)  # TODO

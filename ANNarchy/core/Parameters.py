@@ -8,6 +8,7 @@ from ANNarchy.core.Random import RandomDistribution
 
 # Parameters
 
+
 @dataclass
 class Parameter:
     """
@@ -43,8 +44,8 @@ class Parameter:
     """
 
     value: float | int | bool | RandomDistribution
-    locality: str = 'local'
-    type: str = 'float'
+    locality: str = "local"
+    type: str = "float"
 
 
 # Variables
@@ -79,10 +80,10 @@ class Variable:
     min: float = None
     max: float = None
     method: str = None
-    locality: str = 'local'
-    type: str = 'float'
+    locality: str = "local"
+    type: str = "float"
 
-    def _to_string(self, object_type:str) -> str:
+    def _to_string(self, object_type: str) -> str:
         "Returns a one-liner string with the flags. object_type is either 'neuron' or 'synapse'. to decide between population and projection"
 
         representation = self.equation
@@ -92,7 +93,9 @@ class Variable:
         flags = []
 
         if self.init is not None:
-            if not has_flag: has_flag = True ; representation += " : "
+            if not has_flag:
+                has_flag = True
+                representation += " : "
             if isinstance(self.init, (RandomDistribution,)):
                 init = repr(self.init)
             else:
@@ -100,33 +103,43 @@ class Variable:
             flags.append(f"init={init}")
 
         if self.min is not None:
-            if not has_flag: has_flag = True ; representation += " : "
+            if not has_flag:
+                has_flag = True
+                representation += " : "
             flags.append(f"min={self.min}")
 
         if self.max is not None:
-            if not has_flag: has_flag = True ; representation += " : "
+            if not has_flag:
+                has_flag = True
+                representation += " : "
             flags.append(f"max={self.max}")
 
         if self.method is not None:
-            if not has_flag: has_flag = True ; representation += " : "
+            if not has_flag:
+                has_flag = True
+                representation += " : "
             flags.append(f"{self.method}")
 
-        if self.type != 'float':
-            if not has_flag: has_flag = True ; representation += " : "
+        if self.type != "float":
+            if not has_flag:
+                has_flag = True
+                representation += " : "
             flags.append(f"{self.type}")
 
-        if self.locality != 'local':
-            if not has_flag: has_flag = True ; representation += " : "
-            if object_type == 'neuron':
-                val = 'population' # 'global' and 'population' would work
-            elif object_type == 'synapse':
-                if self.locality in ['global', 'projection']: # both are OK
-                    val = 'projection'
-                else: val = 'postsynaptic'
+        if self.locality != "local":
+            if not has_flag:
+                has_flag = True
+                representation += " : "
+            if object_type == "neuron":
+                val = "population"  # 'global' and 'population' would work
+            elif object_type == "synapse":
+                if self.locality in ["global", "projection"]:  # both are OK
+                    val = "projection"
+                else:
+                    val = "postsynaptic"
             flags.append(f"{val}")
 
-
-        return representation + ', '.join(flags)
+        return representation + ", ".join(flags)
 
 
 # Structural plasticity
@@ -153,10 +166,12 @@ class Creating:
     :param w: weight when the synapse is created.
     :param d: delay when the synapse is created.
     """
+
     equation: str
     proba: float = 1.0
     w: float = 0.0
     d: float = None
+
 
 @dataclass
 class Pruning:
@@ -182,5 +197,6 @@ class Pruning:
     :param proba: probability of pruning of the synapse.
 
     """
+
     equation: str
     proba: float = 1.0

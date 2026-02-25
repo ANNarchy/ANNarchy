@@ -62,8 +62,8 @@ protected:
 %(record_classes)s
 """
 
-recording_spike_tpl= {
-    'struct': """
+recording_spike_tpl = {
+    "struct": """
     // Local variable %(name)s
     std::map<int, std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ;
@@ -78,7 +78,7 @@ recording_spike_tpl= {
         //%(name)s.clear();
     }
 """,
-    'init' : """
+    "init": """
         this->%(name)s = std::map<int,  std::vector< %(type)s > >();
         if(!this->partial){
             for(int i=0; i<pop%(id)s->size; i++) {
@@ -92,8 +92,8 @@ recording_spike_tpl= {
         }
         this->record_%(name)s = false;
 """,
-    'record' : {
-        'openmp' : """
+    "record": {
+        "openmp": """
         if(this->record_%(name)s){
             for(int i=0; i<pop%(id)s->%(rec_target)s.size(); i++){
                 if(!this->partial){
@@ -106,7 +106,7 @@ recording_spike_tpl= {
                 }
             }
         } """,
-        'cuda' : """if(this->record_spike){
+        "cuda": """if(this->record_spike){
             for(int i=0; i<pop%(id)s->spike_count; i++){
                 if(!this->partial){
                     this->spike[pop%(id)s->spiked[i]].push_back(t);
@@ -117,10 +117,10 @@ recording_spike_tpl= {
                     }
                 }
             }
-        } """
+        } """,
     },
-    'size_in_bytes': {
-        'openmp' : """
+    "size_in_bytes": {
+        "openmp": """
 // record spike events
 size_in_bytes += sizeof(%(name)s);
 for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
@@ -128,12 +128,12 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
     size_in_bytes += sizeof(%(type)s) * (it->second).capacity(); // value
 }
         """,
-        'cuda': """
+        "cuda": """
 // TODO: record spike events
-        """
+        """,
     },
-    'clear': {
-        'openmp' : """
+    "clear": {
+        "openmp": """
     void clear_spike() {
         for (auto it = this->spike.begin(); it != this->spike.end(); it++) {
             it->second.clear();
@@ -142,8 +142,8 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
         this->spike.clear();
     }
         """,
-        'cuda': """
+        "cuda": """
 // TODO: clear spike events
-        """
-    }
+        """,
+    },
 }

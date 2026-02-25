@@ -4,16 +4,19 @@ This file is part of ANNarchy.
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+
 import unittest
 import numpy
 
 from conftest import TARGET_FOLDER
 from ANNarchy import Network, Neuron
 
+
 class test_NeuronUpdate(unittest.TestCase):
     """
     Test the correct evaluation of local equation updates.
     """
+
     @classmethod
     def setUpClass(cls):
         """
@@ -39,7 +42,7 @@ class test_NeuronUpdate(unittest.TestCase):
             parameters="glob_par = 1.0: population",
             equations="""
                 r = t + glob_par
-            """
+            """,
         )
 
         bound_eq = Neuron(
@@ -49,7 +52,7 @@ class test_NeuronUpdate(unittest.TestCase):
             """,
             equations="""
                 r = t : min=min_r, max=max_r
-            """
+            """,
         )
 
         cls._network = Network()
@@ -58,14 +61,14 @@ class test_NeuronUpdate(unittest.TestCase):
         cls._global_attr = cls._network.create(3, global_eq)
         cls._multi_attr = cls._network.create(3, mixed_eq)
         cls._bound_attr = cls._network.create(3, bound_eq)
-        
-        cls.net_m = cls._network.monitor(cls._bound_attr, 'r')
+
+        cls.net_m = cls._network.monitor(cls._bound_attr, "r")
 
         cls._network.compile(silent=True, directory=TARGET_FOLDER)
 
     @classmethod
     def tearDownClass(cls):
-        """ Delete class instance. """
+        """Delete class instance."""
         del cls._network
 
     def setUp(self):
@@ -73,7 +76,7 @@ class test_NeuronUpdate(unittest.TestCase):
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self._network.reset() # network reset
+        self._network.reset()  # network reset
 
     def test_single_update_local(self):
         """
@@ -108,5 +111,5 @@ class test_NeuronUpdate(unittest.TestCase):
         """
         self._network.simulate(5)
 
-        r = self.net_m.get('r')
-        numpy.testing.assert_allclose(r[:,0], [1, 1, 2, 3, 3])
+        r = self.net_m.get("r")
+        numpy.testing.assert_allclose(r[:, 0], [1, 1, 2, 3, 3])

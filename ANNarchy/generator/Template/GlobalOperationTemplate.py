@@ -4,7 +4,7 @@
 """
 
 global_operation_templates_st = {
-    'max' : """
+    "max": """
 // Computes the maximum value of an array
 %(type)s max_value(const %(type)s* array, int n)
 {
@@ -17,7 +17,7 @@ global_operation_templates_st = {
     return max;
 }
 """,
-    'min' : """
+    "min": """
 // Computes the minimum value of an array
 %(type)s min_value(const %(type)s* array, int n)
 {
@@ -31,7 +31,7 @@ global_operation_templates_st = {
     return min;
 }
 """,
-    'mean' : """
+    "mean": """
 // Computes the mean value of an array
 %(type)s mean_value(const %(type)s* array, int n)
 {
@@ -43,7 +43,7 @@ global_operation_templates_st = {
     return sum/(%(type)s)n;
 }
 """,
-    'norm1' : """
+    "norm1": """
 // Computes the L1-norm of an array
 %(type)s norm1_value(const %(type)s* array, int n)
 {
@@ -55,7 +55,7 @@ global_operation_templates_st = {
     return sum;
 }
 """,
-    'norm2' : """
+    "norm2": """
 // Computes the L2-norm (Euclidian) of an array
 %(type)s norm2_value(const %(type)s* array, int n)
 {
@@ -66,19 +66,19 @@ global_operation_templates_st = {
     }
     return sqrt(sum);
 }
-"""
+""",
 }
 
 global_operation_templates_st_extern = {
-    'max': "extern %(type)s max_value(const %(type)s*, int);\n",
-    'min': "extern %(type)s min_value(const %(type)s*, int);\n",
-    'mean': "extern %(type)s mean_value(const %(type)s*, int);\n",
-    'norm1': "extern %(type)s norm1_value(const %(type)s*, int);\n",
-    'norm2': "extern %(type)s norm2_value(const %(type)s*, int);\n"
+    "max": "extern %(type)s max_value(const %(type)s*, int);\n",
+    "min": "extern %(type)s min_value(const %(type)s*, int);\n",
+    "mean": "extern %(type)s mean_value(const %(type)s*, int);\n",
+    "norm1": "extern %(type)s norm1_value(const %(type)s*, int);\n",
+    "norm2": "extern %(type)s norm2_value(const %(type)s*, int);\n",
 }
 
 global_operation_templates_openmp = {
-    'max' : """// Computes the maximum value of an array
+    "max": """// Computes the maximum value of an array
 %(type)s max_value(const %(type)s* array, const int beg, const int end)
 {
     %(type)s max = array[beg];
@@ -90,7 +90,7 @@ global_operation_templates_openmp = {
     return max;
 }
 """,
-    'min' : """
+    "min": """
 // Computes the minimum value of an array
 %(type)s  min_value(const %(type)s* array, const int beg, const int end)
 {
@@ -103,7 +103,7 @@ global_operation_templates_openmp = {
     return min;
 }
 """,
-    'mean' : """
+    "mean": """
 // Computes the mean value of an array
 %(type)s mean_value(const %(type)s* array, const int beg, const int end, const int n)
 {
@@ -120,7 +120,7 @@ global_operation_templates_openmp = {
     return mean_value(array, beg, end, end);
 }
 """,
-    'norm1' : """
+    "norm1": """
 // Computes the L1-norm of an array
 %(type)s norm1_value(const %(type)s* array, const int beg, const int end)
 {
@@ -132,7 +132,7 @@ global_operation_templates_openmp = {
     return sum;
 }
 """,
-    'norm2' : """
+    "norm2": """
 // Computes the L2-norm (Euclidian) of an array
 %(type)s norm2_value(const %(type)s* array, const int beg, const int end)
 {
@@ -144,73 +144,73 @@ global_operation_templates_openmp = {
 
     return sum;
 }
-"""
+""",
 }
 
 # Will be called if number of elements is too small to be computed in parallel
 global_operation_templates_st_call = {
-    'max': """#pragma omp task
+    "max": """#pragma omp task
 {
     _max_%(var)s = max_value(%(var)s.data(), 0, %(var)s.size());
 }
 """,
-    'min': """#pragma omp task
+    "min": """#pragma omp task
 {
     _min_%(var)s = min_value(%(var)s.data(), 0, %(var)s.size());
 }
 """,
-    'mean': """#pragma omp task
+    "mean": """#pragma omp task
 {
     _mean_%(var)s = mean_value(%(var)s.data(), 0, %(var)s.size());
 }
 """,
-    'norm1': """#pragma omp task
+    "norm1": """#pragma omp task
 {
     _norm1_%(var)s = norm1_value(%(var)s.data(), 0, %(var)s.size());
 }
 """,
-    'norm2': """#pragma omp task
+    "norm2": """#pragma omp task
 {
     _norm2_%(var)s = sqrt(norm2_value(%(var)s.data(), 0, %(var)s.size()));
 }
-"""
+""",
 }
 
 global_operation_templates_omp_call = {
-    'max': """#pragma omp master
+    "max": """#pragma omp master
 {
     _max_%(var)s = %(var)s[0];
 }
 auto local_max_%(var)s = max_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
 """,
-    'min': """#pragma omp master
+    "min": """#pragma omp master
 {
     _min_%(var)s = %(var)s[0];
 }
 auto local_min_%(var)s = min_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
 """,
-    'mean': """#pragma omp master
+    "mean": """#pragma omp master
 {
     _mean_%(var)s = 0.0;
 }
 auto local_mean_%(var)s = mean_value(%(var)s.data(), chunks_[tid], chunks_[tid+1], %(var)s.size());
 """,
-    'norm1': """#pragma omp master
+    "norm1": """#pragma omp master
 {
     _norm1_%(var)s = 0.0;
 }
 auto local_norm1_%(var)s = norm1_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
 """,
-    'norm2': """#pragma omp master
+    "norm2": """#pragma omp master
 {
     _norm2_%(var)s = 0.0;
 }
 auto local_norm2_%(var)s = norm2_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
-"""
+""",
 }
 
 global_operation_templates_omp_reduce = {
-    'max': """#pragma omp for schedule(static, 1)
+    "max": """#pragma omp for schedule(static, 1)
 for (int t = 0; t < nt; t++)
 {
     #pragma omp critical
@@ -220,7 +220,7 @@ for (int t = 0; t < nt; t++)
     }
 }
 """,
-    'min': """#pragma omp for schedule(static, 1)
+    "min": """#pragma omp for schedule(static, 1)
 for (int t = 0; t < nt; t++)
 {
     #pragma omp critical
@@ -230,19 +230,19 @@ for (int t = 0; t < nt; t++)
     }
 }
 """,
-    'mean': """#pragma omp for reduction(+: _mean_%(var)s)
+    "mean": """#pragma omp for reduction(+: _mean_%(var)s)
 for (int t = 0; t < nt; t++)
 {
     _mean_%(var)s += local_mean_%(var)s;
 }
 """,
-    'norm1': """#pragma omp for reduction(+: _norm1_%(var)s)
+    "norm1": """#pragma omp for reduction(+: _norm1_%(var)s)
 for (int t = 0; t < nt; t++)
 {
     _norm1_%(var)s += local_norm1_%(var)s;
 }
 """,
-    'norm2': """#pragma omp for reduction(+: _norm2_%(var)s)
+    "norm2": """#pragma omp for reduction(+: _norm2_%(var)s)
 for (int t = 0; t < nt; t++)
 {
     _norm2_%(var)s += local_norm2_%(var)s;
@@ -251,23 +251,23 @@ for (int t = 0; t < nt; t++)
 {
     _norm2_%(var)s = sqrt(_norm2_%(var)s);
 }
-"""
+""",
 }
 
 global_operation_templates_omp_extern = {
-    'max': "%(type)s max_value(const %(type)s*, const int, const int);\n",
-    'min': "extern %(type)s min_value(const %(type)s*, const int, const int);\n",
-    'mean': "extern %(type)s mean_value(const %(type)s*, const int, const int, const int);\nextern %(type)s mean_value(const %(type)s*, const int, const int);\n",
-    'norm1': "extern %(type)s norm1_value(const %(type)s*, const int, const int);\n",
-    'norm2': "extern %(type)s norm2_value(const %(type)s*, const int, const int);\n"
+    "max": "%(type)s max_value(const %(type)s*, const int, const int);\n",
+    "min": "extern %(type)s min_value(const %(type)s*, const int, const int);\n",
+    "mean": "extern %(type)s mean_value(const %(type)s*, const int, const int, const int);\nextern %(type)s mean_value(const %(type)s*, const int, const int);\n",
+    "norm1": "extern %(type)s norm1_value(const %(type)s*, const int, const int);\n",
+    "norm2": "extern %(type)s norm2_value(const %(type)s*, const int, const int);\n",
 }
 
 #
 # determine correct kernel sizes
 #
 global_operation_templates_cuda = {
-   'max' : {
-        'body' : """// Computes the maximum value of an array
+    "max": {
+        "body": """// Computes the maximum value of an array
 __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
@@ -309,13 +309,12 @@ __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-        'invoke': """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+        "invoke": """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
     cuMaxValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
 }
 """,
-        'header': """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
-
-        'call' : """
+        "header": """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        "call": """
     if ( pop%(id)s->_active ) {
         cuda_max_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_max_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
@@ -325,11 +324,10 @@ __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
             std::cerr << "Global operation '%(op)s' (PopStruct%(id)s): " <<  << std::endl;
     #endif
     }
-"""
+""",
     },
-
-    'min' : {
-        'body' : """// Computes the minimum value of an array
+    "min": {
+        "body": """// Computes the minimum value of an array
 __global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
@@ -371,22 +369,21 @@ __global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-        'invoke' : """
+        "invoke": """
 void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
     cuMinValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
 }
 """,
-        'header' : """void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
-        'call' : """
+        "header": """void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        "call": """
     if ( pop%(id)s->_active ) {
         cuda_min_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_min_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
-"""
+""",
     },
-
-    'mean' : {
-        'body' : """// Computes the mean value of an array
+    "mean": {
+        "body": """// Computes the mean value of an array
 __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
@@ -428,22 +425,21 @@ __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-        'invoke' : """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+        "invoke": """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
     cuMeanValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
 }
 """,
-        'header' : """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
-        'call' : """
+        "header": """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        "call": """
     if ( pop%(id)s->_active ) {
         cuda_mean_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
-"""
+""",
     },
-
     # Computes the L1-norm of an array
-    'norm1' : {
-        'body' : """// Computes the L1-norm value of an array
+    "norm1": {
+        "body": """// Computes the L1-norm value of an array
 __global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
@@ -485,23 +481,22 @@ __global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-        'invoke': """
+        "invoke": """
 void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
     cuNorm1<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(result, gpu_array, N);
 }
 """,
-        'header' : """void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
-        'call' : """
+        "header": """void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        "call": """
     if ( pop%(id)s->_active ) {
         cuda_norm1(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
-"""
+""",
     },
-
     # Computes the L2-norm (Euclidian) of an array
-    'norm2' : {
-        'body' : """// Computes the L2-norm value of an array
+    "norm2": {
+        "body": """// Computes the L2-norm value of an array
 __global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N)
 {
     unsigned int tid = threadIdx.x;
@@ -543,17 +538,17 @@ __global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-        'invoke': """
+        "invoke": """
 void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
     cuNorm2<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(result, gpu_array, N);
 }
 """,
-        'header' : """void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
-        'call' : """
+        "header": """void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        "call": """
     if ( pop%(id)s->_active ) {
         cuda_norm2(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
-"""
-    }
+""",
+    },
 }

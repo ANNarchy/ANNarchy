@@ -3,10 +3,12 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+
 class ProfileGenerator(object):
     """
     Base class to extent the generated code by profiling annotations.
     """
+
     def __init__(self, annarchy_dir, net_id):
         """
         Initialize ProfileGenerator.
@@ -28,25 +30,25 @@ class ProfileGenerator(object):
         dict is also used in absence of profiling.
         """
         body_dict = {
-            'prof_include': "",
-            'prof_step_pre': "",
-            'prof_step_post': "",
-            'prof_run_pre': "",
-            'prof_run_post': "",
-            'prof_proj_psp_pre': "",
-            'prof_proj_psp_post': "",
-            'prof_proj_step_pre': "",
-            'prof_proj_step_post': "",
-            'prof_proj_post_event_pre': "",
-            'prof_proj_post_event_post': "",
-            'prof_neur_step_pre': "",
-            'prof_neur_step_post': "",
-            'prof_record_pre': "",
-            'prof_record_post': "",
-            'prof_rng_pre': "",
-            'prof_rng_post': "",
-            'prof_global_ops_pre': "",
-            'prof_global_ops_post': ""
+            "prof_include": "",
+            "prof_step_pre": "",
+            "prof_step_post": "",
+            "prof_run_pre": "",
+            "prof_run_post": "",
+            "prof_proj_psp_pre": "",
+            "prof_proj_psp_post": "",
+            "prof_proj_step_pre": "",
+            "prof_proj_step_post": "",
+            "prof_proj_post_event_pre": "",
+            "prof_proj_post_event_post": "",
+            "prof_neur_step_pre": "",
+            "prof_neur_step_post": "",
+            "prof_record_pre": "",
+            "prof_record_post": "",
+            "prof_rng_pre": "",
+            "prof_rng_post": "",
+            "prof_global_ops_pre": "",
+            "prof_global_ops_post": "",
         }
         return body_dict
 

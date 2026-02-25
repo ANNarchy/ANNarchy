@@ -98,92 +98,101 @@ class PoissonPopulation(SpecificPopulation):
     :param refractory: refractory period in ms.
     """
 
-    def __init__(self,
-                 geometry:int|tuple[int],
-                 name:str=None,
-                 rates:float|str=None,
-                 target:str=None,
-                 parameters:dict={},
-                 refractory:float=None,
-                 copied:bool=False,
-                 net_id:int = 0):
-
+    def __init__(
+        self,
+        geometry: int | tuple[int],
+        name: str = None,
+        rates: float | str = None,
+        target: str = None,
+        parameters: dict = {},
+        refractory: float = None,
+        copied: bool = False,
+        net_id: int = 0,
+    ):
         if rates is None and target is None:
-            Messages._error('A PoissonPopulation must define either rates or target.')
+            Messages._error("A PoissonPopulation must define either rates or target.")
 
         self.target = target
         self.parameters_init = parameters
         self.refractory_init = refractory
         self.rates_init = rates
 
-        if target is not None: # hybrid population
+        if target is not None:  # hybrid population
             # Create the neuron
             poisson_neuron = Neuron(
-                parameters = parameters,
-                equations = """
+                parameters=parameters,
+                equations="""
                     rates = sum(%(target)s)
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
                     _sum_%(target)s = 0.0
-                """ % {'target': target},
-                spike = """
+                """
+                % {"target": target},
+                spike="""
                     p < rates
                 """,
                 refractory=refractory,
                 name="Hybrid",
-                description="Hybrid spiking neuron emitting spikes according to a Poisson distribution at a frequency determined by the weighted sum of inputs."
+                description="Hybrid spiking neuron emitting spikes according to a Poisson distribution at a frequency determined by the weighted sum of inputs.",
             )
-
 
         elif isinstance(rates, str):
             # Create the neuron
             poisson_neuron = Neuron(
-                parameters = parameters,
-                equations = """
+                parameters=parameters,
+                equations="""
                     rates = %(rates)s
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
                     _sum_exc = 0.0
-                """ % {'rates': rates},
-                spike = """
+                """
+                % {"rates": rates},
+                spike="""
                     p < rates
                 """,
                 refractory=refractory,
                 name="Poisson",
-                description="Spiking neuron with spikes emitted according to a Poisson distribution."
+                description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
 
         elif isinstance(rates, np.ndarray):
             poisson_neuron = Neuron(
-                parameters = """
+                parameters="""
                 rates = 10.0
                 """,
-                equations = """
+                equations="""
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
                 """,
-                spike = """
+                spike="""
                 p < rates
                 """,
                 refractory=refractory,
                 name="Poisson",
-                description="Spiking neuron with spikes emitted according to a Poisson distribution."
+                description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
         else:
             poisson_neuron = Neuron(
-                parameters = """
+                parameters="""
                 rates = %(rates)s
-                """ % {'rates': rates},
-                equations = """
+                """
+                % {"rates": rates},
+                equations="""
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
                 """,
-                spike = """
+                spike="""
                 p < rates
                 """,
                 refractory=refractory,
                 name="Poisson",
-                description="Spiking neuron with spikes emitted according to a Poisson distribution."
+                description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
 
         # Register Population
-        super().__init__(geometry=geometry, neuron=poisson_neuron, name=name, copied=copied, net_id=net_id)
+        super().__init__(
+            geometry=geometry,
+            neuron=poisson_neuron,
+            name=name,
+            copied=copied,
+            net_id=net_id,
+        )
 
         if isinstance(rates, np.ndarray):
             self.rates = rates
@@ -191,12 +200,14 @@ class PoissonPopulation(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return PoissonPopulation(
-            self.geometry, name=self.name,
-            rates=self.rates_init, target=self.target,
+            self.geometry,
+            name=self.name,
+            rates=self.rates_init,
+            target=self.target,
             parameters=self.parameters_init,
             refractory=self.refractory_init,
             copied=True,
-            net_id = self.net_id if not net_id else net_id,
+            net_id=self.net_id if not net_id else net_id,
         )
 
     def _generate_st(self):
