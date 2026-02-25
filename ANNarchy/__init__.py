@@ -34,8 +34,25 @@ from .core.Utils import sparse_random_matrix, sparse_delays_from_weights, timeit
 from .core.Monitor import Monitor
 from .core.Network import Network
 from .parser.report.Report import report
-from .models.Neurons import *
-from .models.Synapses import *
+from .models.Neurons import (
+    LeakyIntegrator,
+    EIF_cond_alpha_isfa_ista,
+    EIF_cond_exp_isfa_ista,
+    HH_cond_exp,
+    IF_cond_alpha,
+    IF_cond_exp,
+    IF_curr_alpha,
+    IF_curr_exp,
+    Izhikevich
+)
+from .models.Synapses import (
+    Hebb,
+    IBCM,
+    Oja,
+    STDP,
+    STP,
+    Synapse
+)
 from .extensions import *
 from .intern.ConfigManagement import setup
 from .intern import Messages

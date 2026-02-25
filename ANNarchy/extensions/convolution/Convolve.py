@@ -3,18 +3,24 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from __future__ import print_function
 import numpy as np
 from copy import deepcopy
 
-from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
-from .ConvolveTemplate import *
-from .Utils import SharedSynapse
+from ANNarchy.extensions.convolution.ConvolveTemplate import (
+    conv_filter_template,
+    convolve_template_cuda,
+    convolve_template_omp,
+    cuda_convolution_bank_of_filter,
+    cuda_convolution_bank_of_filter_3d,
+    cuda_convolution_bank_of_filter_4d,
+    cuda_convolution_single_filter
+)
+from ANNarchy.extensions.convolution.Utils import SharedSynapse
 
 # Indices used for each dimension
 indices = ["i", "j", "k", "l", "m", "n"]

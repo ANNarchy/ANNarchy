@@ -9,12 +9,13 @@ from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.Random import *
+from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Neuron import Neuron, IndividualNeuron
 
 from typing import Iterator
 import numpy as np
-import copy, inspect
+import copy
+import inspect
 import re
 
 
