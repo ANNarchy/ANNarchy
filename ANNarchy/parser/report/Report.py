@@ -6,7 +6,7 @@ from ANNarchy.intern import Messages
 
 
 def report(
-    network: "Network",
+    network: "Network" = None,
     filename: str = "./report.tex",
     standalone: bool = True,
     gather_subprojections: bool = False,
@@ -34,6 +34,8 @@ def report(
     :param author: author of the document (Markdown only).
     :param date: date of the document (Markdown only).
     """
+    if isinstance(network, (str,)) or network is None:
+        Messages._error("report(): expected as first argument a Network instance")
 
     if filename.endswith(".tex"):
         from .LatexReport import report_latex
