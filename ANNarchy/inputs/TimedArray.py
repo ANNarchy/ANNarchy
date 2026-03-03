@@ -209,6 +209,10 @@ class TimedArray(SpecificPopulation):
         if period is None:
             period = self.period
 
+        # Sanity check, would a loop break early
+        if isinstance(schedule, list) and period < schedule[-1]:
+            Messages._warning(f"TimedArray '{self.name}': the period {period} is before the last schedule time point {schedule[-1]}. Therefore, the loop would break early, please make sure it is what you expect.")
+
         # before update reset the internal timers
         if self.initialized and reset:
             self.reset()
@@ -331,16 +335,29 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-        _buffer = buffer;
-        if (_schedule[_block] > _t)
-            r = _buffer[_block-1];
-        else
-            r = _buffer[_block];
+        try {
+            _buffer = buffer;
+            if (_schedule[_block] > _t)
+                r = _buffer[_block-1];
+            else
+                r = _buffer[_block];
+
+        // catches std::bad_array_new_length too
+        } catch (const std::bad_alloc& e) {
+            std::cout << "Something went wrong in PopStruct%(id)s::set_buffer(). Please provide the following information in your bug report." << std::endl;
+            std::cout << "  t = " << t << std::endl;
+            std::cout << "  buffer size: " << _buffer.size() << std::endl;
+            std::cout << "  _t = " << _t<< std::endl;
+            std::cout << "  _block = " << _block<<std::endl;
+            std::cout << "  _schedule[_block] = " << _schedule[_block] << std::endl;
+
+            throw;  // throw again
+        }
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -433,16 +450,29 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-        _buffer = buffer;
-        if (_schedule[_block] > _t)
-            r = _buffer[_block-1];
-        else
-            r = _buffer[_block];
+        try {
+            _buffer = buffer;
+            if (_schedule[_block] > _t)
+                r = _buffer[_block-1];
+            else
+                r = _buffer[_block];
+
+        // catches std::bad_array_new_length too
+        } catch (const std::bad_alloc& e) {
+            std::cout << "Something went wrong in PopStruct%(id)s::set_buffer(). Please provide the following information in your bug report." << std::endl;
+            std::cout << "  t = " << t << std::endl;
+            std::cout << "  buffer size: " << _buffer.size() << std::endl;
+            std::cout << "  _t = " << _t<< std::endl;
+            std::cout << "  _block = " << _block<<std::endl;
+            std::cout << "  _schedule[_block] = " << _schedule[_block] << std::endl;
+
+            throw;  // throw again
+        }
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
