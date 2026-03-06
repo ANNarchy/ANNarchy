@@ -56,10 +56,20 @@ class GlobalObjectManager:
                 del obj
             self._objects["neurons"] = []
 
+            # TODO: this is a brute force reset ... maybe there is a better approach?
+            from ANNarchy.core.Neuron import Neuron
+            Neuron._instantiated_types = set()
+            Neuron._neuron_type_ids = {}
+
         if synapses:
             for obj in self._objects["synapses"]:
                 del obj
             self._objects["synapses"] = []
+
+            # TODO: this is a brute force reset ... maybe there is a better approach?
+            from ANNarchy.core.Synapse import Synapse
+            Synapse._instantiated_types = set()
+            Synapse._synapse_type_ids = {}
 
     ################################
     ## Neuron types

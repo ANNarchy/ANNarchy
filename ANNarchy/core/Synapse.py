@@ -66,7 +66,28 @@ class Synapse:
     """
 
     # Default name and description for reporting
-    _default_names = {"rate": "Rate-coded synapse", "spike": "Spiking synapse"}
+    _default_names = {
+        "rate": "Rate-coded synapse",
+        "spike": "Spiking synapse"
+    }
+
+    # A list of created synapse types, either pre- or user-defined
+    _instantiated_types = set()
+    _synapse_type_ids = {}
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+
+        if cls not in Synapse._instantiated_types:
+            # first time instantiated
+            Synapse._instantiated_types.add(cls)
+            GlobalObjectManager().add_synapse_type(instance)
+            instance._synapse_type_ids[cls] = GlobalObjectManager().num_synapse_types()
+
+        # for reporting
+        instance._rk_synapses_type = instance._synapse_type_ids[cls]
+
+        return instance
 
     def __init__(
         self,
@@ -106,7 +127,7 @@ class Synapse:
                 "Spiking synapses can only perform a sum of presynaptic potentials."
             )
 
-        if not self.operation in ["sum", "min", "max", "mean"]:
+        if self.operation not in ["sum", "min", "max", "mean"]:
             Messages._error(
                 "The only operations permitted are: sum (default), min, max, mean."
             )
@@ -119,13 +140,6 @@ class Synapse:
 
         # Description
         self.description = None
-
-        # Reporting
-        if not hasattr(self, "_instantiated"):  # User-defined
-            GlobalObjectManager().add_synapse_type(synapse=self)
-        elif len(self._instantiated) == 0:  # First instantiation of the class
-            GlobalObjectManager().add_synapse_type(synapse=self)
-        self._rk_synapses_type = GlobalObjectManager().num_synapse_types()
 
         if name:
             self.name = name

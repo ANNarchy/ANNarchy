@@ -11,9 +11,6 @@ class SharedSynapse(Synapse):
     Shared synapse for report()
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         psp,
@@ -26,6 +23,3 @@ class SharedSynapse(Synapse):
         Synapse.__init__(
             self, psp=psp, operation=operation, name=name, description=description
         )
-
-        # For reporting
-        self._instantiated.append(True)
