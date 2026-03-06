@@ -49,7 +49,28 @@ class Neuron:
     """
 
     # Default name and description for reporting
-    _default_names = {"rate": "Rate-coded neuron", "spike": "Spiking neuron"}
+    _default_names = {
+        "rate": "Rate-coded neuron",
+        "spike": "Spiking neuron"
+    }
+
+    # A list of created neuron types, either pre- or user-defined
+    _instantiated_types = set()
+    _neuron_type_ids = {}
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+
+        if cls not in Neuron._instantiated_types:
+            # first time instantiated
+            Neuron._instantiated_types.add(cls)
+            GlobalObjectManager().add_neuron_type(instance)
+            instance._neuron_type_ids[cls] = GlobalObjectManager().num_neuron_types()
+
+        # for reporting
+        instance._rk_neurons_type = instance._neuron_type_ids[cls]
+
+        return instance
 
     def __init__(
         self,
@@ -85,13 +106,6 @@ class Neuron:
                 "Axonal spike conditions are only available for openMP by now."
             )
             # will crash when paradigm='cuda' is passed only at the Network level...
-
-        # Reporting
-        if not hasattr(self, "_instantiated"):  # User-defined
-            GlobalObjectManager().add_neuron_type(self)
-        elif len(self._instantiated) == 0:  # First instantiated of the class
-            GlobalObjectManager().add_neuron_type(self)
-        self._rk_neurons_type = GlobalObjectManager().num_neuron_types()
 
         if name:
             self.name = name
