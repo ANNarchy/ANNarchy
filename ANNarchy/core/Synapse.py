@@ -2,6 +2,7 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import hashlib
 
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -78,14 +79,18 @@ class Synapse:
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
 
-        if cls not in Synapse._instantiated_types:
-            # first time instantiated
-            Synapse._instantiated_types.add(cls)
-            GlobalObjectManager().add_synapse_type(instance)
-            instance._synapse_type_ids[cls] = GlobalObjectManager().num_synapse_types()
+        if cls.__name__ == "Synapse":
+            # User-defined synapses has no unique class name, we fall back to a hash value
+            key = cls._compute_hash_id(args, kwargs)
 
-        # for reporting
-        instance._rk_synapses_type = instance._synapse_type_ids[cls]
+        else:
+            key = cls.__name__
+
+        if key not in Synapse._instantiated_types and (len(args)>0 or kwargs):
+            # first time instantiated
+            Synapse._instantiated_types.add(key)
+            GlobalObjectManager().add_synapse_type(instance)
+            Synapse._synapse_type_ids[key] = GlobalObjectManager().num_synapse_types()
 
         return instance
 
@@ -153,6 +158,39 @@ class Synapse:
                 self.short_description = "User-defined spiking synapse."
             else:
                 self.short_description = "User-defined rate-coded synapse."
+
+    @staticmethod
+    def _compute_hash_id(args, kwargs, key_length=24):
+        """
+        Compute a hash value to later (re-)identify an model object.
+        """
+        # Extract all significant model fields.
+        params = kwargs['parameters'] if 'parameters' in kwargs.keys() else args[0] if len(args)>1 else ""
+        equations = kwargs['equations'] if 'equations' in kwargs.keys() else args[1] if len(args)>2 else ""
+        psp = kwargs['psp'] if 'psp' in kwargs.keys() else args[2] if len(args)>3 else None
+
+        # Combine them to one large string. A fixed ordering ensures a correct hash.
+        key_data = (params, equations, psp)
+        key_str = repr(key_data)
+
+        # Create hash on them
+        return hashlib.sha256(key_str.encode()).hexdigest()[:key_length]
+
+    @property
+    def _rk_synapses_type(self):
+        # for reporting
+        if self.__class__.__name__ == "Synapse":
+            key = self._compute_hash_id(
+                args=(),
+                kwargs={
+                    'parameters': self.parameters,
+                    'equations': self.equations,
+                    'psp': self.psp,
+                }
+            )
+        else:
+            key = self.__class__.__name__
+        return self._synapse_type_ids[key]
 
     def _analyse(self, net_id):
         # Analyse the synapse type
