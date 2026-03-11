@@ -61,25 +61,25 @@ class ConfigManager:
 
     _instance = None
 
-    def __new__(self, *args, **kwds):
+    def __new__(cls, *args, **kwds):
         """
         Only the first call will create a new instance of this class.
         """
-        if self._instance is None:
-            self._instance = super().__new__(self, *args, **kwds)
-            self._config = {  # dictionary because network ids can change
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwds)
+            cls._config = {  # dictionary because network ids can change
                 0: copy.deepcopy(default_config)
             }
 
             # This flags can not be configured through setup()
-            self._performance_related_config_keys = [
+            cls._performance_related_config_keys = [
                 "use_cpp_connectors",
                 "disable_split_matrix",
                 "disable_SIMD_SpMV",
                 "disable_SIMD_Eq",
             ]
 
-        return self._instance
+        return cls._instance
 
     def register_network(self, net_id: int = 0):
         """
