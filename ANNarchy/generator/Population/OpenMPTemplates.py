@@ -56,22 +56,22 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 
-%(declare_spike_arrays)s
     // Neuron specific parameters and variables
+%(declare_spike_arrays)s
 %(declare_parameters_variables)s
 %(declare_delay)s
 %(declare_FR)s
 %(declare_additional)s
 %(declare_profile)s
-    // Access methods to the parameters and variables
-%(access_parameters_variables)s
+
+    // Specialized access methods to the parameters and variables
 %(access_additional)s
 
     // Method called to initialize the data structures
     void init_population() {
     #ifdef _TRACE_INIT
         std::cout << "  PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
-    #endif    
+    #endif
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s

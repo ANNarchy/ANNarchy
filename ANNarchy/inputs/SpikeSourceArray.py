@@ -161,8 +161,6 @@ class SpikeSourceArray(SpecificPopulation):
     }
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        # self._specific_template['access_parameters_variables'] = ""
-
         self._specific_template["init_additional"] = """
         _t = 0;
         next_spike = std::vector<long int>(size, -10000);

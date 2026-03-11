@@ -41,9 +41,7 @@ class CUDAGenerator(PopulationGenerator):
         self._templates = deepcopy(cuda_templates)
 
         # Generate declaration and accessors of all parameters and variables
-        declaration_parameters_variables, access_parameters_variables = (
-            self._generate_decl_and_acc(pop)
-        )
+        declaration_parameters_variables = self._generate_decl_and_acc(pop)
 
         # Additional includes and structures
         include_additional = ""
@@ -161,10 +159,6 @@ class CUDAGenerator(PopulationGenerator):
             declare_FR = pop._specific_template["declare_FR"]
         if "declare_delay" in pop._specific_template.keys() and pop.max_delay > 1:
             declare_delay = pop._specific_template["declare_delay"]
-        if "access_parameters_variables" in pop._specific_template.keys():
-            access_parameters_variables = pop._specific_template[
-                "access_parameters_variables"
-            ]
         if "access_additional" in pop._specific_template.keys():
             access_additional = pop._specific_template["access_additional"]
         if "init_parameters_variables" in pop._specific_template.keys():
@@ -219,7 +213,6 @@ class CUDAGenerator(PopulationGenerator):
             "declare_delay": declare_delay,
             "declare_FR": declare_FR,
             "declare_profile": declare_profile,
-            "access_parameters_variables": access_parameters_variables,
             "access_additional": access_additional,
             "init_parameters_variables": init_parameters_variables,
             "init_spike": init_spike,

@@ -44,7 +44,7 @@ struct PopStruct%(id)s{
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
     int max_delay; // Maximum number of steps to store for delayed synaptic transmission
-    
+
     // CUDA launch configuration
     cudaStream_t stream;
     unsigned int _nb_blocks;
@@ -58,8 +58,8 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 
-%(declare_spike_arrays)s
     // Neuron specific parameters and variables
+%(declare_spike_arrays)s
 %(declare_parameters_variables)s
 %(declare_delay)s
 %(declare_FR)s
@@ -68,8 +68,7 @@ struct PopStruct%(id)s{
     // Profiling
 %(declare_profile)s
 
-    // Access methods to the parameters and variables
-%(access_parameters_variables)s
+    // Specialized access methods to the parameters and variables
 %(access_additional)s
 
     // Method called to initialize the data structures

@@ -61,9 +61,12 @@ class PopulationGenerator(object):
         attributes by accessing the C++ objects directly via the nanobind wrapper.
 
         See also `_generate_pop_wrapper` in `ANNarchy.generator.NanoBind.Generator`
+
+        Implementation note: Unlike projections, in populations we directly access
+        the C++ containers, therefore no accessor code is required.
         """
         # Parameters, Variables
-        declaration, accessors, already_processed = self._generate_default_get_set(pop)
+        declaration, already_processed = self._generate_default_get_set(pop)
 
         # The conductance/current variables for spiking neurons are stored in
         # pop.neuron_type.description['variables'] but only if they are used.
@@ -129,7 +132,7 @@ class PopulationGenerator(object):
                 % {"float_prec": ConfigManager().get("precision", self._net_id)},
             }
 
-        return declaration, accessors
+        return declaration
 
     @staticmethod
     def _get_attr(pop, name):
@@ -380,8 +383,6 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         User defined elements, parallelization support data structures or similar are not considered. Consequently
         implementing generators should extent the resulting code template.
         """
-        from ANNarchy.generator.Utils import tabify
-
         code = ""
 
         # Variables
@@ -446,8 +447,6 @@ _spike_history.shrink_to_fit();
         if "size_in_bytes" in pop._specific_template.keys():
             return pop._specific_template["size_in_bytes"]
 
-        from ANNarchy.generator.Utils import tabify
-
         code = ""
 
         # Parameters
@@ -500,7 +499,6 @@ _spike_history.shrink_to_fit();
         Generate a get/set template for all attributes in the given population
         """
         declaration = ""  # Attribute declarations
-        accessors = ""  # No default accessor methods.
         already_processed = []
         code_ids_per_type = {}
 
@@ -611,4 +609,4 @@ _spike_history.shrink_to_fit();
                 else:
                     declaration += self._templates["attr_decl"][locality] % ids
 
-        return declaration, accessors, already_processed
+        return declaration, already_processed
