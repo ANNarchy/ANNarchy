@@ -25,6 +25,7 @@ header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 // Useful functions
+#include "logging.hpp"
 #include "helper_functions.cuh"
 
 /*

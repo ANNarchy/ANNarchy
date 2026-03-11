@@ -15,9 +15,9 @@ projection_header = """/*
 
 extern PopStruct%(id_pre)s *pop%(id_pre)s;
 extern PopStruct%(id_post)s *pop%(id_post)s;
+%(struct_additional)s
 extern %(float_prec)s dt;
 extern long int t;
-%(struct_additional)s
 extern std::vector<std::mt19937> rng;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -29,9 +29,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         proj%(id_proj)s = this;
 
-    #ifdef _TRACE_INIT
-        std::cout << "  ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("ProjStruct%(id_proj)s", this);
     }
 
 %(connector_call)s
@@ -56,15 +54,14 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(init_parameters_variables)s
 %(init_event_driven)s
 %(init_rng)s
-
         return true;
     }
 
     // Method called to initialize the projection
     void init_projection() {
-    #ifdef _TRACE_INIT
-        std::cout << "  ProjStruct%(id_proj)s::init_projection(post_size = " << pop%(id_post)s->size << ", pre_size = " << pop%(id_pre)s->size << ") - this = " << this << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "init_projection", this);
+        ANNARCHY_LOG_STATE("post_size", std::to_string(pop%(id_post)s->size));
+        ANNARCHY_LOG_STATE("pre_size", std::to_string(pop%(id_pre)s->size));
 
         _transmission = true;
         _axon_transmission = true;
@@ -77,6 +74,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
 %(init_additional)s
 %(init_profile)s
+        ANNARCHY_LOG_MSG("ProjStruct%(id_proj)s(this = " << this << ") has been initialized.");
     }
 
     // Spiking networks: reset the ring buffer when non-uniform
@@ -91,9 +89,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Computes the weighted sum of inputs or updates the conductances
     void compute_psp() {
-    #ifdef _TRACE_SIMULATION_STEPS
-        std::cout << "    ProjStruct%(id_proj)s::compute_psp()" << std::endl;
-    #endif
+        ANNARCHY_TRACE_SIM_STEP("ProjStruct%(id_proj)s", "compute_psp", this);
 %(psp_prefix)s
 %(psp_code)s
     }
@@ -105,9 +101,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Updates synaptic variables
     void update_synapse() {
-    #ifdef _TRACE_SIMULATION_STEPS
-        std::cout << "    ProjStruct%(id_proj)s::update_synapse()" << std::endl;
-    #endif
+        ANNARCHY_TRACE_SIM_STEP("ProjStruct%(id_proj)s", "update_synapse", this);
 %(update_prefix)s
 %(update_variables)s
     }
@@ -135,9 +129,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(pruning)s
 
     void clear() override final {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "clear", this);
 %(clear_container)s
     }
 };
@@ -174,7 +166,7 @@ attribute_template = {
 %(local_get3)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
         return 0.0;
     }
 

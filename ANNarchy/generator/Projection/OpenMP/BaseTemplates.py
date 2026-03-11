@@ -30,9 +30,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         proj%(id_proj)s = this;
 
-    #ifdef _TRACE_INIT
-        std::cout << "  ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("ProjStruct%(id_proj)s", this);
     }
 
 %(connector_call)s
@@ -54,17 +52,17 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Method called to allocate/initialize the variables
     bool init_attributes() {
-%(init_event_driven)s
 %(init_parameters_variables)s
+%(init_event_driven)s
 %(init_rng)s
         return true;
     }
 
     // Method called to initialize the projection
     void init_projection() {
-    #ifdef _TRACE_INIT
-        std::cout << "  ProjStruct%(id_proj)s::init_projection(post_size = " << pop%(id_post)s->size << ", pre_size = " << pop%(id_pre)s->size << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "init_projection", this);
+        ANNARCHY_LOG_STATE("post_size", std::to_string(pop%(id_post)s->size));
+        ANNARCHY_LOG_STATE("pre_size", std::to_string(pop%(id_pre)s->size));
 
         _transmission = true;
         _axon_transmission = true;
@@ -77,6 +75,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
 %(init_additional)s
 %(init_profile)s
+        ANNARCHY_LOG_MSG("ProjStruct%(id_proj)s(this = " << this << ") has been initialized.");
     }
 
     // Spiking networks: reset the ring buffer when non-uniform
@@ -91,13 +90,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Computes the weighted sum of inputs or updates the conductances
     void compute_psp(const int tid, const int nt) {
-    #ifdef _TRACE_SIMULATION_STEPS
-        #pragma omp critical
-        {
-            std::cout << "    ProjStruct%(id_proj)s::compute_psp() - tid = " << tid << ", nt = " << nt << std::endl;
-            std::cout << std::flush;
-        }
-    #endif
+        ANNARCHY_TRACE_SIM_STEP_WORKER("ProjStruct%(id_proj)s", "compute_psp", this, tid, nt);
 %(psp_prefix)s
 %(psp_code)s
     }
@@ -109,13 +102,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Updates synaptic variables
     void update_synapse(const int tid, const int nt) {
-    #ifdef _TRACE_SIMULATION_STEPS
-        #pragma omp critical
-        {
-            std::cout << "    ProjStruct%(id_proj)s::update_synapse() - tid " << tid << std::endl;
-            std::cout << std::flush;
-        }
-    #endif
+        ANNARCHY_TRACE_SIM_STEP_WORKER("ProjStruct%(id_proj)s", "update_synapse", this, tid, nt);
 %(update_prefix)s
 %(update_variables)s
     }
@@ -144,9 +131,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(pruning)s
 
     void clear() override final {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "clear", this);
 %(clear_container)s
     }
 };

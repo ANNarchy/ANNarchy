@@ -69,27 +69,24 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      *  @brief      Constructor
      */
     explicit LILInvMatrix(const IT num_rows, const IT num_columns)  : LILMatrix<IT, ST>(num_rows, num_columns) {
-    #ifdef _DEBUG
-        std::cout << "Created LIL-type matrix with backward view " << this << " using dense dimension " << static_cast<long>(this->num_rows_) << "x" << static_cast<long>(this->num_columns_) << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("LILInvMatrix", this);
+        ANNARCHY_LOG_ARG("num_rows", std::to_string(static_cast<IT>(num_rows)));
+        ANNARCHY_LOG_ARG("num_columns", std::to_string(static_cast<IT>(num_columns)));
     }
 
     /**
      *  @brief      Destructor
      */
     ~LILInvMatrix() {
-    #ifdef _DEBUG
-        std::cout << "LILInvMatrix::~LILInvMatrix(this=" << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_DEALLOC("LILInvMatrix", this);
     }
 
     /**
      *  @brief      Clear the containers.
      */
     void clear() override {
-    #ifdef _DEBUG
-        std::cout << "LILInvMatrix::clear(this=" << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILInvMatrix", "clear", this);
+
         // clear forward view
         LILMatrix<IT, ST>::clear();
 
@@ -114,9 +111,7 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      *  @see    LILMatrix::init_matrix_from_lil()
      */
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
-        std::cout << "LILInvMatrix::init_matrix_from_lil():" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILInvMatrix", "init_matrix_from_lil", this);
 
         // create forward view
         bool success = static_cast<LILMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
@@ -225,11 +220,10 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      *  @brief      Create backward view
      *  @details    based on the forward connectivity stored in LILMatrix::post_rank and LILMatrix::pre_rank we
      *              compute backward view.
-     */ 
+     */
     void inverse_connectivity_matrix() {
-    #ifdef _DEBUG
-        std::cout << "LILInvMatrix::inverse_connectivity_matrix():" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILInvMatrix", "inverse_connectivity_matrix", this);
+
         // std::map < dense column_index, < sparse row_idx, sparse col_idx > >
         inv_pre_rank =  std::map< IT, std::vector< std::pair<IT, IT> > > ();
         for (int i=0; i<this->pre_rank.size(); i++) {

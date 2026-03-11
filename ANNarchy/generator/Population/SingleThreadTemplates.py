@@ -40,9 +40,7 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-    #ifdef _TRACE_INIT
-        std::cout << "  PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("PopStruct%(id)s", this);
     }
 
     int size; // Number of neurons
@@ -70,9 +68,10 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
-    #ifdef _TRACE_INIT
-        std::cout << "  PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "init_population", this);
+        ANNARCHY_LOG_STATE("size", std::to_string(this->size));
+        ANNARCHY_LOG_STATE("max_delay", std::to_string(this->max_delay));
+
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s
@@ -91,17 +90,13 @@ struct PopStruct%(id)s{
 
     // Method to draw new random numbers
     void update_rng() {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update_rng()" << std::endl;
-#endif
+        ANNARCHY_TRACE_SIM_STEP("PopStruct%(id)s", "update_rng", this);
 %(update_rng)s
     }
 
     // Method to update global operations on the population (min/max/mean...)
     void update_global_ops() {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update_global_ops()" << std::endl;
-#endif
+        ANNARCHY_TRACE_SIM_STEP("PopStruct%(id)s", "update_global_ops", this);
 %(update_global_ops)s
     }
 
@@ -112,18 +107,19 @@ struct PopStruct%(id)s{
 
     // Method to dynamically change the size of the queue for delayed variables
     void update_max_delay(int value) {
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "update_max_delay", this);
+        ANNARCHY_LOG_ARG("new max_delay", value);
 %(update_max_delay)s
     }
 
     // Main method to update neural variables
     void update() {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update()" << std::endl;
-#endif
+        ANNARCHY_TRACE_SIM_STEP("PopStruct%(id)s", "update", this);
 %(update_variables)s
     }
 
     void spike_gather() {
+        ANNARCHY_TRACE_SIM_STEP("PopStruct%(id)s", "spike_gather", this);
 %(test_spike_cond)s
     }
 
@@ -138,9 +134,7 @@ struct PopStruct%(id)s{
 
     // Memory management: destroy all the C++ data
     void clear() {
-#ifdef _DEBUG
-    std::cout << "PopStruct%(id)s::clear() - this = " << this << std::endl;
-#endif
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "clear", this);
 %(clear_container)s
     }
 };

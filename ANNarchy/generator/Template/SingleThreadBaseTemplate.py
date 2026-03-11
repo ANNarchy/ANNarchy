@@ -31,6 +31,7 @@ header_template = """#pragma once
 #endif
 
 // Useful functions
+#include "logging.hpp"
 #include "helper_functions.hpp"
 
 /*
@@ -366,9 +367,9 @@ void initialize(const %(float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
-#ifdef _DEBUG
-    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
-#endif
+    std::string msg = "ANNarchyCore::setSeed(): " + std::to_string(seed) + ", " + std::to_string(num_sources) + ", " + std::string((use_seed_seq) ? "true" : "false");
+    ANNARCHY_LOG_MSG(msg);
+
     // sanity check
     if (num_sources > 1)
         std::cerr << "WARNING - ANNarchyCore::setSeed(): num_sources should be 1 for single thread code." << std::endl;

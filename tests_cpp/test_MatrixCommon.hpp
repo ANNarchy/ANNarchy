@@ -27,6 +27,9 @@
 #include <random>
 #include <fstream>
 
+// ANNarchy log message macros
+#include "logging.hpp"
+
 // ANNarchy helper functions
 #include "helper_functions.hpp"
 
