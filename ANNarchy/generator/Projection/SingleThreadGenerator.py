@@ -325,7 +325,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(LIL_SingleThread.conn_templates)
                 self._template_ids.update(LIL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -339,7 +339,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(COO_SingleThread.conn_templates)
                 self._template_ids.update(COO_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -353,7 +353,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(DIA_SingleThread.conn_templates)
                 self._template_ids.update(DIA_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -367,7 +367,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(BSR_SingleThread.conn_templates)
                 self._template_ids.update(BSR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -389,7 +389,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(ELLR_SingleThread.conn_templates)
                 self._template_ids.update(ELLR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -403,7 +403,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(SELL_SingleThread.conn_templates)
                 self._template_ids.update(SELL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -418,7 +418,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(ELL_SingleThread.conn_ids)
 
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -434,7 +434,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 #   In contrast to most of the other formats, we can not define the
                 #   indices by one set as they are different for coo/ell part
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -674,7 +674,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Messages._debug(
+                    Messages.debug(
                         "No SIMD implementation found, fallback to non-SIMD code"
                     )
                     template = ""
@@ -729,7 +729,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Messages._debug(
+                        Messages.debug(
                             "No SIMD implementation found, fallback to non-SIMD code"
                         )
                         template = ""

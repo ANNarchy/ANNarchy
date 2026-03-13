@@ -65,7 +65,7 @@ def _print(*var_text, end="\n", flush=False):
         print(text)
 
 
-def _debug(*var_text):
+def debug(*var_text):
     """
     Prints a message to standard out, if verbose mode set True.
     """

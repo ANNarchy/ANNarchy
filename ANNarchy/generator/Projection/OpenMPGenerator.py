@@ -670,7 +670,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Messages._debug(
+                    Messages.debug(
                         "No SIMD implementation found, fallback to non-SIMD code"
                     )
                     template = ""
@@ -725,7 +725,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Messages._debug(
+                        Messages.debug(
                             "No SIMD implementation found, fallback to non-SIMD code"
                         )
                         template = ""

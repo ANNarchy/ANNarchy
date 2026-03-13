@@ -148,7 +148,7 @@ class BoldMonitor(object):
                 for pop, scale, normalize in zip(
                     populations, scale_factor, normalize_input
                 ):
-                    Messages._debug(
+                    Messages.debug(
                         "Creating ACCProjection between", pop.name, self._bold_pop.name
                     )
                     tmp_proj = AccProjection(

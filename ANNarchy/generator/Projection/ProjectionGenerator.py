@@ -11,11 +11,7 @@ from ANNarchy.intern.ConfigManagement import (
     _check_paradigm,
     _check_precision,
 )
-from ANNarchy.intern.Messages import (
-    CodeGeneratorException,
-    InvalidConfiguration,
-    _debug,
-)
+from ANNarchy.intern import Messages
 
 # Useful functions
 from ANNarchy.generator.Utils import (
@@ -108,7 +104,7 @@ class ProjectionGenerator(object):
             ConfigManager().get("structural_plasticity", self._net_id)
             and proj._storage_format != "lil"
         ):
-            raise InvalidConfiguration(
+            raise Messages.InvalidConfiguration(
                 "Structural plasticity is only allowed for LIL format."
             )
 
@@ -159,7 +155,7 @@ class ProjectionGenerator(object):
         if proj.synapse_type.type == "rate":
             # Sanity check
             if proj._storage_order == "pre_to_post":
-                raise CodeGeneratorException(
+                raise Messages.CodeGeneratorException(
                     "    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "
                     + proj.name
                     + ")"
@@ -196,7 +192,7 @@ class ProjectionGenerator(object):
                             sparse_matrix_include = '#include "PartitionedMatrix.hpp"\n#include "LILMatrix.hpp"\n'
                             single_matrix = False
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using LIL and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -220,7 +216,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using COO and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -237,12 +233,12 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 elif _check_paradigm("cuda", self._net_id):
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    Diagonal format is not available for CUDA devices."
                     )
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using DIA and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -279,7 +275,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using BSR and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -303,7 +299,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using CSR and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -327,7 +323,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -351,7 +347,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -375,7 +371,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -399,7 +395,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -429,7 +425,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
             else:
-                raise CodeGeneratorException(
+                raise Messages.CodeGeneratorException(
                     "    No implementation assigned for rate-coded synapses using '"
                     + proj._storage_format
                     + "' storage format (Projection: "
@@ -442,7 +438,7 @@ class ProjectionGenerator(object):
             # combination if it's availability
             if proj._storage_format == "lil":
                 if proj._storage_order == "pre_to_post":
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "
                         + proj.name
                         + ")"
@@ -474,7 +470,7 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 else:
-                    raise CodeGeneratorException(
+                    raise Messages.CodeGeneratorException(
                         "    No implementation assigned for spiking synapses using LIL and paradigm="
                         + str(ConfigManager().get("paradigm", self._net_id))
                         + " (Projection: "
@@ -638,7 +634,7 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
             else:
-                raise CodeGeneratorException(
+                raise Messages.CodeGeneratorException(
                     "    No implementation assigned for spiking synapses using '"
                     + proj._storage_format
                     + "' storage format (Projection: "
@@ -647,7 +643,7 @@ class ProjectionGenerator(object):
                 )
 
         else:
-            raise CodeGeneratorException(
+            raise Messages.CodeGeneratorException(
                 "    Invalid synapse type " + proj.synapse_type.type
             )
 
@@ -671,20 +667,20 @@ class ProjectionGenerator(object):
 
         # For debug: printout the configured SpMV implementation
         if ConfigManager().get("verbose", self._net_id) and not suppress_printouts:
-            _debug(f"Code configuration for projection {proj.name}:")
-            _debug(f"  - SpM format   : {sparse_matrix_format}({sparse_matrix_args})")
-            _debug(f"  - single matrix: {single_matrix}")
-            _debug(
+            Messages.debug(f"Code configuration for projection {proj.name}:")
+            Messages.debug(f"  - SpM format   : {sparse_matrix_format}({sparse_matrix_args})")
+            Messages.debug(f"  - single matrix: {single_matrix}")
+            Messages.debug(
                 f"  - delay config : max_delay={proj.max_delay}, uniform_delay={proj.uniform_delay}"
             )
 
             # print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", , " single_matrix =", single_matrix )
             if proj._storage_format == "bsr":
-                _debug(
+                Messages.debug(
                     f"  - dense tiles are {proj._bsr_tile_size} x {proj._bsr_tile_size}"
                 )
             elif proj._storage_format == "sell":
-                _debug(f"  - block size of {proj._sell_block_size} rows")
+                Messages.debug(f"  - block size of {proj._sell_block_size} rows")
 
         return (
             sparse_matrix_include,
@@ -837,7 +833,7 @@ class ProjectionGenerator(object):
                 declare_delay = self._templates["delay"][key_delay]["declare"]
             except:
                 if key_delay == "uniform":
-                    raise InvalidConfiguration(
+                    raise Messages.InvalidConfiguration(
                         "uniform delays are not support by the "
                         + proj._storage_format
                         + " format and "
@@ -845,7 +841,7 @@ class ProjectionGenerator(object):
                         + " matrix ordering."
                     )
                 else:
-                    raise InvalidConfiguration(
+                    raise Messages.InvalidConfiguration(
                         "non-uniform delays are not support by the "
                         + proj._storage_format
                         + " format and "

@@ -121,7 +121,7 @@ class Network(metaclass=NetworkMeta):
         self._initialized = True
 
         # Object tracking
-        Messages._debug("Instantiate Network object", self)
+        Messages.debug("Instantiate Network object", self)
 
         # Register the network in the NetworkManager()
         self.id = NetworkManager().add_network(self)
@@ -783,7 +783,7 @@ class Network(metaclass=NetworkMeta):
         :param seeds: list of seeds for each network. If `None`, the seeds will be be randomly set. If `'same'`, it will be the same as the current network. If `'sequential'`, the seeds will be incremented for each network (42, 43, 44, etc).
         :param measure_time: if the total duration of the simulation should be reported at the end.
         """
-        Messages._debug(
+        Messages.debug(
             "Network was created with ", self._init_args, "and", self._init_kwargs
         )
 
@@ -921,7 +921,7 @@ class Network(metaclass=NetworkMeta):
 
     def _retrieve_initargs(self):
         # args and kwargs were saved here
-        Messages._debug(
+        Messages.debug(
             self._init_args,
             self._init_kwargs,
         )
@@ -1038,14 +1038,14 @@ class Network(metaclass=NetworkMeta):
             rng_changed = True
 
         if rng_changed:
-            Messages._debug("RNG generators are now configured as following:")
-            Messages._debug("  seed={} (accounts for C++ and NumPy)".format(self.seed))
-            Messages._debug(
+            Messages.debug("RNG generators are now configured as following:")
+            Messages.debug("  seed={} (accounts for C++ and NumPy)".format(self.seed))
+            Messages.debug(
                 "  use_seed_seq={}".format(
                     "True" if self._get_config("use_seed_seq") else "False"
                 )
             )
-            Messages._debug(
+            Messages.debug(
                 "  disable_parallel_rng={}".format(
                     "True" if self._get_config("disable_parallel_rng") else "False"
                 )

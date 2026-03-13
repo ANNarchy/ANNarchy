@@ -82,7 +82,7 @@ class NetworkManager:
         new_id = len(self._networks)
         self._networks.append(net)
 
-        Messages._debug(
+        Messages.debug(
             "NetworkManager: added network "
             + str(net)
             + " and assigned ID = "
@@ -172,7 +172,7 @@ class NetworkManager:
 
         This function will be called from the Network.__del__() method, after destruction of the attached objects.
         """
-        Messages._debug("Remove network", py_instance)
+        Messages.debug("Remove network", py_instance)
 
         net_id = -1
         for net_id, inst in enumerate(self._networks):
