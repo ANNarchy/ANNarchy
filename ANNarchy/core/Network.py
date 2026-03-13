@@ -1055,11 +1055,8 @@ class Network(metaclass=NetworkMeta):
         for key, value in kwargs.items():
             # sanity check: filter out performance flags
             if key in ConfigManager()._performance_related_config_keys:
-                Messages._error(
-                    "The performance related flag '"
-                    + key
-                    + "' can not be configured by setup()"
-                )
+                Messages._warning(f"The '{key}' flag enables an optimization for performance which might effect your results. Please cross-check the simulation results!")
+                ConfigManager().set(key, value, net_id=self.id)
             elif key in ConfigManager().keys():
                 ConfigManager().set(key, value, net_id=self.id)
             else:
