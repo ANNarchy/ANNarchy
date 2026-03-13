@@ -41,7 +41,7 @@ class RandomDistribution:
         Returns a np.ndarray with the given shape
         """
         Messages._error("instantiated base class RandomDistribution is not allowed.")
-        return np.array([0.0])
+        return np.zeros(shape=shape)
 
     def get_list_values(self, size):
         """
