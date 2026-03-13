@@ -337,7 +337,7 @@ class Dendrite:
                 *extra_attributes,
             )
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages._error(
                 f"Dendrite.create_synapse(): Could not add synapse of rank {rank} to the dendrite {self.post_rank}."
             )
@@ -437,7 +437,7 @@ class Dendrite:
                 post_idx, ranks, weights, delays, *extra_attributes
             )
         except Exception as e:
-            Messages._print(e)
+            print(e)
 
     def prune_synapse(self, rank: int) -> None:
         """

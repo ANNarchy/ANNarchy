@@ -316,7 +316,7 @@ class Population:
             try:
                 self.set(self.init)
             except Exception as e:
-                Messages._print(e)
+                print(e)
                 Messages._error(
                     "Population.reset(): something went wrong while resetting."
                 )
@@ -334,7 +334,7 @@ class Population:
                 try:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:
-                    Messages._print(e)
+                    print(e)
                     Messages.warning(
                         "Population.reset(): something went wrong while resetting", var
                     )
@@ -444,7 +444,7 @@ class Population:
             else:
                 return getattr(self.cyInstance, attribute)
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages._error(
                 " the variable "
                 + attribute
@@ -527,7 +527,7 @@ class Population:
                         setattr(self.cyInstance, attribute + "_host_to_device", True)
 
         except Exception as e:
-            Messages._print(e)
+            print(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
             Messages._error(err_msg % {"attr": attribute, "pop": self.name})
 
@@ -1114,13 +1114,13 @@ class Population:
                 setattr(self.cyInstance, var, data)
 
             except Exception as e:
-                Messages._print(e)
-                Messages._print(var, data, type(data))
+                print(e)
+                print(var, data, type(data))
                 Messages.warning(
                     "Can not load the variable "
                     + var
                     + " in the population "
                     + self.name
                 )
-                Messages._print("Skipping this variable.")
+                print("Skipping this variable.")
                 continue

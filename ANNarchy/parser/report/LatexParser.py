@@ -368,7 +368,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages.warning(
                 "can not transform the left side of "
                 + orig
@@ -381,7 +381,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left, local_dict, tex_dict)
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages.warning(
                 "can not transform the left side of "
                 + orig
@@ -393,7 +393,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
     try:
         right = _analyse_part(eq[split_idx + 1 :], local_dict, tex_dict)
     except Exception as e:
-        Messages._print(e)
+        print(e)
         Messages.warning(
             "can not transform the right side of "
             + orig
@@ -410,7 +410,7 @@ class CustomLatexPrinter(LatexPrinter):
         For ite(), pos() and neg() only.
         """
         func = expr.func.__name__
-        args = [str(self._print(arg)) for arg in expr.args]
+        args = [str(print(arg)) for arg in expr.args]
 
         if func == "ite":
             return r"""

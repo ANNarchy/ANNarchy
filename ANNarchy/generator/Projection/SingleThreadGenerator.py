@@ -796,7 +796,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             + "%(delay_nu)s%(pre_index)s",
                         )
                     else:
-                        Messages._print(proj.synapse_type.description["psp"]["eq"])
+                        print(proj.synapse_type.description["psp"]["eq"])
                         Messages._error(
                             "The psp accesses a global variable with a non-uniform delay!"
                         )

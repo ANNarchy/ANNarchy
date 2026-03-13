@@ -216,7 +216,7 @@ def process_equations(equations):
             # Retrieve the name
             eq = split_operators[0][0]
             if eq.strip() == "":
-                Messages._print(equation)
+                print(equation)
                 Messages._error("The equation can not be analysed, check the syntax.")
 
             name = extract_name(eq, left=True)

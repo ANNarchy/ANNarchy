@@ -50,7 +50,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Verbose
     if ConfigManager().get("verbose", net_id):
-        Messages._print("Create subdirectory.")
+        print("Create subdirectory.")
 
     if clean or profile_enabled:
         shutil.rmtree(annarchy_dir, True)
@@ -114,7 +114,7 @@ def compile(
     """
     # Check if the network has already been compiled
     if NetworkManager().get_network(net_id).compiled:
-        Messages._print(
+        print(
             "compile(): the network has already been compiled, doing nothing."
         )
         return
@@ -222,7 +222,7 @@ def compile(
 
     if ConfigManager().get("verbose", net_id):
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id) + " "
-        Messages._print("Construct network " + net_str + "...", end=" ")
+        print("Construct network " + net_str + "...", end=" ")
 
     # Create the Python objects
     _instantiate(
@@ -235,7 +235,7 @@ def compile(
     _update_num_aff_connections(compiler.net_id)
 
     if ConfigManager().get("verbose", net_id):
-        Messages._print("OK")
+        print("OK")
 
     # Create a report if requested
     if options.report is not None:
@@ -386,7 +386,7 @@ class Compiler(object):
 
         if ConfigManager().get("verbose", self.net_id):
             net_str = "" if self.net_id == 0 else str(self.net_id) + " "
-            Messages._print("Code generation " + net_str + "...", end=" ", flush=True)
+            print("Code generation " + net_str + "...", end=" ", flush=True)
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.network.get_populations(), self.network.get_projections())
@@ -409,9 +409,9 @@ class Compiler(object):
         if ConfigManager().get("verbose", self.net_id):
             t1 = time.time()
             if not ConfigManager().get("show_time", self.net_id):
-                Messages._print("OK", flush=True)
+                print("OK", flush=True)
             else:
-                Messages._print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
+                print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
 
         # Shared libraries have os-dependent suffixes
         if sys.platform.startswith("linux"):
@@ -569,7 +569,7 @@ class Compiler(object):
             if self.net_id > 0:
                 msg += "network " + str(self.net_id)
             msg += "..."
-            Messages._print(msg, end=" ", flush=True)
+            print(msg, end=" ", flush=True)
             if (
                 ConfigManager().get("show_time", self.net_id)
                 or NetworkManager().get_network(self.net_id)._profiler is not None
@@ -615,7 +615,7 @@ class Compiler(object):
                 msg = rfile.read()
             with open(self.annarchy_dir + "/compilation", "w") as wfile:
                 wfile.write("0")
-            Messages._print(msg)
+            print(msg)
             try:
                 if sys.platform.startswith("linux"):
                     os.remove("ANNarchyCore" + str(self.net_id) + ".so")
@@ -638,9 +638,9 @@ class Compiler(object):
             t1 = time.time()
 
             if not ConfigManager().get("show_time", self.net_id):
-                Messages._print("OK", flush=True)
+                print("OK", flush=True)
             else:
-                Messages._print("OK (took " + str(t1 - t0) + "seconds.", flush=True)
+                print("OK (took " + str(t1 - t0) + "seconds.", flush=True)
 
             if NetworkManager().get_network(self.net_id)._profiler is not None:
                 NetworkManager().get_network(self.net_id)._profiler.add_entry(
@@ -927,14 +927,14 @@ def _instantiate(
 
         if ConfigManager().get("num_threads", net_id) > 1:
             if ConfigManager().get("verbose", net_id):
-                Messages._print(
+                print(
                     "Running simulation with",
                     ConfigManager().get("num_threads", net_id),
                     "threads.",
                 )
         else:
             if ConfigManager().get("verbose", net_id):
-                Messages._print("Running simulation single-threaded.")
+                print("Running simulation single-threaded.")
 
     elif _check_paradigm("cuda", net_id):
         # check if there is a configuration,
@@ -946,7 +946,7 @@ def _instantiate(
             device = int(user_config["cuda"]["device"])
 
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Setting GPU device", device)
+            print("Setting GPU device", device)
 
         # Set the CUDA device
         cython_module.set_device(device)
@@ -982,7 +982,7 @@ def _instantiate(
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get("verbose", net_id):
-            Messages._print(
+            print(
                 "Instantiate population ( name =", pop.name, ", size =", pop.size, ")"
             )
         if ConfigManager().get("show_time", net_id):
@@ -992,7 +992,7 @@ def _instantiate(
         pop._instantiate(cython_module)
 
         if ConfigManager().get("show_time", net_id):
-            Messages._print(
+            print(
                 "  instantiate of the population took",
                 (time.time() - t0) * 1000,
                 "milliseconds",
@@ -1001,7 +1001,7 @@ def _instantiate(
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get("verbose", net_id):
-            Messages._print(
+            print(
                 "Instantiate projection ( pre =",
                 proj.pre.name,
                 ", post =",
@@ -1017,7 +1017,7 @@ def _instantiate(
         proj._instantiate(cython_module)
 
         if ConfigManager().get("show_time", net_id):
-            Messages._print(
+            print(
                 "  instantiate of the projection took",
                 (time.time() - t0) * 1000,
                 "milliseconds",
@@ -1033,11 +1033,11 @@ def _instantiate(
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Initializing C++ counterpart of population", pop.name)
+            print("Initializing C++ counterpart of population", pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Initializing C++ counterpart of projection", proj.name)
+            print("Initializing C++ counterpart of projection", proj.name)
         proj._init_attributes()
 
     # Start the monitors

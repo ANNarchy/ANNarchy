@@ -52,8 +52,8 @@ def load_parameters(
         Messages._error("load_parameters(): the json file does not exist")
 
     if verbose:
-        Messages._print("Loading parameters from file", filename)
-        Messages._print("-" * 40)
+        print("Loading parameters from file", filename)
+        print("-" * 40)
 
     # Populations
     try:
@@ -61,7 +61,7 @@ def load_parameters(
     except:
         populations = {}
         if verbose:
-            Messages._print("load_parameters(): no population parameters.")
+            print("load_parameters(): no population parameters.")
     for name, parameters in populations.items():
         # Get the population
         for pop in NetworkManager().get_network(net_id=net_id).get_populations():
@@ -78,13 +78,13 @@ def load_parameters(
             )
 
         if verbose:
-            Messages._print("Population", name)
+            print("Population", name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in population.parameters:
-                Messages._print(
+                print(
                     "  ",
                     name,
                     "is not a global parameter of",
@@ -93,7 +93,7 @@ def load_parameters(
                 )
                 continue
             if global_only and not name in population.neuron_type.description["global"]:
-                Messages._print(
+                print(
                     "  ",
                     name,
                     "is not a global parameter of",
@@ -103,7 +103,7 @@ def load_parameters(
                 continue
 
             if verbose:
-                Messages._print("  ", name, ":", population.get(name), "->", val)
+                print("  ", name, ":", population.get(name), "->", val)
 
             population.set({name: val})
 
@@ -113,7 +113,7 @@ def load_parameters(
     except:
         projections = {}
         if verbose:
-            Messages._print("load_parameters(): no projection parameters.")
+            print("load_parameters(): no projection parameters.")
     for name, parameters in projections.items():
         # Get the projection
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
@@ -130,13 +130,13 @@ def load_parameters(
             )
 
         if verbose:
-            Messages._print("Projection", name)
+            print("Projection", name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in projection.parameters:
-                Messages._print(
+                print(
                     "  ",
                     name,
                     "is not a global parameter of",
@@ -148,7 +148,7 @@ def load_parameters(
                 global_only
                 and not name in projection.synapse_type.description["global"]
             ):
-                Messages._print(
+                print(
                     "  ",
                     name,
                     "is not a global parameter of",
@@ -158,7 +158,7 @@ def load_parameters(
                 continue
 
             if verbose:
-                Messages._print("  ", name, ":", projection.get(name), "->", val)
+                print("  ", name, ":", projection.get(name), "->", val)
 
             projection.set({name: float(val)})
 
@@ -168,7 +168,7 @@ def load_parameters(
     except:
         constants = {}
         if verbose:
-            Messages._print("load_parameters(): no constants.")
+            print("load_parameters(): no constants.")
     for name, value in constants.items():
         # Get the constant
         for constant in NetworkManager().get_network(net_id=net_id).get_constants():
@@ -271,7 +271,7 @@ def _load_parameters_from_xml(in_file):
     try:
         from lxml import etree
     except:
-        Messages._print("lxml is not installed. Unable to load in xml format.")
+        print("lxml is not installed. Unable to load in xml format.")
         return
     par = {}
     damaged_pars = []  # for printout
@@ -287,7 +287,7 @@ def _load_parameters_from_xml(in_file):
             doc = etree.parse(file)
 
         except IOError:
-            Messages._print("Error: file '", file, "' not found.")
+            print("Error: file '", file, "' not found.")
             continue
 
         matches = doc.findall("parameter")
@@ -297,7 +297,7 @@ def _load_parameters_from_xml(in_file):
 
             # TODO: allways correct ???
             if len(childs) != 2:
-                Messages._print("Error: to much tags in parameter")
+                print("Error: to much tags in parameter")
 
             name = None
             value = None
@@ -308,7 +308,7 @@ def _load_parameters_from_xml(in_file):
                     value = child.text
 
                     if value is None:
-                        Messages._print("Error: no value defined for", name)
+                        print("Error: no value defined for", name)
                         damaged_pars.append(name)
                         value = 0
                     else:
@@ -321,15 +321,15 @@ def _load_parameters_from_xml(in_file):
                                 value = value
 
                 else:
-                    Messages._print("Error: unexpected xml-tag", child.tag)
+                    print("Error: unexpected xml-tag", child.tag)
 
             if name is None:
-                Messages._print("Error: no name in parameter set.")
+                print("Error: no name in parameter set.")
             elif value is None:
-                Messages._print("Error: no value in parameter set.")
+                print("Error: no value in parameter set.")
                 damaged_pars.append(name)
             elif name in par.keys():
-                Messages._print("Error: parameter", name, "already exists.")
+                print("Error: parameter", name, "already exists.")
                 damaged_pars.append(name)
             else:
                 par[name] = value
@@ -347,24 +347,24 @@ def _save_data(filename, data):
 
     if not path == "":
         if not os.path.isdir(path):
-            Messages._print("Creating folder", path)
+            print("Creating folder", path)
             os.mkdir(path)
 
     extension = os.path.splitext(fname)[1]
 
     if extension == ".mat":
-        Messages._print("Saving network in Matlab format...")
+        print("Saving network in Matlab format...")
         try:
             import scipy.io as sio
 
             sio.savemat(filename, data)
         except Exception as e:
             Messages._error("Error while saving in Matlab format.")
-            Messages._print(e)
+            print(e)
             return
 
     elif extension == ".gz":
-        Messages._print("Saving network in gunzipped binary format...")
+        print("Saving network in gunzipped binary format...")
         try:
             import gzip
         except:
@@ -374,23 +374,23 @@ def _save_data(filename, data):
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Messages._print("Error while saving in gzipped binary format.")
-                Messages._print(e)
+                print("Error while saving in gzipped binary format.")
+                print(e)
                 return
 
     elif extension == ".npz":
-        Messages._print("Saving network in Numpy format...")
+        print("Saving network in Numpy format...")
         np.savez_compressed(filename, allow_pickle=True, **data)
 
     else:
-        Messages._print("Saving network in text format...")
+        print("Saving network in text format...")
         # save in Pythons pickle format
         with open(filename, mode="wb") as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Messages._print("Error while saving in text format.")
-                Messages._print(e)
+                print("Error while saving in text format.")
+                print(e)
                 return
         return
 
@@ -461,8 +461,8 @@ def _load_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
     elif extension == ".npz":
@@ -486,8 +486,8 @@ def _load_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
     else:
@@ -499,8 +499,8 @@ def _load_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
 
@@ -534,8 +534,8 @@ def _load_connectivity_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
     elif extension == ".npz":
@@ -554,8 +554,8 @@ def _load_connectivity_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
     else:
@@ -567,8 +567,8 @@ def _load_connectivity_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Messages._print("Unable to read the file " + filename)
-            Messages._print(e)
+            print("Unable to read the file " + filename)
+            print(e)
             return None
 
 

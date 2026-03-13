@@ -135,9 +135,9 @@ class CodeGenerator(object):
         if ConfigManager().get("verbose", self.net_id):
             if ConfigManager().get("paradigm", self.net_id) == "openmp":
                 if ConfigManager().get("num_threads", self.net_id) > 1:
-                    Messages._print("\nGenerate code for OpenMP ...")
+                    print("\nGenerate code for OpenMP ...")
                 else:
-                    Messages._print("\nGenerate sequential code ...")
+                    print("\nGenerate sequential code ...")
             elif ConfigManager().get("paradigm", self.net_id) == "cuda":
                 print("\nGenerate CUDA code ...")
             else:
@@ -1060,7 +1060,7 @@ void set_%(name)s(%(float_prec)s value) {
                 }
 
                 if ConfigManager().get("verbose", self.net_id):
-                    Messages._print(
+                    print(
                         "population",
                         pop.id,
                         " - kernel config: (",
@@ -1100,7 +1100,7 @@ void set_%(name)s(%(float_prec)s value) {
                     }
 
                     if ConfigManager().get("verbose", self.net_id):
-                        Messages._print(
+                        print(
                             "projection",
                             proj.id,
                             "with target",
@@ -1229,7 +1229,7 @@ void set_%(name)s(%(float_prec)s value) {
                 break
 
         if ConfigManager().get("verbose", self.net_id):
-            Messages._print("projection", proj.id, " - kernel size:", guess)
+            print("projection", proj.id, " - kernel size:", guess)
 
         return guess
 

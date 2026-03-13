@@ -870,7 +870,7 @@ class Projection:
             try:
                 self.__setattr__(var, self.init[var])
             except Exception as e:
-                Messages._print(e)
+                print(e)
                 Messages.warning(
                     "Projection.reset(): something went wrong while resetting", var
                 )
@@ -1549,7 +1549,7 @@ class Projection:
 
         if not path == "":
             if not os.path.isdir(path):
-                Messages._print("Creating folder", path)
+                print("Creating folder", path)
                 os.mkdir(path)
 
         extension = os.path.splitext(fname)[1]
@@ -1571,7 +1571,7 @@ class Projection:
 
         # Save the data
         if extension == ".gz":
-            Messages._print("Saving connectivity in gunzipped binary format...")
+            print("Saving connectivity in gunzipped binary format...")
             try:
                 import gzip
             except ImportError:
@@ -1581,16 +1581,16 @@ class Projection:
                 try:
                     pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
                 except Exception as e:
-                    Messages._print("Error while saving in gzipped binary format.")
-                    Messages._print(e)
+                    print("Error while saving in gzipped binary format.")
+                    print(e)
                     return
 
         elif extension == ".npz":
-            Messages._print("Saving connectivity in Numpy format...")
+            print("Saving connectivity in Numpy format...")
             np.savez_compressed(filename, **data)
 
         elif extension == ".mat":
-            Messages._print("Saving connectivity in Matlab format...")
+            print("Saving connectivity in Matlab format...")
             if data["delay"] is None:
                 data["delay"] = 0
             try:
@@ -1599,18 +1599,18 @@ class Projection:
                 sio.savemat(filename, data)
             except Exception as e:
                 Messages._error("Error while saving in Matlab format.")
-                Messages._print(e)
+                print(e)
                 return
 
         else:
-            Messages._print("Saving connectivity in text format...")
+            print("Saving connectivity in text format...")
             # save in Pythons pickle format
             with open(filename, mode="wb") as w_file:
                 try:
                     pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
                 except Exception as e:
-                    Messages._print("Error while saving in text format.")
-                    Messages._print(e)
+                    print("Error while saving in text format.")
+                    print(e)
                     return
             return
 
@@ -1800,7 +1800,7 @@ class Projection:
                     )(var)  # linear array or single constant
 
             except Exception as e:
-                Messages._print(e)
+                print(e)
                 Messages.warning(
                     "Can not save the attribute "
                     + var
@@ -1976,7 +1976,7 @@ class Projection:
                 try:
                     self._set_cython_attribute(var, desc[var])
                 except Exception as e:
-                    Messages._print(e)
+                    print(e)
                     Messages.warning(
                         "load(): the variable",
                         var,

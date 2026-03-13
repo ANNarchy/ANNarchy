@@ -92,7 +92,7 @@ def simulate(
 
     if measure_time:
         if net_id > 0:
-            Messages._print(
+            print(
                 "Simulating",
                 duration / 1000.0,
                 "seconds of the network",
@@ -102,7 +102,7 @@ def simulate(
                 "seconds.",
             )
         else:
-            Messages._print(
+            print(
                 "Simulating",
                 duration / 1000.0,
                 "seconds of the network took",
@@ -232,7 +232,7 @@ def simulate_until(
 
     sim_time = float(nb) / ConfigManager().get("dt", net_id)
     if measure_time:
-        Messages._print(
+        print(
             "Simulating",
             nb / ConfigManager().get("dt", net_id) / 1000.0,
             "seconds of the network took",

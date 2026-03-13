@@ -224,8 +224,8 @@ def _check_reserved_names(populations, projections):
         # Reserved variable names
         for term in reserved_variables:
             if term in pop.attributes:
-                Messages._print(pop.neuron_type.parameters)
-                Messages._print(pop.neuron_type.equations)
+                print(pop.neuron_type.parameters)
+                print(pop.neuron_type.equations)
                 Messages._error(term + " is a reserved variable name")
 
     # Check projections
@@ -233,8 +233,8 @@ def _check_reserved_names(populations, projections):
         # Reserved variable names
         for term in reserved_variables:
             if term in proj.attributes:
-                Messages._print(proj.synapse_type.parameters)
-                Messages._print(proj.synapse_type.equations)
+                print(proj.synapse_type.parameters)
+                print(proj.synapse_type.equations)
                 Messages._error(term + " is a reserved variable name")
 
 
@@ -368,7 +368,7 @@ def _check_prepost(populations, projections):
             if dep.startswith("sum("):
                 target = re.findall(r"\(([\s\w]+)\)", dep)[0].strip()
                 if not target in proj.pre.targets:
-                    Messages._print(proj.synapse_type.equations)
+                    print(proj.synapse_type.equations)
                     Messages._error(
                         "The pre-synaptic population "
                         + proj.pre.name
@@ -378,7 +378,7 @@ def _check_prepost(populations, projections):
                 continue
 
             if not dep in proj.pre.attributes:
-                Messages._print(proj.synapse_type.equations)
+                print(proj.synapse_type.equations)
                 Messages._error(
                     "The pre-synaptic population "
                     + proj.pre.name
@@ -390,7 +390,7 @@ def _check_prepost(populations, projections):
             if dep.startswith("sum("):
                 target = re.findall(r"\(([\s\w]+)\)", dep)[0].strip()
                 if not target in proj.post.targets:
-                    Messages._print(proj.synapse_type.equations)
+                    print(proj.synapse_type.equations)
                     Messages._error(
                         "The post-synaptic population "
                         + proj.post.name
@@ -400,7 +400,7 @@ def _check_prepost(populations, projections):
                 continue
 
             if not dep in proj.post.attributes:
-                Messages._print(proj.synapse_type.equations)
+                print(proj.synapse_type.equations)
                 Messages._error(
                     "The post-synaptic population "
                     + proj.post.name
@@ -424,7 +424,7 @@ def _check_locality(populations, projections):
                         "local",
                         "semiglobal",
                     ]:
-                        Messages._print(var["eq"])
+                        print(var["eq"])
                         Messages._error(
                             "The global variable",
                             var["name"],
@@ -435,7 +435,7 @@ def _check_locality(populations, projections):
                 # As pre/post dependencies
                 deps = var["prepost_dependencies"]
                 if len(deps["pre"]) > 0 or len(deps["post"]) > 0:
-                    Messages._print(proj.synapse_type.equations)
+                    print(proj.synapse_type.equations)
                     Messages._error(
                         "The global variable",
                         var["name"],
@@ -448,7 +448,7 @@ def _check_locality(populations, projections):
                 # Inside the equation
                 for v in var["dependencies"]:
                     if _get_locality(v, proj.synapse_type.description) == "local":
-                        Messages._print(var["eq"])
+                        print(var["eq"])
                         Messages._error(
                             "The postsynaptic variable",
                             var["name"],
@@ -459,7 +459,7 @@ def _check_locality(populations, projections):
                 # As pre/post dependencies
                 deps = var["prepost_dependencies"]
                 if len(deps["pre"]) > 0:
-                    Messages._print(proj.synapse_type.equations)
+                    print(proj.synapse_type.equations)
                     Messages._error(
                         "The postsynaptic variable",
                         var["name"],

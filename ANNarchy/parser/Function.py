@@ -107,7 +107,7 @@ class FunctionParser(object):
                 ),
             )
         except:
-            Messages._print(expression)
+            print(expression)
             Messages._error("The function depends on unknown variables.")
 
         # The `strict` parameter has been introduced in sympy >= 1.13.

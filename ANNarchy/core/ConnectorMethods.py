@@ -18,7 +18,7 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 try:
     from ANNarchy.cython_ext import *
 except Exception as e:
-    Messages._print(e)
+    print(e)
 
 
 ################################
@@ -48,7 +48,7 @@ def connect_one_to_one(
             "with target",
             self.target,
         )
-        Messages._print(
+        print(
             "\t the two populations have different sizes, please check the connection pattern is what you expect."
         )
 
@@ -672,18 +672,18 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     shape = weights.shape
     if shape != (self.post.size, self.pre.size):
         if not pre_post:
-            Messages._print(
+            print(
                 "ERROR: from_matrix(): the matrix does not have the correct dimensions."
             )
-            Messages._print("Expected:", (self.post.size, self.pre.size))
-            Messages._print("Received:", shape)
+            print("Expected:", (self.post.size, self.pre.size))
+            print("Received:", shape)
 
         else:
-            Messages._print(
+            print(
                 "ERROR: from_matrix(): the matrix does not have the correct dimensions."
             )
-            Messages._print("Expected:", (self.pre.size, self.post.size))
-            Messages._print("Received:", shape)
+            print("Expected:", (self.pre.size, self.post.size))
+            print("Received:", shape)
         Messages._error("Quitting...")
 
     for i in range(self.post.size):
@@ -780,11 +780,11 @@ def _load_from_sparse(self, pre, post, weights, delays):
     (pre, post) = weights.shape
 
     if (pre, post) != (len(pre_ranks), len(post_ranks)):
-        Messages._print(
+        print(
             "ERROR: from_sparse(): the sparse matrix does not have the correct dimensions."
         )
-        Messages._print("Expected:", (len(pre_ranks), len(post_ranks)))
-        Messages._print("Received:", (pre, post))
+        print("Expected:", (len(pre_ranks), len(post_ranks)))
+        print("Received:", (pre, post))
         Messages._error("Quitting...")
 
     for idx_post in range(post):
@@ -821,7 +821,7 @@ def connect_from_file(
     try:
         data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
-        Messages._print(e)
+        print(e)
         Messages._error(
             "from_file(): Unable to load the data", filename, "into the projection."
         )
@@ -850,13 +850,13 @@ def connect_from_file(
         if NetworkManager().get_network(net_id=self.net_id).compiled:
             # We have already compiled the network, so changing the flag will result in crashes when accessing 'w'
             if single_w != self._single_constant_weight:
-                Messages._print(
+                print(
                     "Projection (name="
                     + self.name
                     + "): potential mismatch between weight vector in the projection and the save file."
                 )
-                Messages._print("    single weight in file:", single_w)
-                Messages._print(
+                print("    single weight in file:", single_w)
+                print(
                     "    single weight in network:", self._single_constant_weight
                 )
         else:
@@ -876,7 +876,7 @@ def connect_from_file(
                 lil.delay = [[lil.max_delay]]
 
     except Exception as e:
-        Messages._print(e)
+        print(e)
         Messages._error("Unable to load the data", filename, "into the projection.")
 
     # Store the synapses

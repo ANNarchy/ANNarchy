@@ -125,8 +125,8 @@ cdef class LILConnectivity:
         # sanity check: added rows should be ascending sorted
         if rk < self.last_added_idx:
             if self.requires_sorting == False:
-                ANNarchy.intern.Messages._warning("LILConnectivity.add()/.push_back(): dendrites should be added in an ascending order for performance reasons.")
-                ANNarchy.intern.Messages._print("ANNarchy will sort the dendrites during compile() which increases the required time.")
+                ANNarchy.intern.Messages.warning("LILConnectivity.add()/.push_back(): dendrites should be added in an ascending order for performance reasons.")
+                print("ANNarchy will sort the dendrites during compile() which increases the required time.")
             self.requires_sorting = True
         else:
             self.last_added_idx = rk
@@ -200,8 +200,8 @@ cdef class LILConnectivity:
         cdef list preranks, set_preranks, indices
 
         if len(postranks) != len(set_postranks):
-            ANNarchy.intern.Messages._warning('You have added several times the same post-synaptic neuron to the LIL data in your connector method.')
-            ANNarchy.intern.Messages._print('ANNarchy will try to sort the entries if possible, it may take some time...')
+            ANNarchy.intern.Messages.warning('You have added several times the same post-synaptic neuron to the LIL data in your connector method.')
+            print('ANNarchy will try to sort the entries if possible, it may take some time...')
         else:
             return
 
@@ -293,7 +293,7 @@ cdef class LILConnectivity:
         # Retríeve ranks
         post_ranks = post.ranks.tolist()
         pre_ranks = pre.ranks.tolist()
-    
+
         for idx in range(len(post_ranks)):
             if idx >= pre.size:
                 break

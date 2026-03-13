@@ -49,7 +49,7 @@ def extract_randomdist(description, net_id):
 
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
-                    Messages._print(eq)
+                    print(eq)
                     Messages._error(
                         "The distribution "
                         + dist
@@ -58,7 +58,7 @@ def extract_randomdist(description, net_id):
                         + "parameters"
                     )
                 elif len(arguments) > distributions_arguments[dist]:
-                    Messages._print(eq)
+                    print(eq)
                     Messages._error(
                         "Too many parameters provided to the distribution " + dist
                     )
@@ -139,7 +139,7 @@ def extract_globalops_neuron(name, eq, description, net_id):
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = "_" + op + "_" + var.strip()
             else:
-                Messages._print(eq)
+                print(eq)
                 Messages._error("There is no local attribute " + var + ".")
 
     return eq, untouched, globs
@@ -202,7 +202,7 @@ def extract_prepost(name, eq, description, net_id):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == "":
-                    Messages._print(eq)
+                    print(eq)
                     Messages._error("pre.sum() requires one argument.")
 
                 rep = "_pre_sum_" + target.strip()
@@ -226,7 +226,7 @@ def extract_prepost(name, eq, description, net_id):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == "":
-                    Messages._print(eq)
+                    print(eq)
                     Messages._error("post.sum() requires one argument.")
 
                 dependencies["post"].append("sum(" + target + ")")
@@ -514,14 +514,14 @@ def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
             try:
                 init = eval("int(" + init + ")")
             except:
-                Messages._print(equation)
+                print(equation)
                 Messages._error("The value of the parameter is not an integer.")
         # Floats
         else:
             try:
                 init = eval("float(" + init + ")")
             except:
-                Messages._print(equation)
+                print(equation)
                 Messages._error("The value of the parameter is not a float.")
 
     else:  # Default = 0 according to ctype
@@ -739,7 +739,7 @@ def extract_spike_variable(description, net_id):
     # Spike condition
     cond = prepare_string(description["raw_spike"])
     if len(cond) > 1:
-        Messages._print(description["raw_spike"])
+        print(description["raw_spike"])
         Messages._error("The spike condition must be a single expression")
 
     translator = Equation("raw_spike_cond", cond[0].strip(), description)
@@ -781,7 +781,7 @@ def extract_axon_spike_condition(description, net_id):
 
     cond = prepare_string(description["raw_axon_spike"])
     if len(cond) > 1:
-        Messages._print(description["raw_axon_spike"])
+        print(description["raw_axon_spike"])
         Messages._error("The spike condition must be a single expression")
 
     translator = Equation("raw_axon_spike_cond", cond[0].strip(), description)
@@ -983,7 +983,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
             arguments = v.split(",")
             # Check the number of provided arguments
             if len(arguments) < distributions_arguments[dist]:
-                Messages._print(eq)
+                print(eq)
                 Messages._error(
                     "The distribution "
                     + dist
@@ -992,7 +992,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
                     + "parameters"
                 )
             elif len(arguments) > distributions_arguments[dist]:
-                Messages._print(eq)
+                print(eq)
                 Messages._error(
                     "Too many parameters provided to the distribution " + dist
                 )
@@ -1002,7 +1002,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
                 try:
                     arg = float(arguments[idx])
                 except:  # A global parameter
-                    Messages._print(eq)
+                    print(eq)
                     Messages._error(
                         "Random distributions for creating/pruning synapses must use foxed values."
                     )
@@ -1016,7 +1016,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
 
             # Store its definition
             if rd:
-                Messages._print(eq)
+                print(eq)
                 Messages._error("Only one random distribution per equation is allowed.")
 
             rd = {
@@ -1098,5 +1098,5 @@ def check_equation(equation):
     "Makes a formal check on the equation (matching parentheses, etc)"
     # Matching parentheses
     if equation.count("(") != equation.count(")"):
-        Messages._print(equation)
+        print(equation)
         Messages._error("The number of parentheses does not match.")

@@ -425,7 +425,7 @@ class Monitor:
                         + self.object.proj.post.name
                     )
                     if var in self.object.proj.parameters:
-                        Messages._print(
+                        print(
                             "\t", var, "is a parameter, its value is constant"
                         )
 

@@ -102,7 +102,7 @@ class Transpose(SpecificProjection):
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages._error("ANNarchy was not successfully installed.")
 
         lil = LILConnectivity(dt=ConfigManager().get("dt", self.net_id))

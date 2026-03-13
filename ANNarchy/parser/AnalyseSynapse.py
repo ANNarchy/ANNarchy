@@ -532,7 +532,7 @@ def analyse_synapse(synapse, net_id):
                 dependencies += deps
 
             if isinstance(code, list):  # an ode in a pre/post statement
-                Messages._print(eq)
+                print(eq)
                 if variable in description["pre_spike"]:
                     Messages._error("It is forbidden to use ODEs in a pre_spike term.")
                 elif variable in description["posz_spike"]:

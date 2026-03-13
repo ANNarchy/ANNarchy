@@ -172,7 +172,7 @@ def extract_ite(name, eq, description, split=True):
         else:
             eq = right
     else:
-        Messages._print(eq)
+        print(eq)
         Messages._error(
             'Conditional statements must define "then" and "else" values.\n var = if condition: a else: b'
         )

@@ -882,7 +882,7 @@ class Network(metaclass=NetworkMeta):
 
         # Time measurement
         if measure_time:
-            Messages._print(
+            print(
                 "Simulating",
                 number,
                 "networks in parallel took",
@@ -1221,7 +1221,7 @@ class Network(metaclass=NetworkMeta):
         for pop in self._data.populations:
             if pop.name == name:
                 return pop
-        Messages._print(
+        print(
             "get_population(): the population", name, "does not exist in this network."
         )
         return None
@@ -1235,7 +1235,7 @@ class Network(metaclass=NetworkMeta):
         for proj in self._data.projections:
             if proj.name == name:
                 return proj
-        Messages._print(
+        print(
             "get_projection(): the projection", name, "does not exist in this network."
         )
         return None
@@ -1249,7 +1249,7 @@ class Network(metaclass=NetworkMeta):
         for mon in self._data.monitors:
             if mon.name == name:
                 return mon
-        Messages._print(
+        print(
             "get_monitor(): the monitor", name, "does not exist in this network."
         )
         return None
@@ -1263,7 +1263,7 @@ class Network(metaclass=NetworkMeta):
         for ext in self._data.extensions:
             if ext.name == name:
                 return ext
-        Messages._print(
+        print(
             "get_extension(): the extension", name, "does not exist in this network."
         )
         return None
@@ -1277,7 +1277,7 @@ class Network(metaclass=NetworkMeta):
         for constant in self._data.constants:
             if constant.name == name:
                 return constant
-        Messages._print(
+        print(
             "get_constant(): the constant", name, "does not exist in this network."
         )
         return None

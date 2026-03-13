@@ -106,7 +106,7 @@ class Equation(object):
             elif self.type == "simple":
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages._error("Parser: cannot analyse", self.expression)
         return code
 
@@ -218,7 +218,7 @@ class Equation(object):
                 evaluate=False,
             )
         except Exception as e:
-            Messages._print(e)
+            print(e)
             Messages._error("Can not analyse the expression :" + str(expression))
 
         return res
@@ -496,7 +496,7 @@ class Equation(object):
         solved = sp.solve(analysed, new_var, check=False, rational=False)
         # print('Solved', solved)
         if len(solved) > 1:
-            Messages._print(self.expression)
+            print(self.expression)
             Messages._error(
                 "Parser: the ODE is not linear, can not use the implicit method."
             )
@@ -528,7 +528,7 @@ class Equation(object):
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None:  # the equation can not be standardized
-            Messages._print(expression)
+            print(expression)
             Messages.warning(
                 "The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead."
             )
@@ -608,7 +608,7 @@ class Equation(object):
         real_tau, _, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None:  # the equation can not be standardized
-            Messages._print(self.expression)
+            print(self.expression)
             Messages._error(
                 "The equation is not a linear ODE and can not be evaluated exactly."
             )
@@ -616,7 +616,7 @@ class Equation(object):
         # Check the steady state is not dependent on other variables
         for var in self.variables:
             if self.local_dict[var] in steadystate.atoms():
-                Messages._print(self.expression)
+                print(self.expression)
                 Messages._error(
                     "The equation can not depend on other variables ("
                     + var
@@ -704,7 +704,7 @@ class Equation(object):
                 not self.local_dict[self.name] in collected_var.keys()
                 or len(collected_var) > 2
             ):
-                Messages._print(self.expression)
+                print(self.expression)
                 print(collected_var)
                 Messages._error(
                     "The exponential and event-driven methods are reserved for linear first-order ODEs of the type tau*d"
