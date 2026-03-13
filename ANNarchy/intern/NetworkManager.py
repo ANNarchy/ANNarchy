@@ -215,12 +215,12 @@ class NetworkManager:
                 if os.path.isdir(network_directory):
                     os.rmdir(network_directory)
 
-            except OSError as err:
+            except OSError:
                 # we notice a not empty directory error
                 if ConfigManagement.get_global_config(
                     "debug"
                 ) or ConfigManagement.get_global_config("verbose"):
-                    Messages._warning(
+                    Messages.warning(
                         "Attempted to clear:",
                         network_directory,
                         "using os.rmdir failed ... retry with shutil",

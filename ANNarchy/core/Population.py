@@ -324,7 +324,7 @@ class Population:
             for var in attributes:
                 # check it exists
                 if not var in self.attributes:
-                    Messages._warning(
+                    Messages.warning(
                         "Population.reset():",
                         var,
                         "is not an attribute of the population, skipping.",
@@ -335,7 +335,7 @@ class Population:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:
                     Messages._print(e)
-                    Messages._warning(
+                    Messages.warning(
                         "Population.reset(): something went wrong while resetting", var
                     )
 
@@ -579,7 +579,7 @@ class Population:
     def _function(self, name):
         "Access a user defined function"
         if not self.initialized:
-            Messages._warning(
+            Messages.warning(
                 "the network is not compiled yet, cannot access the function " + name
             )
             return
@@ -618,14 +618,14 @@ class Population:
         """
         # Check if the network is initialized
         if not self.initialized:
-            Messages._warning(
+            Messages.warning(
                 "sum(): the population", self.name, "is not initialized yet."
             )
             return np.zeros(self.geometry)
 
         # Check if a projection has this type
         if not target in self.targets:
-            Messages._warning(
+            Messages.warning(
                 "sum(): the population",
                 self.name,
                 "receives no projection with the target",
@@ -661,14 +661,14 @@ class Population:
             else:
                 return self.neuron_type.description["refractory"]
         else:
-            Messages._warning("Rate-coded neurons do not have refractory periods...")
+            Messages.warning("Rate-coded neurons do not have refractory periods...")
             return None
 
     @refractory.setter
     def refractory(self, value: float | str):
         if self.neuron_type.description["type"] == "spike":
             if isinstance(self.neuron_type.description["refractory"], str):
-                Messages._warning(
+                Messages.warning(
                     "The refractory period is linked to the neural variable",
                     self.neuron_type.description["refractory"],
                     ", doing nothing... Change its value instead.",
@@ -701,7 +701,7 @@ class Population:
             else:  # not initialized yet, saving for later
                 self.neuron_type.description["refractory"] = value
         else:
-            Messages._warning("Rate-coded neurons do not have refractory periods...")
+            Messages.warning("Rate-coded neurons do not have refractory periods...")
 
     ################################
     ## Spiking neurons can compute a mean FR
@@ -717,7 +717,7 @@ class Population:
         :param window: window in ms over which the spikes will be counted.
         """
         if _check_paradigm("cuda", self.net_id):
-            Messages._warning(
+            Messages.warning(
                 "compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... "
             )
 
@@ -908,7 +908,7 @@ class Population:
 
                 return PopulationView(self, ranks, geometry=geometry)
 
-        Messages._warning(
+        Messages.warning(
             "Population" + self.name + ": can not address the population with", indices
         )
         return None
@@ -1038,7 +1038,7 @@ class Population:
                     desc[var["name"]] = getattr(self.cyInstance, var["name"])
 
             except:
-                Messages._warning(
+                Messages.warning(
                     "Can not save the attribute "
                     + var["name"]
                     + " in the population "
@@ -1116,7 +1116,7 @@ class Population:
             except Exception as e:
                 Messages._print(e)
                 Messages._print(var, data, type(data))
-                Messages._warning(
+                Messages.warning(
                     "Can not load the variable "
                     + var
                     + " in the population "

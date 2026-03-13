@@ -78,7 +78,7 @@ def debug(*var_text):
     print(text)
 
 
-def _warning(*var_text):
+def warning(*var_text):
     """
     Prints a warning message to standard out. Can be suppressed by configuration.
     """

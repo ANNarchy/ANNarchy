@@ -1602,22 +1602,22 @@ class Convolution(SpecificProjection):
 
     def save_connectivity(self, filename):
         "Not available."
-        Messages._warning("Convolutional projections can not be saved.")
+        Messages.warning("Convolutional projections can not be saved.")
 
     def save(self, filename):
         "Not available."
-        Messages._warning("Convolutional projections can not be saved.")
+        Messages.warning("Convolutional projections can not be saved.")
 
     def load(self, filename):
         "Not available."
-        Messages._warning("Convolutional projections can not be loaded.")
+        Messages.warning("Convolutional projections can not be loaded.")
 
     def receptive_fields(self, variable="w", in_post_geometry=True):
         "Not available."
-        Messages._warning("Convolutional projections can not display receptive fields.")
+        Messages.warning("Convolutional projections can not display receptive fields.")
 
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Messages._warning(
+        Messages.warning(
             "Convolutional projections can not display connectivity matrices."
         )

@@ -219,8 +219,8 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Other methods
-        .def("clear", &ProjStruct%(id_proj)s::clear);    
-    
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+
     """ % {
             "id_proj": self.id,
             "id_copy": self.projection.id,
@@ -346,8 +346,8 @@ extern ProjStruct%(fwd_id_proj)s *proj%(fwd_id_proj)s;    // Forward projection
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Other methods
-        .def("clear", &ProjStruct%(id_proj)s::clear);    
-    
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+
     """ % {
             "id_proj": self.id,
             "id_copy": self.projection.id,
@@ -384,25 +384,25 @@ extern ProjStruct%(fwd_id_proj)s *proj%(fwd_id_proj)s;    // Forward projection
 
     def save_connectivity(self, filename):
         "Not available."
-        Messages._warning("Transposed projections can not be saved.")
+        Messages.warning("Transposed projections can not be saved.")
 
     def save(self, filename):
         "Not available."
-        Messages._warning("Transposed projections can not be saved.")
+        Messages.warning("Transposed projections can not be saved.")
 
     def load(self, filename):
         "Not available."
-        Messages._warning("Transposed projections can not be loaded.")
+        Messages.warning("Transposed projections can not be loaded.")
 
     # TODO: maybe this functions would be helpful for debugging. Even though
     #       they will be time consuming as the matrix need to be constructed.
     #       (HD, 9th July 2020)
     def receptive_fields(self, variable="w", in_post_geometry=True):
         "Not available."
-        Messages._warning("Transposed projections can not display receptive fields.")
+        Messages.warning("Transposed projections can not display receptive fields.")
 
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Messages._warning(
+        Messages.warning(
             "Transposed projections can not display connectivity matrices."
         )

@@ -66,7 +66,7 @@ class AccProjection(SpecificProjection):
                 break
 
         if not found:
-            Messages._warning("Variable might be invalid ...")
+            Messages.warning("Variable might be invalid ...")
 
         single_ids = {"id_pre": self.pre.id, "var": self._variable}
 
@@ -232,7 +232,7 @@ class AccProjection(SpecificProjection):
                 break
 
         if not found:
-            Messages._warning("Variable might be invalid ...")
+            Messages.warning("Variable might be invalid ...")
 
         single_ids = {"id_pre": self.pre.id, "var": self._variable}
 

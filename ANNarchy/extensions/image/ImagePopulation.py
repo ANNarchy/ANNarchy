@@ -12,7 +12,7 @@ from ANNarchy.intern import Messages
 try:
     from PIL import Image
 except:
-    Messages._warning(
+    Messages.warning(
         "The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations."
     )
 
@@ -101,7 +101,7 @@ class ImagePopulation(Population):
         # Resize the image if needed
         (width, height) = (self.geometry[1], self.geometry[0])
         if im.size != (width, height):
-            Messages._warning(
+            Messages.warning(
                 "The image "
                 + filename
                 + " does not have the same size "
@@ -201,14 +201,14 @@ public:
     CameraDeviceCPP (int id, int width, int height, int depth) : cv::VideoCapture(id){
         width_ = width;
         height_ = height;
-        depth_ = depth;      
+        depth_ = depth;
         img_ = std::vector<%(float_prec)s>(width*height*depth, 0.0);
     }
     std::vector<%(float_prec)s> GrabImage(){
         if(isOpened()){
             // Read a new frame from the video
             Mat frame;
-            read(frame); 
+            read(frame);
             // Resize the image
             Mat resized_frame;
             resize(frame, resized_frame, Size(width_, height_) );
@@ -231,7 +231,7 @@ public:
                         this->img_[(j+width_*i)*3 + 2] = %(float_prec)s(intensity.val[0])/255.0;
                     }
                 }
-            }            
+            }
         }
         return this->img_;
     };
@@ -250,16 +250,16 @@ protected:
     void StartCamera(int id, int width, int height, int depth){
         camera_ = new CameraDeviceCPP(id, width, height, depth);
         if(!camera_->isOpened()){
-            std::cout << "Error: could not open the camera." << std::endl;   
+            std::cout << "Error: could not open the camera." << std::endl;
         }
     };
     void GrabImage(){
         if(camera_->isOpened()){
-            r = camera_->GrabImage();   
+            r = camera_->GrabImage();
         }
     };
     void ReleaseCamera(){
-        camera_->release(); 
+        camera_->release();
     };
 """
 

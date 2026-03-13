@@ -108,7 +108,7 @@ class Dendrite:
             return object.__getattribute__(self, name)
         elif hasattr(self, "proj"):
             if name == "rank":  # TODO: remove 'rank' in a future version
-                Messages._warning(
+                Messages.warning(
                     "Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead."
                 )
                 return self.proj.cyInstance.pre_rank(self.idx)
@@ -231,7 +231,7 @@ class Dendrite:
         :param name: name of the parameter/variable.
         """
         if name == "rank":
-            Messages._warning(
+            Messages.warning(
                 "Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead."
             )
             return self.proj.cyInstance.pre_rank(self.idx)

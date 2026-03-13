@@ -40,7 +40,7 @@ def connect_one_to_one(
     :param force_multiple_weights: If a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre.size != self.post.size:
-        Messages._warning(
+        Messages.warning(
             "connect_one_to_one() between",
             self.pre.name,
             "and",

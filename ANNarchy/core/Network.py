@@ -649,7 +649,7 @@ class Network(metaclass=NetworkMeta):
                     proj.cyInstance.reset_ring_buffer()
 
         if synapses and not projections:
-            Messages._warning(
+            Messages.warning(
                 "reset(): if synapses is set to true this automatically enables projections==true"
             )
             projections = True
@@ -1055,12 +1055,12 @@ class Network(metaclass=NetworkMeta):
         for key, value in kwargs.items():
             # sanity check: filter out performance flags
             if key in ConfigManager()._performance_related_config_keys:
-                Messages._warning(f"The '{key}' flag enables an optimization for performance which might effect your results. Please cross-check the simulation results!")
+                Messages.warning(f"The '{key}' flag enables an optimization for performance which might effect your results. Please cross-check the simulation results!")
                 ConfigManager().set(key, value, net_id=self.id)
             elif key in ConfigManager().keys():
                 ConfigManager().set(key, value, net_id=self.id)
             else:
-                Messages._warning("setup(): unknown key:", key)
+                Messages.warning("setup(): unknown key:", key)
 
             if key == "sparse_matrix_format":
                 # check if this is a supported format

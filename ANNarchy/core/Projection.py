@@ -620,7 +620,7 @@ class Projection:
 
         # Sanity checks
         if self._connection_method != None:
-            Messages._warning(
+            Messages.warning(
                 "Projection ",
                 self.name,
                 " was already connected ... data will be overwritten.",
@@ -860,7 +860,7 @@ class Projection:
                 continue
             # check it exists
             if not var in self.attributes:
-                Messages._warning(
+                Messages.warning(
                     "Projection.reset():",
                     var,
                     "is not an attribute of the population, won't reset.",
@@ -871,7 +871,7 @@ class Projection:
                 self.__setattr__(var, self.init[var])
             except Exception as e:
                 Messages._print(e)
-                Messages._warning(
+                Messages.warning(
                     "Projection.reset(): something went wrong while resetting", var
                 )
 
@@ -882,7 +882,7 @@ class Projection:
     def size(self):
         "Number of post-synaptic neurons receiving synapses."
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'size or len()' attribute of a Projection is only valid after compile()"
             )
             return 0
@@ -897,7 +897,7 @@ class Projection:
     def nb_synapses(self):
         "Total number of synapses in the projection."
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'nb_synapses' attribute of a Projection is only valid after compile()"
             )
             return 0
@@ -907,7 +907,7 @@ class Projection:
     def nb_synapses_per_dendrite(self):
         "Total number of synapses for each dendrite as a list."
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()"
             )
             return []
@@ -918,7 +918,7 @@ class Projection:
         Returns the number of efferent connections. Intended only for spiking models.
         """
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'nb_efferent_synapses()' of a Projection is only valid after compile()"
             )
             return None
@@ -933,7 +933,7 @@ class Projection:
     def post_ranks(self):
         "List of ranks of post-synaptic neurons that receive connections. Read-only."
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'post_ranks' attribute of a Projection is only valid after compile()"
             )
             return None
@@ -944,7 +944,7 @@ class Projection:
     def pre_ranks(self):
         "List of lists of pre-synaptic ranks, for each post-synaptic neuron. Read-only."
         if self.cyInstance is None:
-            Messages._warning(
+            Messages.warning(
                 "Access 'pre_ranks' attribute of a Projection is only valid after compile()"
             )
             return None
@@ -1420,7 +1420,7 @@ class Projection:
     def _function(self, name):
         "Access a user defined function"
         if not self.initialized:
-            Messages._warning(
+            Messages.warning(
                 "the network is not compiled yet, cannot access the function " + name
             )
             return
@@ -1486,7 +1486,7 @@ class Projection:
             else:
                 self.cyInstance._update_offset = int(0)
         except:
-            Messages._warning("Enable_learning() is only possible after compile()")
+            Messages.warning("Enable_learning() is only possible after compile()")
 
     def disable_learning(self) -> None:
         """
@@ -1506,7 +1506,7 @@ class Projection:
             else:
                 self.cyInstance._plasticity = False
         except:
-            Messages._warning("disabling learning is only possible after compile().")
+            Messages.warning("disabling learning is only possible after compile().")
 
     ################################
     ## Methods on connectivity matrix
@@ -1801,7 +1801,7 @@ class Projection:
 
             except Exception as e:
                 Messages._print(e)
-                Messages._warning(
+                Messages.warning(
                     "Can not save the attribute "
                     + var
                     + " in the projection (name="
@@ -1977,7 +1977,7 @@ class Projection:
                     self._set_cython_attribute(var, desc[var])
                 except Exception as e:
                     Messages._print(e)
-                    Messages._warning(
+                    Messages.warning(
                         "load(): the variable",
                         var,
                         "does not exist in the current version of the network, skipping it.",
@@ -1996,10 +1996,10 @@ class Projection:
         # HD ( 5th Sep. 2024):
         #   This could path is only relevant for savefiles prior to version 4.8.0
         else:
-            Messages._warning(
+            Messages.warning(
                 "load(): dendrites should be added in an ascending order for performance reasons."
             )
-            Messages._warning(
+            Messages.warning(
                 "This might require some time to adapt the data structure ..."
             )
 
@@ -2132,7 +2132,7 @@ class Projection:
         :param threads_per_block: number of CUDA threads for one block which can be maximally 1024.
         """
         if not _check_paradigm("cuda", self.net_id):
-            Messages._warning(
+            Messages.warning(
                 "Projection.update_launch_config() is intended for usage on CUDA devices"
             )
             return

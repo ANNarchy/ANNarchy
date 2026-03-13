@@ -172,11 +172,11 @@ def setup(**keyValueArgs):
     """
     if len(NetworkManager().get_network(0).get_populations()) > 0:
         if "dt" in keyValueArgs:
-            Messages._warning(
+            Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)..."
             )
         if "precision" in keyValueArgs:
-            Messages._warning(
+            Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing precision now might lead to strange behaviors..."
             )
 
@@ -192,7 +192,7 @@ def setup(**keyValueArgs):
         if key in ConfigManager().keys():
             ConfigManager().set(key, keyValueArgs[key], net_id=0)
         else:
-            Messages._warning("setup(): unknown key:", key)
+            Messages.warning("setup(): unknown key:", key)
 
         if key == "seed":  # also seed numpy, but this is the old way
             np.random.seed(keyValueArgs[key])
@@ -246,11 +246,11 @@ def _optimization_flags(**keyValueArgs):
     for key in keyValueArgs:
         # Sanity check: valid key?
         if key not in ConfigManager().keys():
-            Messages._warning("_optimization_flags() received unknown key:", key)
+            Messages.warning("_optimization_flags() received unknown key:", key)
             continue
 
         if key not in ConfigManager()._performance_related_config_keys:
-            Messages._warning(
+            Messages.warning(
                 f"The key '{key}' does not belong to the performance related keys."
             )
             continue
@@ -261,19 +261,19 @@ def _optimization_flags(**keyValueArgs):
         # Warning: use_cpp_connectors and disable_parallel_rng should be both activated
         if key == "use_cpp_connectors":
             if get_global_config(key) == True:
-                Messages._warning(
+                Messages.warning(
                     "use_cpp_connectors is an experimental feature, we greatly appreciate bug reports."
                 )
 
                 # check if the key is in the update list
                 if "disable_parallel_rng" in keyValueArgs.keys():
                     if keyValueArgs["disable_parallel_rng"]:
-                        Messages._warning(
+                        Messages.warning(
                             "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
                         )
                 # is it enabled by default?
                 elif get_global_config("disable_parallel_rng"):
-                    Messages._warning(
+                    Messages.warning(
                         "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
                     )
                 # no conflict

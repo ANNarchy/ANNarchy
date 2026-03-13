@@ -124,7 +124,7 @@ def compile(
 
     # Check for unknown flags
     if len(unknown) > 0 and ConfigManager().get("verbose", net_id):
-        Messages._warning("unrecognized command-line arguments:", unknown)
+        Messages.warning("unrecognized command-line arguments:", unknown)
 
     # Get CUDA configuration
     if options.gpu_device >= 0:
@@ -770,7 +770,7 @@ class Compiler(object):
 
         else:
             # Windows: to test....
-            Messages._warning(
+            Messages.warning(
                 "Compilation on windows is not supported yet. We recommend to use WSL on windows systems."
             )
 
@@ -900,7 +900,7 @@ def _instantiate(
                 )
 
             if len(core_list) != len(list(set(core_list))):
-                Messages._warning(
+                Messages.warning(
                     "The provided core list contains doubled entries - is this intended?"
                 )
 
@@ -916,7 +916,7 @@ def _instantiate(
             num_cores = psutil.cpu_count(logical=False)
             # Check if the number of threads make sense
             if num_cores < ConfigManager().get('num_threads', net_id):
-                Messages._warning("The number of threads =", ConfigManager().get('num_threads', net_id), "exceeds the number of available physical cores =", num_cores)
+                Messages.warning("The number of threads =", ConfigManager().get('num_threads', net_id), "exceeds the number of available physical cores =", num_cores)
 
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)

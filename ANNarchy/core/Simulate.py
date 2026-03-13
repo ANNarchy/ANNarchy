@@ -293,10 +293,10 @@ def _check_monitor_memory(
             meminfo[key] = int(value.strip().split()[0])  # currently free memory in kiB
     curr_avail_mib = meminfo["MemFree"] / 1024
     if rec_size_mib > (curr_avail_mib * warn_threshold):
-        Messages._warning(
+        Messages.warning(
             f"The recording of monitors might consume {rec_size_mib}MiB, i.e. more then {int(warn_threshold * 100)}% of your currently available memory."
         )
-        Messages._warning(
+        Messages.warning(
             "Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included."
         )
     elif show_monitor_memory_estimate:

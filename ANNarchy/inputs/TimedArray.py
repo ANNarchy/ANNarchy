@@ -114,7 +114,7 @@ class TimedArray(SpecificPopulation):
                 geometry = rates.shape[1:]
             else:
                 if geometry != rates.shape[1:]:
-                    Messages._warning(
+                    Messages.warning(
                         "TimedArray: mismatch between *rates* and *geometry* dimensions detected."
                     )
 
@@ -239,7 +239,7 @@ class TimedArray(SpecificPopulation):
             )
 
         if len(self.schedule) < rates.shape[0]:
-            Messages._warning(
+            Messages.warning(
                 "TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect."
             )
 

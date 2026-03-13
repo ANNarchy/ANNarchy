@@ -128,7 +128,7 @@ def _deprecated_wrapper(obj, name, message=None):
     if isinstance(obj, types.FunctionType):
 
         def wrapper(*args, **kwargs):
-            Messages._warning(
+            Messages.warning(
                 message
                 or f"{name} is deprecated. Please use ann.Network().{name}() instead."
             )
@@ -141,7 +141,7 @@ def _deprecated_wrapper(obj, name, message=None):
 
         class DeprecatedClass(obj):
             def __new__(cls, *args, **kwargs):
-                Messages._warning(
+                Messages.warning(
                     message
                     or f"{name} is deprecated. Please use ann.Network().{name}() instead."
                 )

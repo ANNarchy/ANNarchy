@@ -529,7 +529,7 @@ class Equation(object):
 
         if real_tau is None:  # the equation can not be standardized
             Messages._print(expression)
-            Messages._warning(
+            Messages.warning(
                 "The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead."
             )
             return self.explicit(expression)

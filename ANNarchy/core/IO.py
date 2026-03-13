@@ -69,7 +69,7 @@ def load_parameters(
                 population = pop
                 break
         else:
-            Messages._warning(
+            Messages.warning(
                 "The population",
                 name,
                 "defined in the file",
@@ -121,7 +121,7 @@ def load_parameters(
                 projection = proj
                 break
         else:
-            Messages._warning(
+            Messages.warning(
                 "The projection",
                 name,
                 "defined in the file",
@@ -176,7 +176,7 @@ def load_parameters(
                 constant.set(value)
                 break
         else:
-            Messages._warning(
+            Messages.warning(
                 "The projection",
                 name,
                 "defined in the file",
@@ -254,7 +254,7 @@ def save_parameters(filename: str, net_id=0):
 
 # Backwards compatibility with XML
 def load_parameter(in_file):
-    Messages._warning(
+    Messages.warning(
         "load_parameter() is deprecated. Use load_parameters() and JSON files instead."
     )
     return _load_parameters_from_xml(in_file)

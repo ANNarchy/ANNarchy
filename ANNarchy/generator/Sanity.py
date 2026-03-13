@@ -83,7 +83,7 @@ def check_experimental_features(populations, projections):
     # CPU-related formats
     if ConfigManager().get("paradigm", net_id) == "openmp":
         if ConfigManager().get("disable_SIMD_SpMV", net_id) == False:
-            Messages._warning(
+            Messages.warning(
                 "Using hand-written SIMD kernel for continuous transmission is an experimental feature, we greatly appreciate bug reports."
             )
 
@@ -93,47 +93,47 @@ def check_experimental_features(populations, projections):
                 continue
 
             elif fmt[0] == "csr" and fmt[1] == "pre_to_post":
-                Messages._warning(
+                Messages.warning(
                     "Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "bsr":
-                Messages._warning(
+                Messages.warning(
                     "Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "coo":
-                Messages._warning(
+                Messages.warning(
                     "Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "dia":
-                Messages._warning(
+                Messages.warning(
                     "Diagonal (dia) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "ellr":
-                Messages._warning(
+                Messages.warning(
                     "ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "sell":
-                Messages._warning(
+                Messages.warning(
                     "Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "ell":
-                Messages._warning(
+                Messages.warning(
                     "ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "hyb":
-                Messages._warning(
+                Messages.warning(
                     "Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif fmt[0] == "dense" and fmt[2] == "spike":
-                Messages._warning(
+                Messages.warning(
                     "Dense representation is an experimental feature for spiking models, we greatly appreciate bug reports."
                 )
 
@@ -164,32 +164,32 @@ def check_experimental_features(populations, projections):
                 continue
 
             elif fmt[0] == "dense":
-                Messages._warning(
+                Messages.warning(
                     "Dense representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif proj._storage_format == "sell":
-                Messages._warning(
+                Messages.warning(
                     "Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif proj._storage_format == "ellr":
-                Messages._warning(
+                Messages.warning(
                     "ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif proj._storage_format == "bsr":
-                Messages._warning(
+                Messages.warning(
                     "Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif proj._storage_format == "coo":
-                Messages._warning(
+                Messages.warning(
                     "Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 
             elif proj._storage_format == "hyb":
-                Messages._warning(
+                Messages.warning(
                     "Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports."
                 )
 

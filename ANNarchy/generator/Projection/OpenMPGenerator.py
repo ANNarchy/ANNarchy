@@ -1236,7 +1236,7 @@ if (%(condition)s) {
         pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1:  # Non-uniform delays
-                Messages._warning(
+                Messages.warning(
                     "Variable delays for spiking networks is experimental and slow..."
                 )
                 template = self._templates["spiking_sum_variable_delay"]

@@ -141,7 +141,7 @@ class Monitor:
 
         # Warn users when recording projections all the time
         if isinstance(self.object, Projection) and self._period == self.dt:
-            Messages._warning(
+            Messages.warning(
                 "Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!"
             )
 
@@ -429,7 +429,7 @@ class Monitor:
                             "\t", var, "is a parameter, its value is constant"
                         )
 
-                Messages._warning(
+                Messages.warning(
                     "Monitor: " + var + " can not be recorded (" + obj_desc + ")"
                 )
 
@@ -462,7 +462,7 @@ class Monitor:
                         + " and "
                         + self.object.proj.post.name
                     )
-                Messages._warning(
+                Messages.warning(
                     "Monitor:" + var + " can not be recorded (" + obj_desc + ")"
                 )
 
@@ -499,7 +499,7 @@ class Monitor:
                         + " and "
                         + self.object.proj.post.name
                     )
-                Messages._warning(
+                Messages.warning(
                     "Monitor:" + var + " can not be recorded (" + obj_desc + ")"
                 )
 
@@ -538,7 +538,7 @@ class Monitor:
                     + " and "
                     + self.object.proj.post.name
                 )
-            Messages._warning("Monitor:" + obj_desc + "cannot be stopped")
+            Messages.warning("Monitor:" + obj_desc + "cannot be stopped")
 
     def reset(self) -> None:
         """
@@ -699,7 +699,7 @@ class Monitor:
         for var in variables:
             # check for spelling mistakes
             if not var in self._variables:
-                Messages._warning("Variable '" + str(var) + "' is not monitored.")
+                Messages.warning("Variable '" + str(var) + "' is not monitored.")
                 continue
 
             t[var] = deepcopy(self._last_recorded_variables[var])
@@ -1035,7 +1035,7 @@ class MemoryStats:
             if hasattr(pop, "size_in_bytes"):
                 print(pop.name, ":", self._human_readable_bytes(pop._size_in_bytes()))
             else:
-                Messages._warning(
+                Messages.warning(
                     "MemoryStats.print_cpp(): the object",
                     pop,
                     "does not have a size_in_bytes() function.",
@@ -1053,7 +1053,7 @@ class MemoryStats:
                     self._human_readable_bytes(proj._size_in_bytes()),
                 )
             else:
-                Messages._warning(
+                Messages.warning(
                     "MemoryStats.print_cpp(): the object",
                     proj,
                     "does not have a size_in_bytes() function.",
@@ -1068,7 +1068,7 @@ class MemoryStats:
                     self._human_readable_bytes(mon._size_in_bytes()),
                 )
             else:
-                Messages._warning(
+                Messages.warning(
                     "MemoryStats.print_cpp(): the object",
                     mon,
                     "does not have a size_in_bytes() function.",
