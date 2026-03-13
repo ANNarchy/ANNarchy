@@ -107,7 +107,7 @@ class Neuron:
 
         # Not available by now ...
         if axon_spike and ConfigManager().get("paradigm", 0) != "openmp":
-            Messages._error(
+            Messages.error(
                 "Axonal spike conditions are only available for openMP by now."
             )
             # will crash when paradigm='cuda' is passed only at the Network level...
@@ -306,5 +306,5 @@ class IndividualNeuron:
                     self.population, list(set([self.rank] + other.ranks))
                 )
         else:
-            Messages._error("can only add two PopulationViews of the same population.")
+            Messages.error("can only add two PopulationViews of the same population.")
             return None

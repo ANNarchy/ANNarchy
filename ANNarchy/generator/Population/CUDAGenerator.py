@@ -751,7 +751,7 @@ class CUDAGenerator(PopulationGenerator):
                         }
                     )
                 else:
-                    Messages._error(
+                    Messages.error(
                         "Unsupported random distribution on GPUs: " + rd["dist"]
                     )
 
@@ -805,7 +805,7 @@ class CUDAGenerator(PopulationGenerator):
                         }
                     )
                 else:
-                    Messages._error(
+                    Messages.error(
                         "Unsupported random distribution on GPUs: " + rd["dist"]
                     )
 
@@ -1000,7 +1000,7 @@ class CUDAGenerator(PopulationGenerator):
                     pop._specific_template["update_variable_call"],
                 )
             except KeyError:
-                Messages._error(
+                Messages.error(
                     "\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body"
                 )
 
@@ -1234,7 +1234,7 @@ class CUDAGenerator(PopulationGenerator):
                     pop._specific_template["update_variable_call"],
                 )
             except KeyError:
-                Messages._error(
+                Messages.error(
                     "\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body"
                 )
 
@@ -1469,7 +1469,7 @@ class CUDAGenerator(PopulationGenerator):
                     pop._specific_template["spike_gather_call"],
                 )
             except KeyError:
-                Messages._error(
+                Messages.error(
                     "\nCode generation error: if one attempts to override the spike gathering on CUDA devices, one need to define all of the following fields of _specific_template dictionary: spike_gather_call, spike_gather_header, spike_gather_body"
                 )
 
@@ -1536,7 +1536,7 @@ class CUDAGenerator(PopulationGenerator):
                         found = True
                         break
                 if not found:
-                    Messages._error(
+                    Messages.error(
                         "refractory = "
                         + pop.neuron_type.refractory
                         + ": parameter or variable does not exist."

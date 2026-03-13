@@ -35,7 +35,7 @@ def report(
     :param date: date of the document (Markdown only).
     """
     if isinstance(network, (str,)) or network is None:
-        Messages._error("report(): expected as first argument a Network instance")
+        Messages.error("report(): expected as first argument a Network instance")
 
     if filename.endswith(".tex"):
         from .LatexReport import report_latex
@@ -50,4 +50,4 @@ def report(
         )
 
     else:
-        Messages._error("report(): the filename must end with .tex or .md.")
+        Messages.error("report(): the filename must end with .tex or .md.")

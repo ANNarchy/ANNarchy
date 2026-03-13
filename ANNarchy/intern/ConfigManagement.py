@@ -185,7 +185,7 @@ def setup(**keyValueArgs):
     for key in keyValueArgs:
         # sanity check: filter out performance flags
         if key in ConfigManager()._performance_related_config_keys:
-            Messages._error(
+            Messages.error(
                 "Performance related flags can not be configured by setup()"
             )
 
@@ -213,7 +213,7 @@ def setup(**keyValueArgs):
                 "hyb",
                 "auto",
             ]:
-                Messages._error(
+                Messages.error(
                     "The value",
                     keyValueArgs[key],
                     "provided to sparse_matrix_format is not valid.",
@@ -313,7 +313,7 @@ def _check_paradigm(paradigm, net_id=0):
     try:
         return paradigm == ConfigManager().get("paradigm", net_id)
     except KeyError:
-        Messages._error("Unknown paradigm")
+        Messages.error("Unknown paradigm")
 
 
 def _check_precision(precision, net_id=0):
@@ -328,4 +328,4 @@ def _check_precision(precision, net_id=0):
     try:
         return precision == ConfigManager().get("precision", net_id)
     except KeyError:
-        Messages._error("Unknown precision")
+        Messages.error("Unknown precision")

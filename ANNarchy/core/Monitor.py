@@ -81,7 +81,7 @@ class Monitor:
         if not isinstance(
             self.object, (Population, Projection, PopulationView, Dendrite)
         ):
-            Messages._error(
+            Messages.error(
                 "Monitor: the object must be a Population, PopulationView, Dendrite or Projection object"
             )
 
@@ -110,14 +110,14 @@ class Monitor:
                 continue
 
             if var in self.object.parameters:
-                Messages._error("Parameters are not recordable")
+                Messages.error("Parameters are not recordable")
 
             if (
                 not var in self.object.variables
                 and var not in ["spike", "axon_spike"]
                 and not var.startswith("sum(")
             ):
-                Messages._error(
+                Messages.error(
                     "Monitor: the object does not have an attribute named", var
                 )
 
@@ -133,7 +133,7 @@ class Monitor:
         else:
             # Check validity
             if period_offset >= period:
-                Messages._error(
+                Messages.error(
                     "Monitor(): value of period_offset must be smaller than period."
                 )
             else:
@@ -215,7 +215,7 @@ class Monitor:
 
     @variables.setter
     def variables(self, val):
-        Messages._error("Modifying of a Monitors variable list is not allowed")
+        Messages.error("Modifying of a Monitors variable list is not allowed")
 
     def get(
         self,
@@ -624,7 +624,7 @@ class Monitor:
         ## Save single variables as numpy array
         if filename.endswith(".npy"):
             if len(variables) == 1:
-                Messages._error(
+                Messages.error(
                     "Monitor.save: Saving with numpy only possible for single variables."
                 )
             name = variables[0]
@@ -654,7 +654,7 @@ class Monitor:
                     # Update stopping time
                     self._update_stopping_time(var, keep)
         else:
-            Messages._error(
+            Messages.error(
                 "Monitor.save: File type not recognized (Must be .hdf5 or .npy)."
             )
 
@@ -739,7 +739,7 @@ class Monitor:
         times = []
         ranks = []
         if not "spike" in self._variables:
-            Messages._error("Monitor: spike was not recorded")
+            Messages.error("Monitor: spike was not recorded")
 
         # Get data
         if spikes is None:
@@ -779,7 +779,7 @@ class Monitor:
         :param bins: the bin size in ms (default: dt).
         """
         if not "spike" in self._variables:
-            Messages._error("Monitor: spike was not recorded")
+            Messages.error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
@@ -875,7 +875,7 @@ class Monitor:
 
         """
         if not "spike" in self._variables:
-            Messages._error("Monitor: spike was not recorded")
+            Messages.error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
@@ -925,7 +925,7 @@ class Monitor:
 
         """
         if not "spike" in self._variables:
-            Messages._error("Monitor: spike was not recorded")
+            Messages.error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:
@@ -970,7 +970,7 @@ class Monitor:
 
         """
         if not "spike" in self._variables:
-            Messages._error("Monitor: spike was not recorded")
+            Messages.error("Monitor: spike was not recorded")
 
         # Get data
         if not spikes:

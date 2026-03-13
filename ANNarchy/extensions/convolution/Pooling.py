@@ -67,7 +67,7 @@ class Pooling(SpecificProjection):
     ):
         # Sanity check
         if not operation in ["max", "mean", "min"]:
-            Messages._error(
+            Messages.error(
                 "Pooling: the operation must be either 'max', 'mean' or 'min'."
             )
         self.operation = operation
@@ -96,11 +96,11 @@ class Pooling(SpecificProjection):
         self.dim_pre = self.pre.dimension
         self.dim_post = self.post.dimension
         if self.dim_post > 4:
-            Messages._error(
+            Messages.error(
                 "Pooling: Too many dimensions for the post-synaptic population (maximum 4)."
             )
         if self.dim_pre > 4:
-            Messages._error(
+            Messages.error(
                 "Pooling: Too many dimensions for the pre-synaptic population (maximum 4)."
             )
 
@@ -130,7 +130,7 @@ class Pooling(SpecificProjection):
         self.extent_init = extent
         if extent is None:  # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
-                Messages._error(
+                Messages.error(
                     "Pooling: If you do not provide the extent parameter, the two populations must have the same number of dimensions."
                 )
 
@@ -138,25 +138,25 @@ class Pooling(SpecificProjection):
             for dim in range(self.pre.dimension):
                 extent[dim] /= self.post.geometry[dim]
                 if self.pre.geometry[dim] != extent[dim] * self.post.geometry[dim]:
-                    Messages._error(
+                    Messages.error(
                         "Pooling: Unable to compute the extent of the pooling area: the number of neurons do not match."
                     )
 
         elif not isinstance(extent, tuple):
-            Messages._error(
+            Messages.error(
                 "Pooling: You must provide a tuple for the extent of the pooling operation."
             )
 
         self.extent = list(extent)
         if len(self.extent) < self.pre.dimension:
-            Messages._error(
+            Messages.error(
                 "Pooling: You must provide a tuple for the extent of the pooling operation."
             )
 
         # Process the delays
         self.delays = float(delays)
         if not isinstance(delays, (int, float)):
-            Messages._error("Convolutions can only have constant delays.")
+            Messages.error("Convolutions can only have constant delays.")
 
         # Generate the pre-synaptic coordinates
         self._generate_extent_coordinates()
@@ -200,7 +200,7 @@ class Pooling(SpecificProjection):
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             print(e)
-            Messages._error("ANNarchy was not successfully installed.")
+            Messages.error("ANNarchy was not successfully installed.")
 
         lil = LILConnectivity(dt=ConfigManager().get("dt", self.net_id))
         lil.max_delay = self.delays
@@ -220,7 +220,7 @@ class Pooling(SpecificProjection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Messages._error(
+            Messages.error(
                 "Pooling: The projection between "
                 + self.pre.name
                 + " and "
@@ -308,7 +308,7 @@ class Pooling(SpecificProjection):
         elif _check_paradigm("cuda", self.net_id):
             self._generate_cuda()
         else:
-            Messages._error("Pooling: not implemented for the configured paradigm")
+            Messages.error("Pooling: not implemented for the configured paradigm")
 
     def _generate_pooling_code(self):
         """
@@ -418,7 +418,7 @@ class Pooling(SpecificProjection):
             code += """
                 sum += %(psp)s;"""
         else:
-            Messages._error(
+            Messages.error(
                 "SharedProjection: Operation",
                 operation,
                 "is not implemented yet for shared projections with pooling.",

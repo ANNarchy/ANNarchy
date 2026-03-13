@@ -128,18 +128,18 @@ class Synapse:
 
         # Check the operation
         if self.type == "spike" and self.operation != "sum":
-            Messages._error(
+            Messages.error(
                 "Spiking synapses can only perform a sum of presynaptic potentials."
             )
 
         if self.operation not in ["sum", "min", "max", "mean"]:
-            Messages._error(
+            Messages.error(
                 "The only operations permitted are: sum (default), min, max, mean."
             )
 
         # Sanity check
         if self.pre_axon_spike and self.post_spike:
-            Messages._error(
+            Messages.error(
                 "The usage of axonal spike events is currently not allowed for plastic connections."
             )
 
@@ -198,7 +198,7 @@ class Synapse:
             self.description = analyse_synapse(self, net_id)
 
     def __add__(self, synapse):
-        Messages._error("adding synapse models is not implemented yet.")
+        Messages.error("adding synapse models is not implemented yet.")
 
         # self._variables.update(synapse.variables)
 

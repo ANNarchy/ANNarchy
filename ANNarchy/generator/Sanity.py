@@ -44,7 +44,7 @@ def check_structure(populations, projections):
             continue
 
         if not proj._connection_method:
-            Messages._error(
+            Messages.error(
                 "The projection between populations",
                 proj.pre.id,
                 "and",
@@ -150,11 +150,11 @@ def check_experimental_features(populations, projections):
                     "hyb",
                     "dense",
                 ]:
-                    Messages._error(
+                    Messages.error(
                         "Invalid storage format provided for execution on CPUs:", fmt[0]
                     )
                 if fmt[1] not in ["post_to_pre", "pre_to_post"]:
-                    Messages._error("Invalid storage order provided:", fmt[1])
+                    Messages.error("Invalid storage order provided:", fmt[1])
 
     # GPU-related formats
     elif ConfigManager().get("paradigm", net_id) == "cuda":
@@ -204,12 +204,12 @@ def check_experimental_features(populations, projections):
                     "hyb",
                     "dense",
                 ]:
-                    Messages._error(
+                    Messages.error(
                         "Invalid storage format provided for execution on CPUs GPUs:",
                         fmt[0],
                     )
                 if fmt[1] not in ["post_to_pre", "pre_to_post"]:
-                    Messages._error("Invalid storage order provided:", fmt[1])
+                    Messages.error("Invalid storage order provided:", fmt[1])
 
     else:
         pass
@@ -226,7 +226,7 @@ def _check_reserved_names(populations, projections):
             if term in pop.attributes:
                 print(pop.neuron_type.parameters)
                 print(pop.neuron_type.equations)
-                Messages._error(term + " is a reserved variable name")
+                Messages.error(term + " is a reserved variable name")
 
     # Check projections
     for proj in projections:
@@ -235,7 +235,7 @@ def _check_reserved_names(populations, projections):
             if term in proj.attributes:
                 print(proj.synapse_type.parameters)
                 print(proj.synapse_type.equations)
-                Messages._error(term + " is a reserved variable name")
+                Messages.error(term + " is a reserved variable name")
 
 
 def _check_storage_formats(projections):
@@ -344,7 +344,7 @@ def _check_storage_formats(projections):
         if not _check_paradigm("cuda", proj.net_id) and (
             proj._storage_format in ["csr_scalar", "csr_vector"]
         ):
-            Messages._error(
+            Messages.error(
                 "The CSR variants csr_scalar/csr_vector are only intended for GPUs."
             )
 
@@ -369,7 +369,7 @@ def _check_prepost(populations, projections):
                 target = re.findall(r"\(([\s\w]+)\)", dep)[0].strip()
                 if not target in proj.pre.targets:
                     print(proj.synapse_type.equations)
-                    Messages._error(
+                    Messages.error(
                         "The pre-synaptic population "
                         + proj.pre.name
                         + " receives no projection with the type "
@@ -379,7 +379,7 @@ def _check_prepost(populations, projections):
 
             if not dep in proj.pre.attributes:
                 print(proj.synapse_type.equations)
-                Messages._error(
+                Messages.error(
                     "The pre-synaptic population "
                     + proj.pre.name
                     + " has no variable called "
@@ -391,7 +391,7 @@ def _check_prepost(populations, projections):
                 target = re.findall(r"\(([\s\w]+)\)", dep)[0].strip()
                 if not target in proj.post.targets:
                     print(proj.synapse_type.equations)
-                    Messages._error(
+                    Messages.error(
                         "The post-synaptic population "
                         + proj.post.name
                         + " receives no projection with the type "
@@ -401,7 +401,7 @@ def _check_prepost(populations, projections):
 
             if not dep in proj.post.attributes:
                 print(proj.synapse_type.equations)
-                Messages._error(
+                Messages.error(
                     "The post-synaptic population "
                     + proj.post.name
                     + " has no variable called "
@@ -425,7 +425,7 @@ def _check_locality(populations, projections):
                         "semiglobal",
                     ]:
                         print(var["eq"])
-                        Messages._error(
+                        Messages.error(
                             "The global variable",
                             var["name"],
                             "cannot depend on a synapse-specific/post-synaptic one:",
@@ -436,7 +436,7 @@ def _check_locality(populations, projections):
                 deps = var["prepost_dependencies"]
                 if len(deps["pre"]) > 0 or len(deps["post"]) > 0:
                     print(proj.synapse_type.equations)
-                    Messages._error(
+                    Messages.error(
                         "The global variable",
                         var["name"],
                         "cannot depend on pre- or post-synaptic variables.",
@@ -449,7 +449,7 @@ def _check_locality(populations, projections):
                 for v in var["dependencies"]:
                     if _get_locality(v, proj.synapse_type.description) == "local":
                         print(var["eq"])
-                        Messages._error(
+                        Messages.error(
                             "The postsynaptic variable",
                             var["name"],
                             "cannot depend on a synapse-specific one:",
@@ -460,7 +460,7 @@ def _check_locality(populations, projections):
                 deps = var["prepost_dependencies"]
                 if len(deps["pre"]) > 0:
                     print(proj.synapse_type.equations)
-                    Messages._error(
+                    Messages.error(
                         "The postsynaptic variable",
                         var["name"],
                         "cannot depend on pre-synaptic ones (e.g. pre.r).",

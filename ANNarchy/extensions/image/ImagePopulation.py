@@ -54,12 +54,12 @@ class ImagePopulation(Population):
     ):
         # Check geometry
         if isinstance(geometry, int) or len(geometry) == 1:
-            Messages._error(
+            Messages.error(
                 "The geometry of an ImagePopulation should be 2D (grayscale) or 3D (color)."
             )
 
         if len(geometry) == 3 and (geometry[2] != 3 and geometry[2] != 1):
-            Messages._error(
+            Messages.error(
                 "The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color)."
             )
 
@@ -96,7 +96,7 @@ class ImagePopulation(Population):
         try:
             im = Image.open(filename)
         except:  # image does not exist
-            Messages._error("The image " + filename + " does not exist.")
+            Messages.error("The image " + filename + " does not exist.")
 
         # Resize the image if needed
         (width, height) = (self.geometry[1], self.geometry[0])

@@ -91,7 +91,7 @@ def info(*var_text):
         print(text)
 
 
-def _error(*var_text, **args):
+def error(*var_text, **args):
     """
     Prints an error message to standard out and exits.
 

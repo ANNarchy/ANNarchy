@@ -55,9 +55,9 @@ def simulate(
 
     # Sanity checks
     if not network.compiled:
-        Messages._error("simulate(): the network is not compiled yet.")
+        Messages.error("simulate(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error("simulate(): the network is not initialized yet.")
+        Messages.error("simulate(): the network is not initialized yet.")
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / ConfigManager().get("dt", net_id))
@@ -205,9 +205,9 @@ def simulate_until(
 
     # Sanity checks
     if not network.compiled:
-        Messages._error("simulate_until(): the network is not compiled yet.")
+        Messages.error("simulate_until(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error("simulate_until(): the network is not initialized yet.")
+        Messages.error("simulate_until(): the network is not initialized yet.")
 
     # Compute maximum number of steps
     nb_steps = ceil(float(max_duration) / ConfigManager().get("dt", net_id))
@@ -253,9 +253,9 @@ def step(net_id: int = 0, show_monitor_memory_estimate: bool = False):
 
     # Sanity check
     if not network.compiled:
-        Messages._error("step(): the network is not compiled yet.")
+        Messages.error("step(): the network is not compiled yet.")
     if not network.instance:
-        Messages._error("step(): the network is not initialized yet.")
+        Messages.error("step(): the network is not initialized yet.")
 
     # Sanity check: potential memory consumption of recordings
     _check_monitor_memory(

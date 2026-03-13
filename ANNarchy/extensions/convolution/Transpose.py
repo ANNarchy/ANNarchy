@@ -63,7 +63,7 @@ class Transpose(SpecificProjection):
                 net_id=net_id,
             )
         else:
-            Messages._error(
+            Messages.error(
                 "TransposeProjection are not applyable on hybrid projections ..."
             )
 
@@ -73,7 +73,7 @@ class Transpose(SpecificProjection):
         self.projection = projection
 
         if projection._connection_delay > 0.0:
-            Messages._error(
+            Messages.error(
                 "TransposeProjection can not be applied on delayed projections yet ..."
             )
 
@@ -103,7 +103,7 @@ class Transpose(SpecificProjection):
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             print(e)
-            Messages._error("ANNarchy was not successfully installed.")
+            Messages.error("ANNarchy was not successfully installed.")
 
         lil = LILConnectivity(dt=ConfigManager().get("dt", self.net_id))
         lil.max_delay = self.max_delay
@@ -270,7 +270,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
         TODO: openMP
         """
         if ConfigManager().get("num_threads", self.net_id) > 1:
-            Messages._error(
+            Messages.error(
                 "TransposeProjection for spiking projections is only available for single-thread yet ..."
             )
 

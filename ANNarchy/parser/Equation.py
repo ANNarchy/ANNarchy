@@ -107,7 +107,7 @@ class Equation(object):
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
             print(e)
-            Messages._error("Parser: cannot analyse", self.expression)
+            Messages.error("Parser: cannot analyse", self.expression)
         return code
 
     def identify_type(self):
@@ -219,7 +219,7 @@ class Equation(object):
             )
         except Exception as e:
             print(e)
-            Messages._error("Can not analyse the expression :" + str(expression))
+            Messages.error("Can not analyse the expression :" + str(expression))
 
         return res
 
@@ -497,7 +497,7 @@ class Equation(object):
         # print('Solved', solved)
         if len(solved) > 1:
             print(self.expression)
-            Messages._error(
+            Messages.error(
                 "Parser: the ODE is not linear, can not use the implicit method."
             )
 
@@ -609,7 +609,7 @@ class Equation(object):
 
         if real_tau is None:  # the equation can not be standardized
             print(self.expression)
-            Messages._error(
+            Messages.error(
                 "The equation is not a linear ODE and can not be evaluated exactly."
             )
 
@@ -617,7 +617,7 @@ class Equation(object):
         for var in self.variables:
             if self.local_dict[var] in steadystate.atoms():
                 print(self.expression)
-                Messages._error(
+                Messages.error(
                     "The equation can not depend on other variables ("
                     + var
                     + ") to be evaluated exactly."
@@ -706,7 +706,7 @@ class Equation(object):
             ):
                 print(self.expression)
                 print(collected_var)
-                Messages._error(
+                Messages.error(
                     "The exponential and event-driven methods are reserved for linear first-order ODEs of the type tau*d"
                     + self.name
                     + "/dt + "

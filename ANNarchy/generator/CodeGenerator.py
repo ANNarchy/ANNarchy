@@ -75,7 +75,7 @@ class CodeGenerator(object):
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
-                Messages._error(
+                Messages.error(
                     "No ProfileGenerator available for "
                     + ConfigManager().get("paradigm", self.net_id)
                 )
@@ -98,7 +98,7 @@ class CodeGenerator(object):
                 self._cuda_config["cuda_version"], self._profgen, net_id
             )
         else:
-            Messages._error(
+            Messages.error(
                 "No PopulationGenerator for "
                 + ConfigManager().get("paradigm", self.net_id)
             )

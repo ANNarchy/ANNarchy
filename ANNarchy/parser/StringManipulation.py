@@ -104,7 +104,7 @@ def extract_name(equation, left=False):
                 return equation.split(op)[0]
     # Check for error
     if name.strip() == "":
-        Messages._error("the variable name can not be extracted from " + equation)
+        Messages.error("the variable name can not be extracted from " + equation)
 
     # Search for any operation in the left side
     operators = ["+", "-", "*", "/"]
@@ -217,11 +217,11 @@ def process_equations(equations):
             eq = split_operators[0][0]
             if eq.strip() == "":
                 print(equation)
-                Messages._error("The equation can not be analysed, check the syntax.")
+                Messages.error("The equation can not be analysed, check the syntax.")
 
             name = extract_name(eq, left=True)
             if name in ["_undefined", ""]:
-                Messages._error("No variable name can be found in " + equation)
+                Messages.error("No variable name can be found in " + equation)
 
             # Append the result
             variables.append(
@@ -232,6 +232,6 @@ def process_equations(equations):
             variables[-1]["eq"] += " " + equation.strip()
             variables[-1]["constraint"] += constraint
         else:
-            Messages._error("Only one assignement operator is allowed per equation.")
+            Messages.error("Only one assignement operator is allowed per equation.")
 
     return variables

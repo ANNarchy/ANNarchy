@@ -96,7 +96,7 @@ class NetworkManager:
         if net_id < len(self._networks):
             return self._networks[net_id]
         else:
-            Messages._error("Network", net_id, "not existing ...")
+            Messages.error("Network", net_id, "not existing ...")
 
     def get_networks(self) -> list["Network"]:
         "Returns the list of networks."

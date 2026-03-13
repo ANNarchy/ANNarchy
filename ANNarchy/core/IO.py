@@ -49,7 +49,7 @@ def load_parameters(
             desc = json.load(rfile)
     except IOError as error:
         print(error)
-        Messages._error("load_parameters(): the json file does not exist")
+        Messages.error("load_parameters(): the json file does not exist")
 
     if verbose:
         print("Loading parameters from file", filename)
@@ -247,7 +247,7 @@ def save_parameters(filename: str, net_id=0):
         with open(filename, "w") as wfile:
             json.dump(description, wfile, indent=4)
     except IOError as error:
-        Messages._error(
+        Messages.error(
             "save_parameters(): cannot write the json file. Make sure the subfolders already exist."
         )
 
@@ -359,7 +359,7 @@ def _save_data(filename, data):
 
             sio.savemat(filename, data)
         except Exception as e:
-            Messages._error("Error while saving in Matlab format.")
+            Messages.error("Error while saving in Matlab format.")
             print(e)
             return
 
@@ -368,7 +368,7 @@ def _save_data(filename, data):
         try:
             import gzip
         except:
-            Messages._error("gzip is not installed.")
+            Messages.error("gzip is not installed.")
             return
         with gzip.open(filename, mode="wb") as w_file:
             try:
@@ -444,14 +444,14 @@ def _load_data(filename, pickle_encoding):
     extension = os.path.splitext(fname)[1]
 
     if extension == ".mat":
-        Messages._error("Unable to load Matlab format.")
+        Messages.error("Unable to load Matlab format.")
         return None
 
     elif extension == ".gz":
         try:
             import gzip
         except:
-            Messages._error("gzip is not installed.")
+            Messages.error("gzip is not installed.")
             return None
         try:
             with gzip.open(filename, mode="rb") as r_file:
@@ -517,14 +517,14 @@ def _load_connectivity_data(filename, pickle_encoding):
     extension = os.path.splitext(fname)[1]
 
     if extension == ".mat":
-        Messages._error("Unable to load Matlab format.")
+        Messages.error("Unable to load Matlab format.")
         return None
 
     elif extension == ".gz":
         try:
             import gzip
         except:
-            Messages._error("gzip is not installed.")
+            Messages.error("gzip is not installed.")
             return None
         try:
             with gzip.open(filename, mode="rb") as r_file:
@@ -688,12 +688,12 @@ class MonitorList(list):
         """
         # Define the separator for the keys
         if not filename.endswith(".hdf5"):
-            Messages._error("MonitorList: File type must be .hdf5-File.")
+            Messages.error("MonitorList: File type must be .hdf5-File.")
 
         try:
             import h5py
         except Exception as e:
-            Messages._error(
+            Messages.error(
                 "MonitorList: h5py is required to save the monitors, please install it."
             )
 

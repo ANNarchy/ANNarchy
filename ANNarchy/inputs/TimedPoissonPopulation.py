@@ -111,7 +111,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         try:
             rates = list(rates)
         except:
-            Messages._error(
+            Messages.error(
                 "TimedPoissonPopulation: the rates argument must be a list of lists."
             )
 
@@ -119,7 +119,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         nb_schedules = len(rates)
         if nb_schedules != len(schedule):
-            Messages._error(
+            Messages.error(
                 "TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule."
             )
 
@@ -134,7 +134,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         else:
             for i in range(nb_schedules):
                 if len(rates[i]) != self.size:
-                    Messages._error(
+                    Messages.error(
                         "TimedPoissonPopulation: the second axis of the rates must be either a single element or the size of the population."
                     )
 
@@ -190,7 +190,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         else:
             for i in range(len(schedule)):
                 if len(rates[i]) != self.size:
-                    Messages._error(
+                    Messages.error(
                         "TimedPoissonPopulation: the second axis of the rates must be either a single element or the size of the population."
                     )
 

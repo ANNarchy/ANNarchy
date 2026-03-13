@@ -49,7 +49,7 @@ class Population:
     ):
         # Check if the network has already been compiled
         if NetworkManager().get_network(net_id).compiled and not copied:
-            Messages._error(
+            Messages.error(
                 "You cannot add a population after the network has been compiled."
             )
 
@@ -90,7 +90,7 @@ class Population:
 
             self.dimension = len(geometry)
         else:
-            Messages._error(
+            Messages.error(
                 "Population(): the geometry must be either an integer or a tuple."
             )
 
@@ -238,7 +238,7 @@ class Population:
                 self.size, self.max_delay
             )
         except:
-            Messages._error("unable to instantiate the population", self.name)
+            Messages.error("unable to instantiate the population", self.name)
 
         if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
@@ -317,7 +317,7 @@ class Population:
                 self.set(self.init)
             except Exception as e:
                 print(e)
-                Messages._error(
+                Messages.error(
                     "Population.reset(): something went wrong while resetting."
                 )
         else:  # only some of them
@@ -380,7 +380,7 @@ class Population:
             return object.__getattribute__(self, name)
         elif name == "spike":
             if not self.initialized:
-                Messages._error("Accessing spike events is only valid after compile()")
+                Messages.error("Accessing spike events is only valid after compile()")
             else:
                 return self._get_cython_attribute(name)
         elif hasattr(self, "attributes"):
@@ -445,7 +445,7 @@ class Population:
                 return getattr(self.cyInstance, attribute)
         except Exception as e:
             print(e)
-            Messages._error(
+            Messages.error(
                 " the variable "
                 + attribute
                 + " does not exist in this population ("
@@ -529,7 +529,7 @@ class Population:
         except Exception as e:
             print(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
-            Messages._error(err_msg % {"attr": attribute, "pop": self.name})
+            Messages.error(err_msg % {"attr": attribute, "pop": self.name})
 
     def _get_attribute_cpp_type(self, attribute):
         """
@@ -722,7 +722,7 @@ class Population:
             )
 
         if self.neuron_type.type == "rate":
-            Messages._error(
+            Messages.error(
                 "compute_firing_rate(): the neuron is already rate-coded..."
             )
 
@@ -743,7 +743,7 @@ class Population:
             if isinstance(coord[0], int):
                 rank = coord[0]
                 if not rank < self.size:
-                    Messages._error(
+                    Messages.error(
                         " when accessing neuron",
                         str(rank),
                         ": the population",
@@ -814,7 +814,7 @@ class Population:
             # Sanity check
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
-                    Messages._error(
+                    Messages.error(
                         "only one-dimensional lists/arrays are allowed to address a population."
                     )
 
@@ -896,12 +896,12 @@ class Population:
                         len(coords[3]),
                     )
                 else:
-                    Messages._error(
+                    Messages.error(
                         "Slicing is implemented only for population with 4 dimensions at maximum",
                         self.geometry,
                     )
                 if not max(ranks) < self.size:
-                    Messages._error(
+                    Messages.error(
                         "Indices do not match the geometry of the population",
                         self.geometry,
                     )
@@ -930,7 +930,7 @@ class Population:
         try:
             rank = self._rank_from_coord(coord, self.geometry)
         except:
-            Messages._error(
+            Messages.error(
                 "rank_from_coordinates(): There is no neuron of coordinates",
                 coord,
                 "in the population",
@@ -939,7 +939,7 @@ class Population:
             )
 
         if rank > self.size:
-            Messages._error(
+            Messages.error(
                 "rank_from_coordinates(), neuron",
                 str(coord),
                 ": the population",
@@ -959,7 +959,7 @@ class Population:
         """
         # Check the rank
         if not rank < self.size:
-            Messages._error(
+            Messages.error(
                 "The given rank",
                 str(rank),
                 "is larger than the size of the population",
@@ -969,7 +969,7 @@ class Population:
         try:
             coord = self._coord_from_rank(rank, self.geometry)
         except:
-            Messages._error(
+            Messages.error(
                 "The given rank",
                 str(rank),
                 "is larger than the size of the population",
@@ -1099,7 +1099,7 @@ class Population:
         Updates the population with the stored data set.
         """
         if not "attributes" in desc.keys():
-            Messages._error(
+            Messages.error(
                 "Saved with a too old version of ANNarchy (< 4.2).", exit=True
             )
 

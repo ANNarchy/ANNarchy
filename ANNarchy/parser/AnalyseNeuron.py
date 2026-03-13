@@ -140,12 +140,12 @@ def analyse_neuron(neuron, net_id):
             if var["name"] == "r":
                 break
         else:
-            Messages._error('Rate-coded neurons must define the variable "r".')
+            Messages.error('Rate-coded neurons must define the variable "r".')
 
     else:  # spiking neurons define r by default, it contains the average FR if enabled
         for var in description["parameters"] + description["variables"]:
             if var["name"] == "r":
-                Messages._error(
+                Messages.error(
                     'Spiking neurons use the variable "r" for the average FR, use another name.'
                 )
 
@@ -175,7 +175,7 @@ def analyse_neuron(neuron, net_id):
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        Messages._error("Attributes must be declared only once.", attributes)
+        Messages.error("Attributes must be declared only once.", attributes)
 
     # Store the attributes
     description["attributes"] = attributes

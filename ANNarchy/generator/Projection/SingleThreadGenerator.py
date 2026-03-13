@@ -500,14 +500,14 @@ class SingleThreadGenerator(ProjectionGenerator):
             )
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay higher than the maximum of existing delays"
                     )
 
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay different from the others if they were constant."
                     )
 
@@ -797,7 +797,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                         )
                     else:
                         print(proj.synapse_type.description["psp"]["eq"])
-                        Messages._error(
+                        Messages.error(
                             "The psp accesses a global variable with a non-uniform delay!"
                         )
 
@@ -1205,7 +1205,7 @@ if (%(condition)s) {
                 template = self._templates["spiking_sum_fixed_delay"]
 
         if template is None:
-            Messages._error("Code generation error: no template available")
+            Messages.error("Code generation error: no template available")
 
         complete_code = ""
 
@@ -1694,7 +1694,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._error(
+            Messages.error(
                 "No synaptic plasticity template found for format = "
                 + proj._storage_format,
                 " and order = " + proj._storage_order,

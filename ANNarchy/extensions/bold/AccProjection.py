@@ -35,7 +35,7 @@ class AccProjection(SpecificProjection):
 
         # Check population type of the receiving population
         if not self.post.neuron_type.type == "rate":
-            Messages._error(
+            Messages.error(
                 "The post-synaptic population of an AccProjection must be rate-coded."
             )
 

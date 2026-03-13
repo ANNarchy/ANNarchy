@@ -62,7 +62,7 @@ def connect_one_to_one(
         self._single_constant_weight = True
 
     if storage_format == "dense":
-        Messages._error(
+        Messages.error(
             "The usage of 'dense' storage format on one-to-one pattern is not allowed."
         )
 
@@ -165,7 +165,7 @@ def connect_gaussian(
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Messages._error(
+        Messages.error(
             "Gaussian connector is only possible on whole populations, not PopulationViews."
         )
 
@@ -226,7 +226,7 @@ def connect_dog(
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Messages._error(
+        Messages.error(
             "DoG connector is only possible on whole populations, not PopulationViews."
         )
 
@@ -345,7 +345,7 @@ def connect_fixed_number_pre(
         allow_self_connections = True
 
     if number > self.pre.size:
-        Messages._error(
+        Messages.error(
             "fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population."
         )
 
@@ -411,7 +411,7 @@ def connect_fixed_number_post(
         allow_self_connections = True
 
     if number > self.post.size:
-        Messages._error(
+        Messages.error(
             "fixed_number_post: the number of post-synaptic neurons exceeds the size of the population."
         )
 
@@ -596,7 +596,7 @@ def _load_from_lil(
     Load from LILConnectivity instance.
     """
     if not isinstance(synapses, LILConnectivity):
-        Messages._error(
+        Messages.error(
             f"_load_from_lil(): expected a LILConnectivty instance (Projection: pre={pre.name}, post={post.name}, name='{self.name}')."
         )
 
@@ -631,7 +631,7 @@ def connect_from_matrix(
         try:
             weights = np.array(weights)
         except:
-            Messages._error("from_matrix(): You must provide a dense 2D matrix.")
+            Messages.error("from_matrix(): You must provide a dense 2D matrix.")
 
     self._store_connectivity(
         self._load_from_matrix,
@@ -662,7 +662,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         try:
             delays = np.array(delays)
         except:
-            Messages._error("from_matrix(): You must provide a dense 2D matrix.")
+            Messages.error("from_matrix(): You must provide a dense 2D matrix.")
 
     if pre_post:  # if the user prefers pre as the first index...
         weights = weights.T
@@ -684,7 +684,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
             )
             print("Expected:", (self.pre.size, self.post.size))
             print("Received:", shape)
-        Messages._error("Quitting...")
+        Messages.error("Quitting...")
 
     for i in range(self.post.size):
         if isinstance(self.post, PopulationView):
@@ -731,17 +731,17 @@ def connect_from_sparse(
     try:
         from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
     except:
-        Messages._error(
+        Messages.error(
             "from_sparse(): scipy is not installed, sparse matrices can not be loaded."
         )
 
     if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
-        Messages._error(
+        Messages.error(
             "from_sparse(): only lil, csr and csc matrices are allowed for now."
         )
 
     if not isinstance(delays, (int, float)):
-        Messages._error(
+        Messages.error(
             "from_sparse(): only constant delays are allowed for sparse matrices."
         )
 
@@ -785,7 +785,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
         )
         print("Expected:", (len(pre_ranks), len(post_ranks)))
         print("Received:", (pre, post))
-        Messages._error("Quitting...")
+        Messages.error("Quitting...")
 
     for idx_post in range(post):
         idx_pre = weights.getcol(idx_post).indices
@@ -822,7 +822,7 @@ def connect_from_file(
         data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
         print(e)
-        Messages._error(
+        Messages.error(
             "from_file(): Unable to load the data", filename, "into the projection."
         )
 
@@ -877,7 +877,7 @@ def connect_from_file(
 
     except Exception as e:
         print(e)
-        Messages._error("Unable to load the data", filename, "into the projection.")
+        Messages.error("Unable to load the data", filename, "into the projection.")
 
     # Store the synapses
     self.connector_name = "From File"

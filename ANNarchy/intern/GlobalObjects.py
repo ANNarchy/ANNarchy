@@ -101,7 +101,7 @@ class GlobalObjectManager:
     def add_function(self, function):
         name = function.split("(")[0]
         if self.get_function(name) is not None:
-            Messages._error(
+            Messages.error(
                 f"add_function(): the global function {name} already exists at the global level."
             )
         self._objects["functions"].append((name, function))
@@ -113,7 +113,7 @@ class GlobalObjectManager:
                 NetworkManager().get_network(net_id=net_id).instance, "func_" + name
             )
         except:
-            Messages._error("call to", name, ": the function is not compiled yet.")
+            Messages.error("call to", name, ": the function is not compiled yet.")
 
         return func
 

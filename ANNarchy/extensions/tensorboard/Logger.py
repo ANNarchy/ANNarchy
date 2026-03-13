@@ -11,7 +11,7 @@ try:
     from tensorboardX import SummaryWriter
 except Exception as e:
     print(e)
-    Messages._error(
+    Messages.error(
         "tensorboard extension: please install tensorboardX (pip install tensorboardX)."
     )
 
@@ -198,7 +198,7 @@ class Logger(object):
 
         elif img.ndim == 3:
             if not img.shape[2] == 3:
-                Messages._error(
+                Messages.error(
                     "Logger.add_image: color images must be of shape (H, W, 3)."
                 )
 
@@ -215,7 +215,7 @@ class Logger(object):
             )
 
         else:
-            Messages._error(
+            Messages.error(
                 "Logger.add_image: images must be of shape (H, W) or (H, W, 3)."
             )
 

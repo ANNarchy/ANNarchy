@@ -90,10 +90,10 @@ class Copy(SpecificProjection):
 
         # Sanity checks
         if not isinstance(self.projection, Projection):
-            Messages._error("Copy: You must provide an existing projection to copy().")
+            Messages.error("Copy: You must provide an existing projection to copy().")
 
         if isinstance(self.projection, (Convolution, Pooling)):
-            Messages._error(
+            Messages.error(
                 "Copy: You can only copy regular projections, not shared projections."
             )
 
@@ -101,7 +101,7 @@ class Copy(SpecificProjection):
             not self.pre.geometry == self.projection.pre.geometry
             or not self.post.geometry == self.projection.post.geometry
         ):
-            Messages._error(
+            Messages.error(
                 "Copy: When copying a projection, the geometries must be the same."
             )
 
@@ -129,7 +129,7 @@ class Copy(SpecificProjection):
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             print(e)
-            Messages._error("ANNarchy was not successfully installed.")
+            Messages.error("ANNarchy was not successfully installed.")
 
         lil = LILConnectivity(dt=ConfigManager().get("dt", self.net_id))
 
@@ -142,7 +142,7 @@ class Copy(SpecificProjection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Messages._error(
+            Messages.error(
                 "Copy: The projection between "
                 + self.pre.name
                 + " and "
@@ -228,7 +228,7 @@ class Copy(SpecificProjection):
         try:
             sum_code = copy_sum_template[self.synapse_type.operation]
         except KeyError:
-            Messages._error(
+            Messages.error(
                 "CopyProjection: the operation ",
                 self.synapse_type.operation,
                 " is not available.",

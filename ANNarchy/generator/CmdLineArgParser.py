@@ -154,7 +154,7 @@ class CmdLineArgParser(object):
                 core_list = [int(x) for x in options.visible_cores.split(",")]
                 ConfigManagement._update_global_config("visible_cores", core_list)
             except:
-                Messages._error(
+                Messages.error(
                     "As argument for 'visible_cores' a comma-seperated list of integers is expected."
                 )
 

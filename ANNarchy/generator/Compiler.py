@@ -132,7 +132,7 @@ def compile(
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
-        Messages._error(
+        Messages.error(
             "CUDA and openMP can not be active at the same time, please check your command line arguments."
         )
 
@@ -266,7 +266,7 @@ def detect_cython():
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
-                    Messages._error("Unable to detect the path to cython.")
+                    Messages.error("Unable to detect the path to cython.")
 
     return cython
 
@@ -364,7 +364,7 @@ class Compiler(object):
             cmd = self.user_config["cuda"]["compiler"] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
-                Messages._error(
+                Messages.error(
                     "CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration."
                 )
 
@@ -599,7 +599,7 @@ class Compiler(object):
             shell=True,
         )
         if make_process.wait() != 0:
-            Messages._error("CMake generation failed.")
+            Messages.error("CMake generation failed.")
 
         # Start the compilation
         verbose = (
@@ -625,7 +625,7 @@ class Compiler(object):
                     raise NotImplementedError
             except:
                 pass
-            Messages._error("Compilation failed.")
+            Messages.error("Compilation failed.")
 
         else:  # Note that the last compilation was successful
             with open(self.annarchy_dir + "/compilation", "w") as wfile:
@@ -885,17 +885,17 @@ def _instantiate(
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
-                Messages._error(
+                Messages.error(
                     "The length of core ids provided to setup() is larger than available number of cores"
                 )
 
             if len(core_list) < ConfigManager().get("num_threads", net_id):
-                Messages._error(
+                Messages.error(
                     "The list of visible cores should be at least the number of cores."
                 )
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
-                Messages._error(
+                Messages.error(
                     "At least one of the core ids provided to setup() is larger than available number of cores"
                 )
 

@@ -200,7 +200,7 @@ class STP(Synapse):
 
     def __init__(self, tau_rec=100.0, tau_facil=0.01, U=0.5):
         if tau_facil <= 0.0:
-            Messages._error(
+            Messages.error(
                 "STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse."
             )
 

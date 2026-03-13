@@ -1073,7 +1073,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                         found = True
                         break
                 if not found:
-                    Messages._error(
+                    Messages.error(
                         "refractory = "
                         + pop.neuron_type.refractory
                         + ": parameter or variable does not exist."

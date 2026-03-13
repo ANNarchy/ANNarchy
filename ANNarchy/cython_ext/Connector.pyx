@@ -235,7 +235,7 @@ cdef class LILConnectivity:
             preranks = list(ranks)
             set_preranks = list(set(preranks))
             if len(preranks) != len(set_preranks):
-                ANNarchy.intern.Messages._error('The same synapse has been declared multiple times! Check your code.', exit=True)
+                ANNarchy.intern.Messages.error('The same synapse has been declared multiple times! Check your code.', exit=True)
 
             # Add the new data
             self.post_rank.push_back(rk)

@@ -53,7 +53,7 @@ class BoldMonitor(object):
         # The usage of [] as default arguments in the __init__ call lead to strange side effects.
         # We decided therefore to use None as default and create the lists locally.
         if populations is None:
-            Messages._error(
+            Messages.error(
                 "Either a population or a list of populations must be provided to the BOLD monitor (populations=...)"
             )
         if scale_factor is None:
@@ -75,20 +75,20 @@ class BoldMonitor(object):
 
         if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
-                Messages._error(
+                Messages.error(
                     "BoldMonitor: Length of scale_factor must be equal to number of populations"
                 )
 
         if len(normalize_input) > 0:
             if len(populations) != len(normalize_input):
-                Messages._error(
+                Messages.error(
                     "BoldMonitor: Length of normalize_input must be equal to number of populations"
                 )
 
         # Check mapping
         for target, input_var in mapping.items():
             if not target in bold_model._inputs:
-                Messages._error(
+                Messages.error(
                     "BoldMonitor: the key "
                     + target
                     + " of mapping is not part of the BOLD model."
@@ -232,7 +232,7 @@ class BoldMonitor(object):
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Messages._error(
+                Messages.error(
                     "BoldMonitor: attributes can not modified before compile()"
                 )
 
@@ -251,7 +251,7 @@ class BoldMonitor(object):
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Messages._error(
+                Messages.error(
                     "BoldMonitor: attributes can not modified before compile()"
                 )
 

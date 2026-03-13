@@ -40,7 +40,7 @@ class RandomDistribution:
         """
         Returns a np.ndarray with the given shape
         """
-        Messages._error("instantiated base class RandomDistribution is not allowed.")
+        Messages.error("instantiated base class RandomDistribution is not allowed.")
         return np.zeros(shape=shape)
 
     def get_list_values(self, size):
@@ -92,7 +92,7 @@ class Uniform(RandomDistribution):
             self.rng = rng
 
         if min >= max:
-            Messages._error(
+            Messages.error(
                 f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max})."
             )
 
@@ -132,7 +132,7 @@ class DiscreteUniform(RandomDistribution):
             self.rng = rng
 
         if min >= max:
-            Messages._error(
+            Messages.error(
                 f"Uniform: the minimum value (min = {min}) should be smaller than the maximum value (max = {max})."
             )
 
@@ -177,7 +177,7 @@ class Normal(RandomDistribution):
             self.rng = rng
 
         if sigma < 0.0:
-            Messages._error("Normal: the standard deviation sigma should be positive.")
+            Messages.error("Normal: the standard deviation sigma should be positive.")
 
         self.mu = mu
         self.sigma = sigma
@@ -230,7 +230,7 @@ class LogNormal(RandomDistribution):
             self.rng = rng
 
         if sigma < 0.0:
-            Messages._error(
+            Messages.error(
                 "LogNormal: the standard deviation sigma should be positive."
             )
 
@@ -287,7 +287,7 @@ class Exponential(RandomDistribution):
             self.rng = rng
 
         if Lambda < 0.0:
-            Messages._error(
+            Messages.error(
                 "Exponential: the rate parameter Lambda should be positive."
             )
 

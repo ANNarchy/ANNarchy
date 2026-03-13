@@ -57,12 +57,12 @@ class DecodingProjection(SpecificProjection):
 
         # Check populations
         if not self.pre.neuron_type.type == "spike":
-            Messages._error(
+            Messages.error(
                 "The pre-synaptic population of a DecodingProjection must be spiking."
             )
 
         if not self.post.neuron_type.type == "rate":
-            Messages._error(
+            Messages.error(
                 "The post-synaptic population of a DecodingProjection must be rate-coded."
             )
 
@@ -76,7 +76,7 @@ class DecodingProjection(SpecificProjection):
 
         # Not on CUDA
         if _check_paradigm("cuda", self.net_id):
-            Messages._error("DecodingProjections are not available on CUDA yet.")
+            Messages.error("DecodingProjections are not available on CUDA yet.")
 
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
