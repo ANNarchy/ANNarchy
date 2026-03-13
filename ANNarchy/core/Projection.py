@@ -785,7 +785,7 @@ class Projection:
                     else:
                         storage_format = "csr"
 
-        Messages._info("Automatic format selection for", self.name, ":", storage_format)
+        Messages.info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
     def _automatic_order_selection(self):
@@ -815,7 +815,7 @@ class Projection:
                 else:
                     storage_order = "post_to_pre"
 
-        Messages._info(
+        Messages.info(
             "Automatic matrix order selection for", self.name, ":", storage_order
         )
         return storage_order
@@ -1987,7 +1987,7 @@ class Projection:
             if connectivity_changed and not ConfigManager().get(
                 "suppress_warnings", self.net_id
             ):
-                Messages._info(
+                Messages.info(
                     "Loading connectivity was successful, note that stored connectivity in save file diverges from the initial state ... (Projection{id} - {name})".format(
                         id=self.id, name=self.name
                     )

@@ -351,12 +351,12 @@ def _check_storage_formats(projections):
         if _check_paradigm("cuda", proj.net_id) and proj._storage_format == "lil":
             proj._storage_format = "csr"
             if not isinstance(proj, SpecificProjection):
-                Messages._info(
+                Messages.info(
                     "LIL-type projections are not available for GPU devices ... default to CSR"
                 )
 
         if _check_paradigm("cuda", proj.net_id) and proj._storage_format == "ell":
-            Messages._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
+            Messages.info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
 
 
 def _check_prepost(populations, projections):

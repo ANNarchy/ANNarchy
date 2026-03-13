@@ -300,8 +300,8 @@ def _check_monitor_memory(
             "Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included."
         )
     elif show_monitor_memory_estimate:
-        Messages._info(f"The recording of monitors might consume {rec_size_mib}MiB.")
-        Messages._info(
+        Messages.info(f"The recording of monitors might consume {rec_size_mib}MiB.")
+        Messages.info(
             "Please note, that estimate considers only recorded state variables. Other attributes, such as spike recordings, are not included."
         )
 

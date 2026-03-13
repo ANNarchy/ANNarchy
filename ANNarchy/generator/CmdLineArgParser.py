@@ -160,7 +160,7 @@ class CmdLineArgParser(object):
 
         # Get Performance-related flags
         if options.auto_tuning:
-            Messages._info(
+            Messages.info(
                 "Automatic format selection is an experimental feature. We greatly appreciate bug reports."
             )
             ConfigManagement.setup(

@@ -80,7 +80,7 @@ def warning(*var_text):
         print(text)
 
 
-def _info(*var_text):
+def info(*var_text):
     """
     Prints a information message to standard out. Can be suppressed by configuration.
     """
