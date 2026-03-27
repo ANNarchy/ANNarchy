@@ -110,7 +110,7 @@ class PoissonPopulation(SpecificPopulation):
         net_id: int = 0,
     ):
         if rates is None and target is None:
-            Messages._error("A PoissonPopulation must define either rates or target.")
+            Messages.error("A PoissonPopulation must define either rates or target.")
 
         self.target = target
         self.parameters_init = parameters

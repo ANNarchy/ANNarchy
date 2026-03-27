@@ -54,8 +54,7 @@ class CSRCMatrixT{
      *
      */
     void init_matrix_from_transposed_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrixT::init_matrix_from_transposed_lil()" << std::endl;
+        ANNARCHY_LOG_CALL("CSRCMatrixT", "init_matrix_from_transposed_lil", this);
     #ifdef _DEBUG_CONN
         auto d_row_it = row_indices.begin();
         auto d_col_it = column_indices.begin();
@@ -66,7 +65,7 @@ class CSRCMatrixT{
             std::cout << "]" << std::endl;
         }
     #endif
-    #endif
+
         assert( (row_indices.size() == column_indices.size()) );
 
         if (row_indices.empty())
@@ -110,9 +109,10 @@ class CSRCMatrixT{
  public:
     explicit CSRCMatrixT(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrixT::CSRCMatrixT() with dense dimensions " << this->num_rows_ << " times " << this->num_columns_ << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("CSRCMatrixT", this);
+        ANNARCHY_LOG_ARG("num_rows", std::to_string(static_cast<IT>(num_rows)));
+        ANNARCHY_LOG_ARG("num_columns", std::to_string(static_cast<IT>(num_columns)));
+
         row_ptr_ = std::vector<ST>(num_columns_+1, 0);
         col_idx_ = std::vector<IT>();
 
@@ -149,9 +149,8 @@ class CSRCMatrixT{
      *  Create CSRC_T from LIL while ensuring an ascending index in rows. This function is called from Python.
      */
     bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrixT::init_matrix_from_lil()" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("CSRCMatrixT", "init_matrix_from_lil", this);
+
         // post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>(num_rows_, num_columns_);
         lil_mat->init_matrix_from_lil(post_ranks, pre_ranks);

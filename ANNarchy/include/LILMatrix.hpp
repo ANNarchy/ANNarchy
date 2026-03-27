@@ -113,9 +113,9 @@ class LILMatrix {
         assert ( (static_cast<unsigned long int>(num_rows) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
         assert ( (static_cast<unsigned long int>(num_columns) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
-    #ifdef _DEBUG
-        std::cout << "LILMatrix::LILMatrix(this=" << this << ") with dense dimensions " << static_cast<long>(this->num_rows_) << " times " << static_cast<long>(this->num_columns_) << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("LILMatrix", this);
+        ANNARCHY_LOG_ARG("num_rows", std::to_string(static_cast<IT>(num_rows)));
+        ANNARCHY_LOG_ARG("num_columns", std::to_string(static_cast<IT>(num_columns)));
     }
 
     /**
@@ -124,9 +124,7 @@ class LILMatrix {
      *              framework should never be destroyed by the base pointer.
      */
     ~LILMatrix() {
-    #ifdef _DEBUG
-        std::cout << "LILMatrix::~LILMatrix(this=" << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_DEALLOC("LILMatrix", this);
     }
 
     /**
@@ -135,9 +133,8 @@ class LILMatrix {
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     virtual void clear() {
-    #ifdef _DEBUG
-        std::cout << "LILMatrix::clear(this=" << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "clear", this);
+
         post_rank.clear();
         post_rank.shrink_to_fit();
 
@@ -234,9 +231,7 @@ class LILMatrix {
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
-        std::cout << "LILMatrix::init_matrix_from_lil()" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_from_lil", this);
 
         // Sanity checks
         assert ( (post_ranks.size() == pre_ranks.size()) );
@@ -246,7 +241,7 @@ class LILMatrix {
         this->post_rank = post_ranks;
         this->pre_rank = pre_ranks;
 
-    #ifdef _DEBUG
+    #ifdef _TRACE_INIT
         print_matrix_statistics();
     #endif
         return true;
@@ -453,9 +448,9 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector< std::vector<VT> > init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with constant " << default_value << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable", this);
+        ANNARCHY_LOG_ARG("constant", default_value);
+
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
 
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -475,9 +470,10 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_uniform", this);
+        ANNARCHY_LOG_ARG("min", a);
+        ANNARCHY_LOG_ARG("max", b);
+
         std::uniform_real_distribution<VT> dis (a,b);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -499,9 +495,10 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_discrete_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with discrete Uniform(" << a << ", " << b << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_discrete_uniform", this);
+        ANNARCHY_LOG_ARG("min", a);
+        ANNARCHY_LOG_ARG("max", b);
+
         std::uniform_int_distribution<VT> dis (a,b);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -522,9 +519,10 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with normal distribution (" << mean << ", " << sigma << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_normal", this);
+        ANNARCHY_LOG_ARG("mean", mean);
+        ANNARCHY_LOG_ARG("sigma", sigma);
+
         std::normal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -545,9 +543,10 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal(VT mean, VT sigma, std::mt19937& rng) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with log-normal distribution (" << mean << ", " << sigma << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal", this);
+        ANNARCHY_LOG_ARG("mean", mean);
+        ANNARCHY_LOG_ARG("sigma", sigma);
+
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -571,9 +570,12 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal_clip(VT mean, VT sigma, std::mt19937& rng, VT min, VT max) {
-    #ifdef _DEBUG
-        std::cout << "Initialize variable with log-normal distribution (" << mean << ", " << sigma << ") clipped to [" << min << "," << max << "]" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal_clip", this);
+        ANNARCHY_LOG_ARG("mean", mean);
+        ANNARCHY_LOG_ARG("sigma", sigma);
+        ANNARCHY_LOG_ARG("min", min);
+        ANNARCHY_LOG_ARG("max", max);
+
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -607,22 +609,17 @@ class LILMatrix {
      */
     template <typename VT>
     inline void update_matrix_variable(std::vector< std::vector<VT> > &variable, const IT lil_idx, const IT col_idx, const VT value) {
-    #ifdef _DEBUG_ACCESSOR
-        std::cout << "LILMatrix::update_matrix_variable(row_idx = " << post_rank[lil_idx] << ", col_idx = " << col_idx << ", value = " << value << ")" << std::endl;
-        bool updated = false;
-    #endif
+        ANNARCHY_LOG_CALL("LILMatrix", "update_matrix_variable", this);
+        ANNARCHY_LOG_ARG("lil_idx", lil_idx);
+        ANNARCHY_LOG_ARG("col_idx", col_idx);
+        ANNARCHY_LOG_ARG("value", value);
+
         for (auto idx = 0; idx < pre_rank[lil_idx].size(); idx++) {
             if (pre_rank[lil_idx][idx] == col_idx) {
                 variable[lil_idx][idx] = value;
-            #ifdef _DEBUG_ACCESSOR
-                updated = true;
-            #endif
+                ANNARCHY_LOG_STATE("updated position", idx);
             }
         }
-    #ifdef _DEBUG_ACCESSOR
-        if (!updated)
-            std::cerr << "Update failed ..." << std::endl;
-    #endif
     }
 
     /**
@@ -742,7 +739,7 @@ class LILMatrix {
      *  @param[in]  variable    the vector variable which should be read-out.
      *  @param[in]  lil_idx     position of the vector to be updated.
      *  @param[in]  value       new value for the matrix entry.
-     */    
+     */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, IT lil_idx, VT value) {
         assert ( (lil_idx < post_rank.size()) );
@@ -870,6 +867,7 @@ class LILMatrix {
      *  @details    Intended for debug.
      */
     void print_matrix_statistics() {
+        std::cout << "LILMatrix instance at " << this << std::endl;
         std::cout << "  #rows: " << num_rows_ << std::endl;
         std::cout << "  #columns: " << num_columns_ << std::endl;
         std::cout << "  #nnz: " << nb_synapses() << std::endl;
@@ -881,7 +879,6 @@ class LILMatrix {
      *  @details    Intended for debug.
      */
     void print_data_representation() {
-        std::cout << "LILMatrix instance at " << this << std::endl;
         print_matrix_statistics();
 
         std::cout << "  post_ranks = [ ";

@@ -4,6 +4,7 @@
 """
 
 import numpy as np
+import hashlib
 
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
@@ -49,7 +50,32 @@ class Neuron:
     """
 
     # Default name and description for reporting
-    _default_names = {"rate": "Rate-coded neuron", "spike": "Spiking neuron"}
+    _default_names = {
+        "rate": "Rate-coded neuron",
+        "spike": "Spiking neuron"
+    }
+
+    # A list of created neuron types, either pre- or user-defined
+    _instantiated_types = set()
+    _neuron_type_ids = {}
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+
+        if cls.__name__ == "Neuron":
+            # User-defined neurons has no unique class name, we fall back to a hash value
+            key = cls._compute_hash_id(args, kwargs)
+
+        else:
+            key = cls.__name__
+
+        if key not in Neuron._instantiated_types and (len(args)>0 or kwargs):
+            # first time instantiated
+            Neuron._instantiated_types.add(key)
+            GlobalObjectManager().add_neuron_type(instance)
+            Neuron._neuron_type_ids[key] = GlobalObjectManager().num_neuron_types()
+
+        return instance
 
     def __init__(
         self,
@@ -81,17 +107,10 @@ class Neuron:
 
         # Not available by now ...
         if axon_spike and ConfigManager().get("paradigm", 0) != "openmp":
-            Messages._error(
+            Messages.error(
                 "Axonal spike conditions are only available for openMP by now."
             )
             # will crash when paradigm='cuda' is passed only at the Network level...
-
-        # Reporting
-        if not hasattr(self, "_instantiated"):  # User-defined
-            GlobalObjectManager().add_neuron_type(self)
-        elif len(self._instantiated) == 0:  # First instantiated of the class
-            GlobalObjectManager().add_neuron_type(self)
-        self._rk_neurons_type = GlobalObjectManager().num_neuron_types()
 
         if name:
             self.name = name
@@ -109,6 +128,42 @@ class Neuron:
 
         # Analyse the neuron type
         self.description = None
+
+    @staticmethod
+    def _compute_hash_id(args, kwargs, key_length=24):
+        """
+        Compute a hash value to later (re-)identify an model object.
+        """
+        # Extract all significant model fields.
+        params = kwargs['parameters'] if 'parameters' in kwargs.keys() else args[0] if len(args)>1 else ""
+        equations = kwargs['equations'] if 'equations' in kwargs.keys() else args[1] if len(args)>2 else ""
+        spike = kwargs['spike'] if 'spike' in kwargs.keys() else args[2] if len(args)>3 else None
+        reset = kwargs['reset'] if 'reset' in kwargs.keys() else args[4] if len(args)>5 else None
+
+        # Combine them to one large string. A fixed ordering ensures a correct hash.
+        key_data = (params, equations, spike)
+        key_str = repr(key_data)
+
+        # Create hash on them
+        return hashlib.sha256(key_str.encode()).hexdigest()[:key_length]
+
+    @property
+    def _rk_neurons_type(self):
+        # for reporting
+        if self.__class__.__name__ == "Neuron":
+            key = self._compute_hash_id(
+                args=(),
+                kwargs={
+                    'parameters': self.parameters,
+                    'equations': self.equations,
+                    'spike': self.spike,
+                    'reset': self.reset
+                }
+            )
+        else:
+            key = self.__class__.__name__
+        return self._neuron_type_ids[key]
+
 
     def _analyse(self, net_id):
         # Analyse the neuron type
@@ -251,5 +306,5 @@ class IndividualNeuron:
                     self.population, list(set([self.rank] + other.ranks))
                 )
         else:
-            Messages._error("can only add two PopulationViews of the same population.")
+            Messages.error("can only add two PopulationViews of the same population.")
             return None

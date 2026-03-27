@@ -501,14 +501,14 @@ class OpenMPGenerator(ProjectionGenerator):
             )
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay higher than the maximum of existing delays"
                     )
 
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay different from the others if they were constant."
                     )
 
@@ -670,7 +670,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Messages._debug(
+                    Messages.debug(
                         "No SIMD implementation found, fallback to non-SIMD code"
                     )
                     template = ""
@@ -725,7 +725,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Messages._debug(
+                        Messages.debug(
                             "No SIMD implementation found, fallback to non-SIMD code"
                         )
                         template = ""
@@ -734,7 +734,7 @@ class OpenMPGenerator(ProjectionGenerator):
         try:
             template = self._templates["rate_coded_sum"]
         except:
-            Messages._error(
+            Messages.error(
                 "OpenMPGenerator: no template for storage_format = "
                 + proj._storage_format
                 + " configuration available"
@@ -782,8 +782,8 @@ class OpenMPGenerator(ProjectionGenerator):
                             + "%(delay_nu)s%(pre_index)s",
                         )
                     else:
-                        Messages._print(proj.synapse_type.description["psp"]["eq"])
-                        Messages._error(
+                        print(proj.synapse_type.description["psp"]["eq"])
+                        Messages.error(
                             "The psp accesses a global variable with a non-uniform delay!"
                         )
 
@@ -1236,7 +1236,7 @@ if (%(condition)s) {
         pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1:  # Non-uniform delays
-                Messages._warning(
+                Messages.warning(
                     "Variable delays for spiking networks is experimental and slow..."
                 )
                 template = self._templates["spiking_sum_variable_delay"]
@@ -1610,7 +1610,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # Template does not exist
-            Messages._error(
+            Messages.error(
                 "No template for spiking neurons post event (format = {}, order = {}, and single_matrix = {})".format(
                     proj._storage_format, proj._storage_order, single_matrix
                 )
@@ -1769,7 +1769,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._error(
+            Messages.error(
                 "No synaptic plasticity template found for format = "
                 + proj._storage_format,
                 ", order = " + proj._storage_order,

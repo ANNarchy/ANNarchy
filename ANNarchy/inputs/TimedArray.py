@@ -104,7 +104,7 @@ class TimedArray(SpecificPopulation):
     ):
         # Sanity check
         if rates is None and geometry is None:
-            Messages._error(
+            Messages.error(
                 "TimedArray: either *rates* or *geometry* argument must be set."
             )
 
@@ -114,7 +114,7 @@ class TimedArray(SpecificPopulation):
                 geometry = rates.shape[1:]
             else:
                 if geometry != rates.shape[1:]:
-                    Messages._warning(
+                    Messages.warning(
                         "TimedArray: mismatch between *rates* and *geometry* dimensions detected."
                     )
 
@@ -145,11 +145,11 @@ class TimedArray(SpecificPopulation):
         if self.initialized:
             return self._get_cython_attribute("r")
         else:
-            Messages._error("Read-out of 'r' is only possible after compile.")
+            Messages.error("Read-out of 'r' is only possible after compile.")
 
     @r.setter
     def r(self, new_r):
-        Messages._error("The value of r is defined through the '*'rates' argument.")
+        Messages.error("The value of r is defined through the '*'rates' argument.")
 
     def update(
         self,
@@ -234,12 +234,12 @@ class TimedArray(SpecificPopulation):
             self.schedule = schedule
 
         if len(self.schedule) > rates.shape[0]:
-            Messages._error(
+            Messages.error(
                 "TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter."
             )
 
         if len(self.schedule) < rates.shape[0]:
-            Messages._warning(
+            Messages.warning(
                 "TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect."
             )
 
@@ -761,7 +761,7 @@ class TimedArray(SpecificPopulation):
 
                 if len(value.shape) > 2:
                     if value.shape[1:] != self.geometry:
-                        Messages._error(
+                        Messages.error(
                             "TimedArray: mismatch between *rates* argument (",
                             value.shape[1:],
                             ") and stored geometry (",

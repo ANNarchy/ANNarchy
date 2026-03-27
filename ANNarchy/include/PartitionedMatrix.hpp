@@ -155,9 +155,7 @@ class PartitionedMatrix {
      *  @param[in]  num_partitions  The provided LIL presentation is divided into *num_partitions* partitions.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
-    #ifdef _DEBUG
-        std::cout << "PartitionedMatrix::init_matrix_from_lil()" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("PartitionedMatrix", "init_matrix_from_lil", this);
 
         // Sanity check
         assert ( (post_ranks.size() == pre_ranks.size()) );
@@ -184,7 +182,7 @@ class PartitionedMatrix {
         std::cout << "PartitionedMatrix: created " << num_partitions << " partitions with partition borders:" << std::endl;
         for (int t = 0; t < num_partitions; t++) {
             std::cout << "  partition " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
-            " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) << 
+            " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) <<
             " ( " << slices_[t].second - slices_[t].first << " rows, "<< sub_matrices_[t]->nb_synapses() <<" nnz )" << std::endl;
         }
     #endif
@@ -410,7 +408,7 @@ class PartitionedMatrix {
             if ((lil_idx >= it->first) && (lil_idx < it->second)) {
                 sub_matrices_[part]->update_matrix_variable(variable[part], lil_idx-it->first, col_idx, value);
             }
-        }        
+        }
     }
 
     template <typename VT, typename PART_TYPE>
@@ -599,17 +597,18 @@ class PartitionedMatrix {
         std::cout << "Partitioned matrices ..." << std::endl;
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
             (*it)->print_data_representation();
-  
+
     }
-  
+
     /**
      *  @brief      Divide the matrix across rows in equally large partitions.
      *  @details    Sets the chunk_size_ as well as the slices_ attribute.
      */
     void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
-    #ifdef _DEBUG
-        std::cout << "PartitionedMatrix::divide_post_ranks(row_indices.size()="<<row_indices.size()<<", num_partitions="<<num_partitions<<")"<< std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("PartitionedMatrix", "divide_post_ranks", this);
+        ANNARCHY_LOG_ARG("row_indices.size()", row_indices.size());
+        ANNARCHY_LOG_ARG("num_partitions", num_partitions);
+
         num_partitions_ = num_partitions;
         chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));
 
@@ -617,7 +616,7 @@ class PartitionedMatrix {
             int beg = i * chunk_size_;
             int end = std::min(static_cast<int>((i+1) * chunk_size_), static_cast<int>(num_rows_));
 
-            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(end-beg, num_columns_));
+            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(num_rows_, num_columns_));
         }
 
         // ATTENTION: this assumes that row_indices are sorted ascending

@@ -325,7 +325,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(LIL_SingleThread.conn_templates)
                 self._template_ids.update(LIL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -339,7 +339,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(COO_SingleThread.conn_templates)
                 self._template_ids.update(COO_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -353,7 +353,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(DIA_SingleThread.conn_templates)
                 self._template_ids.update(DIA_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -367,7 +367,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(BSR_SingleThread.conn_templates)
                 self._template_ids.update(BSR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -389,7 +389,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(ELLR_SingleThread.conn_templates)
                 self._template_ids.update(ELLR_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -403,7 +403,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(SELL_SingleThread.conn_templates)
                 self._template_ids.update(SELL_SingleThread.conn_ids)
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -418,7 +418,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(ELL_SingleThread.conn_ids)
 
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -434,7 +434,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 #   In contrast to most of the other formats, we can not define the
                 #   indices by one set as they are different for coo/ell part
             else:
-                raise Global.InvalidConfiguration(
+                raise Messages.InvalidConfiguration(
                     "    "
                     + proj.name
                     + ": storage_format = "
@@ -500,14 +500,14 @@ class SingleThreadGenerator(ProjectionGenerator):
             )
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay higher than the maximum of existing delays"
                     )
 
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
-                    Messages._error(
+                    Messages.error(
                         "creating: you can not add a delay different from the others if they were constant."
                     )
 
@@ -674,7 +674,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Messages._debug(
+                    Messages.debug(
                         "No SIMD implementation found, fallback to non-SIMD code"
                     )
                     template = ""
@@ -729,7 +729,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Messages._debug(
+                        Messages.debug(
                             "No SIMD implementation found, fallback to non-SIMD code"
                         )
                         template = ""
@@ -796,8 +796,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                             + "%(delay_nu)s%(pre_index)s",
                         )
                     else:
-                        Messages._print(proj.synapse_type.description["psp"]["eq"])
-                        Messages._error(
+                        print(proj.synapse_type.description["psp"]["eq"])
+                        Messages.error(
                             "The psp accesses a global variable with a non-uniform delay!"
                         )
 
@@ -1185,7 +1185,7 @@ if (%(condition)s) {
         pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1:  # Non-uniform delays
-                Messages._warning(
+                Messages.warning(
                     "Variable delays for spiking networks is experimental and slow..."
                 )
                 template = self._templates["spiking_sum_variable_delay"]
@@ -1205,7 +1205,7 @@ if (%(condition)s) {
                 template = self._templates["spiking_sum_fixed_delay"]
 
         if template is None:
-            Messages._error("Code generation error: no template available")
+            Messages.error("Code generation error: no template available")
 
         complete_code = ""
 
@@ -1694,7 +1694,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._error(
+            Messages.error(
                 "No synaptic plasticity template found for format = "
                 + proj._storage_format,
                 " and order = " + proj._storage_order,

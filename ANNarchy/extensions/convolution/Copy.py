@@ -90,10 +90,10 @@ class Copy(SpecificProjection):
 
         # Sanity checks
         if not isinstance(self.projection, Projection):
-            Messages._error("Copy: You must provide an existing projection to copy().")
+            Messages.error("Copy: You must provide an existing projection to copy().")
 
         if isinstance(self.projection, (Convolution, Pooling)):
-            Messages._error(
+            Messages.error(
                 "Copy: You can only copy regular projections, not shared projections."
             )
 
@@ -101,7 +101,7 @@ class Copy(SpecificProjection):
             not self.pre.geometry == self.projection.pre.geometry
             or not self.post.geometry == self.projection.post.geometry
         ):
-            Messages._error(
+            Messages.error(
                 "Copy: When copying a projection, the geometries must be the same."
             )
 
@@ -128,8 +128,8 @@ class Copy(SpecificProjection):
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
-            Messages._print(e)
-            Messages._error("ANNarchy was not successfully installed.")
+            print(e)
+            Messages.error("ANNarchy was not successfully installed.")
 
         lil = LILConnectivity(dt=ConfigManager().get("dt", self.net_id))
 
@@ -142,7 +142,7 @@ class Copy(SpecificProjection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Messages._error(
+            Messages.error(
                 "Copy: The projection between "
                 + self.pre.name
                 + " and "
@@ -228,7 +228,7 @@ class Copy(SpecificProjection):
         try:
             sum_code = copy_sum_template[self.synapse_type.operation]
         except KeyError:
-            Messages._error(
+            Messages.error(
                 "CopyProjection: the operation ",
                 self.synapse_type.operation,
                 " is not available.",
@@ -272,20 +272,20 @@ class Copy(SpecificProjection):
 
     def save_connectivity(self, filename):
         "Not available."
-        Messages._warning("Copied projections can not be saved.")
+        Messages.warning("Copied projections can not be saved.")
 
     def save(self, filename):
         "Not available."
-        Messages._warning("Copied projections can not be saved.")
+        Messages.warning("Copied projections can not be saved.")
 
     def load(self, filename):
         "Not available."
-        Messages._warning("Copied projections can not be loaded.")
+        Messages.warning("Copied projections can not be loaded.")
 
     def receptive_fields(self, variable="w", in_post_geometry=True):
         "Not available."
-        Messages._warning("Copied projections can not display receptive fields.")
+        Messages.warning("Copied projections can not display receptive fields.")
 
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Messages._warning("Copied projections can not display connectivity matrices.")
+        Messages.warning("Copied projections can not display connectivity matrices.")

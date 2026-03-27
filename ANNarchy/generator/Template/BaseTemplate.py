@@ -31,6 +31,7 @@ omp_header_template = """#pragma once
 #endif
 
 // Useful functions
+#include "logging.hpp"
 #include "helper_functions.hpp"
 
 /*
@@ -209,28 +210,23 @@ size_t estimate_record_size(int num_steps) {
 // Simulate a single step
 void singleStep()
 {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "-- evaluate step " << t << " (" << t * dt << " ms) --" << std::endl;
-#endif
 %(prof_step_pre)s
+
+    ANNARCHY_TRACE_SIM_MSG("-- evaluate step " << t << " (" << t * dt << " ms) --");
 
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
+    ANNARCHY_TRACE_SIM_MSG("Update psp/conductances ...");
 %(prof_proj_psp_pre)s
 %(reset_sums)s
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update psp/conductances ..." << std::endl;
-#endif
 %(compute_sums)s
 %(prof_proj_psp_post)s
 
     ////////////////////////////////
     // Recording target variables
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Record psp/conductances ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Record psp/conductances ...");
     for (unsigned int i=0; i < recorders.size(); i++) {
         if (recorders[i])
             recorders[i]->record_targets();
@@ -239,9 +235,7 @@ void singleStep()
     ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Draw required random numbers ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Draw required random numbers ...");
 %(prof_rng_pre)s
 %(random_dist_update)s
 %(prof_rng_post)s
@@ -249,9 +243,7 @@ void singleStep()
     ////////////////////////////////
     // Update neural variables
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate neural ODEs ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Evaluate neural ODEs ...");
 %(prof_neur_step_pre)s
 %(update_neuron)s
 %(prof_neur_step_post)s
@@ -259,17 +251,13 @@ void singleStep()
     ////////////////////////////////
     // Delay outputs
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update delay queues ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Update delayed signals ...");
 %(delay_code)s
 
     ////////////////////////////////
     // Global operations (min/max/mean)
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update global operations ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Update global operations ...");
 %(prof_global_ops_pre)s
 %(update_globalops)s
 %(prof_global_ops_post)s
@@ -277,9 +265,7 @@ void singleStep()
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate synaptic ODEs ..." << std::endl;
-#endif
+    ANNARCHY_TRACE_SIM_MSG("Evaluate synaptic ODEs ...");
 %(prof_proj_step_pre)s
 %(update_synapse)s
 %(prof_proj_step_post)s
@@ -299,6 +285,7 @@ void singleStep()
     ////////////////////////////////
     // Recording neural / synaptic variables
     ////////////////////////////////
+    ANNARCHY_TRACE_SIM_MSG("Record neural/synaptic variables ...");
 %(prof_record_pre)s
     for (unsigned int i=0; i < recorders.size(); i++){
         if (recorders[i])
@@ -312,18 +299,12 @@ void singleStep()
     t++;
 
 %(prof_step_post)s
-
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "-- simulation step " << t << " completed --" << std::endl;
-#endif
 }
 
 // Simulate the network for the given number of steps,
 // called from python
 void run(const int nbSteps) {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Perform simulation for " << nbSteps << " steps.");
 
 %(prof_run_pre)s
     // apply changes implied by structural plasticity (spike only)
@@ -339,6 +320,8 @@ void run(const int nbSteps) {
 // Simulate the network for a single steps,
 // called from python
 void step() {
+    ANNARCHY_LOG_MSG("Perform a single step.");
+
 %(prof_run_pre)s
     // apply changes implied by structural plasticity (spike only)
 %(sp_spike_backward_view_update)s
@@ -350,6 +333,8 @@ void step() {
 
 int run_until(const int steps, std::vector<int> populations, bool or_and)
 {
+    ANNARCHY_LOG_MSG("Perform simulation for " << steps << " steps at maximum.");
+
     // apply changes implied by structural plasticity (spike only)
 %(sp_spike_backward_view_update)s
 
@@ -367,9 +352,11 @@ void initialize(const %(float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
-#ifdef _DEBUG
-    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
-#endif
+    ANNARCHY_LOG_CALL("ANNarchyCore", "setSeed", nullptr);
+    ANNARCHY_LOG_ARG("seed", seed);
+    ANNARCHY_LOG_ARG("num_sources", num_sources);
+    ANNARCHY_LOG_ARG("use_seed_seq", std::string((use_seed_seq) ? "true" : "false"));
+
     // sanity check
     if (num_sources > 1)
         std::cerr << "WARNING - ANNarchyCore::setSeed(): num_sources should be 1 for single thread code." << std::endl;
@@ -385,15 +372,11 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
  *  Life-time management
  */
 void create_cpp_instances() {
-#if defined(_TRACE_INIT) || defined(_DEBUG)
-    std::cout << "Instantiate C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Instantiate C++ objects ...");
 }
 
 void destroy_cpp_instances() {
-#if defined(_TRACE_INIT) || defined(_DEBUG)
-    std::cout << "Destroy C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Destroy C++ objects ...");
 }
 
 /*
@@ -750,9 +733,11 @@ void initialize(const %(float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
-#ifdef _DEBUG
-    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
-#endif
+    ANNARCHY_LOG_CALL("ANNarchyCore", "setSeed", nullptr);
+    ANNARCHY_LOG_ARG("seed", seed);
+    ANNARCHY_LOG_ARG("num_sources", num_sources);
+    ANNARCHY_LOG_ARG("use_seed_seq", std::string((use_seed_seq) ? "true" : "false"));
+
     // sanity check
     if (num_sources > 1) {
         if (num_sources != global_num_threads) {
@@ -793,15 +778,11 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
  *  Life-time management
  */
 void create_cpp_instances() {
-#ifdef _DEBUG
-    std::cout << "Instantiate C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Instantiate C++ objects ...");
 }
 
 void destroy_cpp_instances() {
-#ifdef _DEBUG
-    std::cout << "Destroy C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Destroy C++ objects ...");
 }
 
 /*
@@ -818,14 +799,9 @@ void setDt(const %(float_prec)s dt_) { dt=dt_;}
  */
 void setNumberThreads(const int threads, const std::vector<int> core_list)
 {
-#ifdef _DEBUG
-    std::cout << "Set new number of threads:" << threads << std::endl;
-    if (!core_list.empty()) {
-        std::cout << "Use thread placement: [";
-        for (auto it = core_list.begin(); it != core_list.end(); it++) std::cout << *it << " ";
-        std::cout << "]";
-    }
-#endif
+    ANNARCHY_LOG_CALL("ANNarchyCore", "setNumberThreads", nullptr);
+    ANNARCHY_LOG_ARG("threads", threads);
+    ANNARCHY_LOG_ARG("core_list", vec_to_string<int>(core_list));
 
     // set worker set size
     global_num_threads = threads;
@@ -921,6 +897,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 // Useful functions
+#include "logging.hpp"
 #include "helper_functions.cuh"
 
 /*
@@ -990,9 +967,9 @@ void step();
 void initialize(const %(float_prec)s _dt) ;
 
 inline void setDevice(const int device_id) {
-#ifdef _DEBUG
-    std::cout << "Setting device " << device_id << " as compute device ..." << std::endl;
-#endif
+    ANNARCHY_LOG_CALL("ANNarchyCore", "setDevice", nullptr);
+    ANNARCHY_LOG_ARG("device id", device_id);
+
     cudaError_t err = cudaSetDevice(device_id);
     if ( err != cudaSuccess )
         std::cerr << "Set device " << device_id << ": " << cudaGetErrorString(err) << std::endl;
@@ -1138,11 +1115,9 @@ void init_curand_states( int numBlocks, int numThreads, curandState* states, uns
     rng_setup_kernel<<< numBlocks, numThreads >>>( numBlocks * numThreads, sequence_offset, states, seed);
     sequence_offset += numBlocks * numThreads;
 
-#ifdef _DEBUG
     cudaError_t err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "init_curand_state: " << cudaGetErrorString(err) << std::endl;
-#endif
 }
 
 void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum) {
@@ -1293,15 +1268,11 @@ void initialize(%(float_prec)s _dt) {
  *  Life-time management
  */
 void create_cpp_instances() {
-#ifdef _DEBUG
-    std::cout << "Instantiate C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Instantiate C++ objects ...");
 }
 
 void destroy_cpp_instances() {
-#ifdef _DEBUG
-    std::cout << "Destroy C++ objects ..." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Destroy C++ objects ...");
 }
 
 /*
@@ -1455,17 +1426,13 @@ void single_step()
 
 // Simulate the network for the given number of steps
 void run(const int nbSteps) {
-#ifdef _DEBUG
-    std::cout << "host to device transfers." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("perform host to device transfers.");
 
 %(host_device_transfer)s
 
     stream_assign();
 
-#ifdef _DEBUG
-    std::cout << "simulate " << nbSteps << " steps." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Perform simulation for " << nbSteps << " steps.");
 
 %(prof_run_pre)s
     // simulation loop
@@ -1489,16 +1456,13 @@ int run_until(const int steps, std::vector<int> populations, bool or_and) {
 }
 
 void step() {
-#ifdef _DEBUG
-    std::cout << "host to device transfers." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("perform host to device transfers.");
+
 %(host_device_transfer)s
 
     stream_assign();
 
-#ifdef _DEBUG
-    std::cout << "simulate a single step." << std::endl;
-#endif
+    ANNARCHY_LOG_MSG("Perform a single step.");
 
 %(prof_run_pre)s
     single_step();
@@ -1510,7 +1474,7 @@ void step() {
     }
 
 %(device_host_transfer)s
-    
+
     cudaDeviceSynchronize();
 }
 

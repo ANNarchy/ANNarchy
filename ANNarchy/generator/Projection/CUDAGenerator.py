@@ -407,7 +407,7 @@ class CUDAGenerator(ProjectionGenerator):
                 device_kernel = proj._specific_template["psp_body"]
                 host_call = proj._specific_template["psp_call"]
             except KeyError:
-                Messages._error(
+                Messages.error(
                     "At least one of the following fields is missing for psp: header, invoke, body or call"
                 )
 
@@ -704,7 +704,7 @@ class CUDAGenerator(ProjectionGenerator):
                 device_kernel = proj._specific_template["psp_body"]
                 host_call = proj._specific_template["psp_call"]
             except KeyError:
-                Messages._error(
+                Messages.error(
                     "At least one of the following fields is missing for psp: header, invoke, body or call"
                 )
 
@@ -723,7 +723,7 @@ class CUDAGenerator(ProjectionGenerator):
         kernel_deps = []
 
         if proj.max_delay > 1 and proj.uniform_delay == -1:
-            Messages._error("Non-uniform delays are not supported yet on GPUs.")
+            Messages.error("Non-uniform delays are not supported yet on GPUs.")
 
         # Basic tags, dependent on storage format are assuming a feedforward
         # transmission.
@@ -785,7 +785,7 @@ class CUDAGenerator(ProjectionGenerator):
                 elif operation == "=":
                     ids.update({"atomicOp": "atomicExch"})
                 else:
-                    Messages._error(
+                    Messages.error(
                         "The operator '"
                         + operation
                         + "' is not supported in psp-statements on CUDA devices yet."
@@ -1536,7 +1536,7 @@ if(%(condition)s){
                     raise NotImplementedError
 
             else:
-                Messages._error(
+                Messages.error(
                     "Unsupported random distribution on GPUs: " + dist["dist"]
                 )
 

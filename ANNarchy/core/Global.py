@@ -123,7 +123,7 @@ def get_population(name: str, net_id: int = 0) -> "Population":
         if pop.name == name:
             return pop
 
-    Messages._warning("get_population(): the population", name, "does not exist.")
+    Messages.warning("get_population(): the population", name, "does not exist.")
     return None
 
 
@@ -137,7 +137,7 @@ def get_projection(name: str, net_id: int = 0) -> "Projection":
         if proj.name == name:
             return proj
 
-    Messages._warning("get_projection(): the projection", name, "does not exist.")
+    Messages.warning("get_projection(): the projection", name, "does not exist.")
     return None
 
 
@@ -335,7 +335,7 @@ def set_time(t: float, net_id=0):
             int(t / ConfigManager().get("dt", net_id))
         )
     except:
-        Messages._warning("Time can only be set when the network is compiled.")
+        Messages.warning("Time can only be set when the network is compiled.")
 
 
 def get_current_step(net_id=0) -> int:
@@ -356,7 +356,7 @@ def set_current_step(t: int, net_id=0):
     try:
         NetworkManager().get_network(net_id=net_id).instance.set_time(int(t))
     except:
-        Messages._warning("Time can only be set when the network is compiled.")
+        Messages.warning("Time can only be set when the network is compiled.")
 
 
 def dt(net_id: int = 0) -> float:
@@ -397,6 +397,6 @@ def set_seed(seed: int, use_seed_seq: bool = True, net_id: int = 0):
                 seed, ConfigManager().get("num_threads", net_id), use_seed_seq
             )
     except:
-        Messages._warning(
+        Messages.warning(
             "The seed will only be set in the simulated network when it is compiled."
         )

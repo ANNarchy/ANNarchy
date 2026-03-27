@@ -42,7 +42,7 @@ def report_markdown(
     """
 
     # stdout
-    Messages._print("Generating report in", filename)
+    print("Generating report in", filename)
 
     # Header
     if title == None:

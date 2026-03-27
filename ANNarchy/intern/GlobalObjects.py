@@ -56,10 +56,20 @@ class GlobalObjectManager:
                 del obj
             self._objects["neurons"] = []
 
+            # TODO: this is a brute force reset ... maybe there is a better approach?
+            from ANNarchy.core.Neuron import Neuron
+            Neuron._instantiated_types = set()
+            Neuron._neuron_type_ids = {}
+
         if synapses:
             for obj in self._objects["synapses"]:
                 del obj
             self._objects["synapses"] = []
+
+            # TODO: this is a brute force reset ... maybe there is a better approach?
+            from ANNarchy.core.Synapse import Synapse
+            Synapse._instantiated_types = set()
+            Synapse._synapse_type_ids = {}
 
     ################################
     ## Neuron types
@@ -91,7 +101,7 @@ class GlobalObjectManager:
     def add_function(self, function):
         name = function.split("(")[0]
         if self.get_function(name) is not None:
-            Messages._error(
+            Messages.error(
                 f"add_function(): the global function {name} already exists at the global level."
             )
         self._objects["functions"].append((name, function))
@@ -103,7 +113,7 @@ class GlobalObjectManager:
                 NetworkManager().get_network(net_id=net_id).instance, "func_" + name
             )
         except:
-            Messages._error("call to", name, ": the function is not compiled yet.")
+            Messages.error("call to", name, ": the function is not compiled yet.")
 
         return func
 

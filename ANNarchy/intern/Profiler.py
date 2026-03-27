@@ -101,7 +101,7 @@ class Profiler:
                 found = True
 
         if not found:
-            Messages._warning("Profiler.update_entry(): the entry was not found ...")
+            Messages.warning("Profiler.update_entry(): the entry was not found ...")
 
     def clear(self):
         """

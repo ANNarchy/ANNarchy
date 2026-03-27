@@ -50,7 +50,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Verbose
     if ConfigManager().get("verbose", net_id):
-        Messages._print("Create subdirectory.")
+        print("Create subdirectory.")
 
     if clean or profile_enabled:
         shutil.rmtree(annarchy_dir, True)
@@ -114,7 +114,7 @@ def compile(
     """
     # Check if the network has already been compiled
     if NetworkManager().get_network(net_id).compiled:
-        Messages._print(
+        print(
             "compile(): the network has already been compiled, doing nothing."
         )
         return
@@ -124,7 +124,7 @@ def compile(
 
     # Check for unknown flags
     if len(unknown) > 0 and ConfigManager().get("verbose", net_id):
-        Messages._warning("unrecognized command-line arguments:", unknown)
+        Messages.warning("unrecognized command-line arguments:", unknown)
 
     # Get CUDA configuration
     if options.gpu_device >= 0:
@@ -132,7 +132,7 @@ def compile(
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
-        Messages._error(
+        Messages.error(
             "CUDA and openMP can not be active at the same time, please check your command line arguments."
         )
 
@@ -222,7 +222,7 @@ def compile(
 
     if ConfigManager().get("verbose", net_id):
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id) + " "
-        Messages._print("Construct network " + net_str + "...", end=" ")
+        print("Construct network " + net_str + "...", end=" ")
 
     # Create the Python objects
     _instantiate(
@@ -235,7 +235,7 @@ def compile(
     _update_num_aff_connections(compiler.net_id)
 
     if ConfigManager().get("verbose", net_id):
-        Messages._print("OK")
+        print("OK")
 
     # Create a report if requested
     if options.report is not None:
@@ -266,7 +266,7 @@ def detect_cython():
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
-                    Messages._error("Unable to detect the path to cython.")
+                    Messages.error("Unable to detect the path to cython.")
 
     return cython
 
@@ -364,7 +364,7 @@ class Compiler(object):
             cmd = self.user_config["cuda"]["compiler"] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
-                Messages._error(
+                Messages.error(
                     "CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration."
                 )
 
@@ -386,7 +386,7 @@ class Compiler(object):
 
         if ConfigManager().get("verbose", self.net_id):
             net_str = "" if self.net_id == 0 else str(self.net_id) + " "
-            Messages._print("Code generation " + net_str + "...", end=" ", flush=True)
+            print("Code generation " + net_str + "...", end=" ", flush=True)
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.network.get_populations(), self.network.get_projections())
@@ -409,9 +409,9 @@ class Compiler(object):
         if ConfigManager().get("verbose", self.net_id):
             t1 = time.time()
             if not ConfigManager().get("show_time", self.net_id):
-                Messages._print("OK", flush=True)
+                print("OK", flush=True)
             else:
-                Messages._print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
+                print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
 
         # Shared libraries have os-dependent suffixes
         if sys.platform.startswith("linux"):
@@ -569,7 +569,7 @@ class Compiler(object):
             if self.net_id > 0:
                 msg += "network " + str(self.net_id)
             msg += "..."
-            Messages._print(msg, end=" ", flush=True)
+            print(msg, end=" ", flush=True)
             if (
                 ConfigManager().get("show_time", self.net_id)
                 or NetworkManager().get_network(self.net_id)._profiler is not None
@@ -599,7 +599,7 @@ class Compiler(object):
             shell=True,
         )
         if make_process.wait() != 0:
-            Messages._error("CMake generation failed.")
+            Messages.error("CMake generation failed.")
 
         # Start the compilation
         verbose = (
@@ -615,7 +615,7 @@ class Compiler(object):
                 msg = rfile.read()
             with open(self.annarchy_dir + "/compilation", "w") as wfile:
                 wfile.write("0")
-            Messages._print(msg)
+            print(msg)
             try:
                 if sys.platform.startswith("linux"):
                     os.remove("ANNarchyCore" + str(self.net_id) + ".so")
@@ -625,7 +625,7 @@ class Compiler(object):
                     raise NotImplementedError
             except:
                 pass
-            Messages._error("Compilation failed.")
+            Messages.error("Compilation failed.")
 
         else:  # Note that the last compilation was successful
             with open(self.annarchy_dir + "/compilation", "w") as wfile:
@@ -638,9 +638,9 @@ class Compiler(object):
             t1 = time.time()
 
             if not ConfigManager().get("show_time", self.net_id):
-                Messages._print("OK", flush=True)
+                print("OK", flush=True)
             else:
-                Messages._print("OK (took " + str(t1 - t0) + "seconds.", flush=True)
+                print("OK (took " + str(t1 - t0) + "seconds.", flush=True)
 
             if NetworkManager().get_network(self.net_id)._profiler is not None:
                 NetworkManager().get_network(self.net_id)._profiler.add_entry(
@@ -770,7 +770,7 @@ class Compiler(object):
 
         else:
             # Windows: to test....
-            Messages._warning(
+            Messages.warning(
                 "Compilation on windows is not supported yet. We recommend to use WSL on windows systems."
             )
 
@@ -885,22 +885,22 @@ def _instantiate(
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
-                Messages._error(
+                Messages.error(
                     "The length of core ids provided to setup() is larger than available number of cores"
                 )
 
             if len(core_list) < ConfigManager().get("num_threads", net_id):
-                Messages._error(
+                Messages.error(
                     "The list of visible cores should be at least the number of cores."
                 )
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
-                Messages._error(
+                Messages.error(
                     "At least one of the core ids provided to setup() is larger than available number of cores"
                 )
 
             if len(core_list) != len(list(set(core_list))):
-                Messages._warning(
+                Messages.warning(
                     "The provided core list contains doubled entries - is this intended?"
                 )
 
@@ -916,7 +916,7 @@ def _instantiate(
             num_cores = psutil.cpu_count(logical=False)
             # Check if the number of threads make sense
             if num_cores < ConfigManager().get('num_threads', net_id):
-                Messages._warning("The number of threads =", ConfigManager().get('num_threads', net_id), "exceeds the number of available physical cores =", num_cores)
+                Messages.warning("The number of threads =", ConfigManager().get('num_threads', net_id), "exceeds the number of available physical cores =", num_cores)
 
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
@@ -927,14 +927,14 @@ def _instantiate(
 
         if ConfigManager().get("num_threads", net_id) > 1:
             if ConfigManager().get("verbose", net_id):
-                Messages._print(
+                print(
                     "Running simulation with",
                     ConfigManager().get("num_threads", net_id),
                     "threads.",
                 )
         else:
             if ConfigManager().get("verbose", net_id):
-                Messages._print("Running simulation single-threaded.")
+                print("Running simulation single-threaded.")
 
     elif _check_paradigm("cuda", net_id):
         # check if there is a configuration,
@@ -946,7 +946,7 @@ def _instantiate(
             device = int(user_config["cuda"]["device"])
 
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Setting GPU device", device)
+            print("Setting GPU device", device)
 
         # Set the CUDA device
         cython_module.set_device(device)
@@ -982,7 +982,7 @@ def _instantiate(
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get("verbose", net_id):
-            Messages._print(
+            print(
                 "Instantiate population ( name =", pop.name, ", size =", pop.size, ")"
             )
         if ConfigManager().get("show_time", net_id):
@@ -992,7 +992,7 @@ def _instantiate(
         pop._instantiate(cython_module)
 
         if ConfigManager().get("show_time", net_id):
-            Messages._print(
+            print(
                 "  instantiate of the population took",
                 (time.time() - t0) * 1000,
                 "milliseconds",
@@ -1001,7 +1001,7 @@ def _instantiate(
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get("verbose", net_id):
-            Messages._print(
+            print(
                 "Instantiate projection ( pre =",
                 proj.pre.name,
                 ", post =",
@@ -1017,7 +1017,7 @@ def _instantiate(
         proj._instantiate(cython_module)
 
         if ConfigManager().get("show_time", net_id):
-            Messages._print(
+            print(
                 "  instantiate of the projection took",
                 (time.time() - t0) * 1000,
                 "milliseconds",
@@ -1033,11 +1033,11 @@ def _instantiate(
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Initializing C++ counterpart of population", pop.name)
+            print("Initializing C++ counterpart of population", pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_network(net_id).get_projections():
         if ConfigManager().get("verbose", net_id):
-            Messages._print("Initializing C++ counterpart of projection", proj.name)
+            print("Initializing C++ counterpart of projection", proj.name)
         proj._init_attributes()
 
     # Start the monitors

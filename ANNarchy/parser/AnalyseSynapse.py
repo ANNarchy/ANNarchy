@@ -155,7 +155,7 @@ def analyse_synapse(synapse, net_id):
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        Messages._error("Attributes must be declared only once.", attributes)
+        Messages.error("Attributes must be declared only once.", attributes)
 
     # Add this info to the description
     description["parameters"] = parameters
@@ -532,13 +532,13 @@ def analyse_synapse(synapse, net_id):
                 dependencies += deps
 
             if isinstance(code, list):  # an ode in a pre/post statement
-                Messages._print(eq)
+                print(eq)
                 if variable in description["pre_spike"]:
-                    Messages._error("It is forbidden to use ODEs in a pre_spike term.")
+                    Messages.error("It is forbidden to use ODEs in a pre_spike term.")
                 elif variable in description["posz_spike"]:
-                    Messages._error("It is forbidden to use ODEs in a post_spike term.")
+                    Messages.error("It is forbidden to use ODEs in a post_spike term.")
                 else:
-                    Messages._error("It is forbidden to use ODEs here.")
+                    Messages.error("It is forbidden to use ODEs here.")
 
             # Replace untouched variables with their original name
             for prev, new in sorted(

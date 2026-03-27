@@ -156,13 +156,13 @@ def extract_ite(name, eq, description, split=True):
     if nb_then > 0:
         # A if must be right after the equal sign
         if not right.strip().startswith("if"):
-            Messages._error(
+            Messages.error(
                 eq, "\nThe right term must directly start with a if statement."
             )
 
         # It must have the same number of : and of else
         if not nb_then == 2 * nb_else:
-            Messages._error(eq, "\nConditional statements must use both : and else.")
+            Messages.error(eq, "\nConditional statements must use both : and else.")
 
         multilined = transform(right)
         condition = parse(multilined)
@@ -172,8 +172,8 @@ def extract_ite(name, eq, description, split=True):
         else:
             eq = right
     else:
-        Messages._print(eq)
-        Messages._error(
+        print(eq)
+        Messages.error(
             'Conditional statements must define "then" and "else" values.\n var = if condition: a else: b'
         )
 

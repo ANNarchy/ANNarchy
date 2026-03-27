@@ -51,21 +51,7 @@ class InvalidConfiguration(Exception):
         print(msg)
 
 
-def _print(*var_text, end="\n", flush=False):
-    """
-    Prints a message to standard out.
-    """
-    text = ""
-    for var in var_text:
-        text += str(var) + " "
-
-    if sys.version_info.major == 3:
-        print(text, end=end, flush=flush)
-    else:
-        print(text)
-
-
-def _debug(*var_text):
+def debug(*var_text):
     """
     Prints a message to standard out, if verbose mode set True.
     """
@@ -78,7 +64,7 @@ def _debug(*var_text):
     print(text)
 
 
-def _warning(*var_text):
+def warning(*var_text):
     """
     Prints a warning message to standard out. Can be suppressed by configuration.
     """
@@ -94,7 +80,7 @@ def _warning(*var_text):
         print(text)
 
 
-def _info(*var_text):
+def info(*var_text):
     """
     Prints a information message to standard out. Can be suppressed by configuration.
     """
@@ -105,7 +91,7 @@ def _info(*var_text):
         print(text)
 
 
-def _error(*var_text, **args):
+def error(*var_text, **args):
     """
     Prints an error message to standard out and exits.
 

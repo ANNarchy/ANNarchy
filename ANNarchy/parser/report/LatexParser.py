@@ -368,8 +368,8 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except Exception as e:
-            Messages._print(e)
-            Messages._warning(
+            print(e)
+            Messages.warning(
                 "can not transform the left side of "
                 + orig
                 + " to LaTeX, you have to do it by hand..."
@@ -381,8 +381,8 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left, local_dict, tex_dict)
         except Exception as e:
-            Messages._print(e)
-            Messages._warning(
+            print(e)
+            Messages.warning(
                 "can not transform the left side of "
                 + orig
                 + " to LaTeX, you have to do it by hand..."
@@ -393,8 +393,8 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
     try:
         right = _analyse_part(eq[split_idx + 1 :], local_dict, tex_dict)
     except Exception as e:
-        Messages._print(e)
-        Messages._warning(
+        print(e)
+        Messages.warning(
             "can not transform the right side of "
             + orig
             + " to LaTeX, you have to do it by hand..."
@@ -410,14 +410,14 @@ class CustomLatexPrinter(LatexPrinter):
         For ite(), pos() and neg() only.
         """
         func = expr.func.__name__
-        args = [str(self._print(arg)) for arg in expr.args]
+        args = [str(print(arg)) for arg in expr.args]
 
         if func == "ite":
             return r"""
 \begin{cases}
     %(then_code)s \qquad \text{if} \quad %(if_code)s \\
     \\
-    %(else_code)s \qquad \text{otherwise.} 
+    %(else_code)s \qquad \text{otherwise.}
 \end{cases}""" % {"if_code": args[0], "then_code": args[1], "else_code": args[2]}
 
         elif func in ["positive", "pos"]:

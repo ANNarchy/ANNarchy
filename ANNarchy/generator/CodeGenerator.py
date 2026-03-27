@@ -6,7 +6,6 @@
 import time
 
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -31,7 +30,7 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import (
     global_operation_templates_cuda,
 )
 from ANNarchy.generator.Utils import tabify
-from ANNarchy.generator.Template import BaseTemplate
+from ANNarchy.generator.Template import SingleThreadBaseTemplate, OpenMPBaseTemplate, CUDABaseTemplate
 from ANNarchy.generator import Profile
 
 
@@ -76,7 +75,7 @@ class CodeGenerator(object):
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
-                Messages._error(
+                Messages.error(
                     "No ProfileGenerator available for "
                     + ConfigManager().get("paradigm", self.net_id)
                 )
@@ -99,7 +98,7 @@ class CodeGenerator(object):
                 self._cuda_config["cuda_version"], self._profgen, net_id
             )
         else:
-            Messages._error(
+            Messages.error(
                 "No PopulationGenerator for "
                 + ConfigManager().get("paradigm", self.net_id)
             )
@@ -136,9 +135,9 @@ class CodeGenerator(object):
         if ConfigManager().get("verbose", self.net_id):
             if ConfigManager().get("paradigm", self.net_id) == "openmp":
                 if ConfigManager().get("num_threads", self.net_id) > 1:
-                    Messages._print("\nGenerate code for OpenMP ...")
+                    print("\nGenerate code for OpenMP ...")
                 else:
-                    Messages._print("\nGenerate sequential code ...")
+                    print("\nGenerate sequential code ...")
             elif ConfigManager().get("paradigm", self.net_id) == "cuda":
                 print("\nGenerate CUDA code ...")
             else:
@@ -335,19 +334,35 @@ class CodeGenerator(object):
         # Final code
         header_code = ""
         if ConfigManager().get("paradigm", self.net_id) == "openmp":
-            header_code = BaseTemplate.omp_header_template % {
-                "float_prec": ConfigManager().get("precision", self.net_id),
-                "pop_struct": pop_struct,
-                "proj_struct": proj_struct,
-                "pop_ptr": pop_ptr,
-                "proj_ptr": proj_ptr,
-                "custom_func": custom_func,
-                "custom_constant": custom_constant,
-                "built_in": BaseTemplate.built_in_functions
-                + BaseTemplate.integer_power_cpu
-                % {"float_prec": ConfigManager().get("precision", self.net_id)},
-            }
-            return header_code
+            if ConfigManager().get("num_threads", self.net_id) == 1:
+                header_code = SingleThreadBaseTemplate.header_template % {
+                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "pop_struct": pop_struct,
+                    "proj_struct": proj_struct,
+                    "pop_ptr": pop_ptr,
+                    "proj_ptr": proj_ptr,
+                    "custom_func": custom_func,
+                    "custom_constant": custom_constant,
+                    "built_in": SingleThreadBaseTemplate.built_in_functions
+                    + SingleThreadBaseTemplate.integer_power
+                    % {"float_prec": ConfigManager().get("precision", self.net_id)},
+                }
+                return header_code
+
+            else:
+                header_code = OpenMPBaseTemplate.header_template % {
+                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "pop_struct": pop_struct,
+                    "proj_struct": proj_struct,
+                    "pop_ptr": pop_ptr,
+                    "proj_ptr": proj_ptr,
+                    "custom_func": custom_func,
+                    "custom_constant": custom_constant,
+                    "built_in": OpenMPBaseTemplate.built_in_functions
+                    + OpenMPBaseTemplate.integer_power
+                    % {"float_prec": ConfigManager().get("precision", self.net_id)},
+                }
+                return header_code
 
         elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # kernel declaration
@@ -363,19 +378,19 @@ class CodeGenerator(object):
             glob_ops_header, _, _ = self._body_def_glops()
             invoke_kernel_def += glob_ops_header
 
-            device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
+            device_invoke_header = CUDABaseTemplate.device_invoke_header % {
                 "float_prec": ConfigManager().get("precision", self.net_id),
                 "invoke_kernel_def": invoke_kernel_def,
             }
 
-            host_header_code = BaseTemplate.cuda_header_template % {
+            host_header_code = CUDABaseTemplate.header_template % {
                 "float_prec": ConfigManager().get("precision", self.net_id),
                 "pop_struct": pop_struct,
                 "proj_struct": proj_struct,
                 "pop_ptr": pop_ptr,
                 "proj_ptr": proj_ptr,
                 "custom_func": custom_func,
-                "built_in": BaseTemplate.built_in_functions,
+                "built_in": CUDABaseTemplate.built_in_functions,
                 "custom_constant": custom_constant,
             }
             return device_invoke_header, host_header_code
@@ -635,9 +650,9 @@ void set_%(name)s(%(float_prec)s value) {
 
             # complete code template
             if ConfigManager().get("num_threads", self.net_id) == 1:
-                return BaseTemplate.st_body_template % base_dict
+                return SingleThreadBaseTemplate.body_template % base_dict
             else:
-                return BaseTemplate.omp_body_template % base_dict
+                return OpenMPBaseTemplate.body_template % base_dict
 
         elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
@@ -757,7 +772,7 @@ void set_%(name)s(%(float_prec)s value) {
                 ).generate_body_dict()
 
             device_code = (
-                BaseTemplate.cuda_device_kernel
+                CUDABaseTemplate.device_kernel
                 % {  # Target: ANNarchyKernel.cu
                     "common_kernel": common_kernel,
                     "pop_kernel": pop_kernel,
@@ -772,8 +787,8 @@ void set_%(name)s(%(float_prec)s value) {
                     "postevent_invoke_kernel": postevent_invoke_kernel,
                     "custom_func": custom_func,
                     "custom_constant": device_custom_constant,
-                    "built_in": BaseTemplate.built_in_functions
-                    + BaseTemplate.integer_power_cuda
+                    "built_in": CUDABaseTemplate.built_in_functions
+                    + CUDABaseTemplate.integer_power
                     % {"float_prec": ConfigManager().get("precision", self.net_id)},
                     "float_prec": ConfigManager().get("precision", self.net_id),
                 }
@@ -804,7 +819,7 @@ void set_%(name)s(%(float_prec)s value) {
             }
             base_dict.update(prof_dict)
             host_code = (
-                BaseTemplate.cuda_host_body_template % base_dict
+                CUDABaseTemplate.host_body_template % base_dict
             )  # Target: ANNarchy.cpp
 
             return device_code, host_code
@@ -835,12 +850,17 @@ void set_%(name)s(%(float_prec)s value) {
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
-            init_tpl = BaseTemplate.omp_initialize_template
+            if ConfigManager().get("num_threads", self.net_id) == 1:
+                init_tpl = SingleThreadBaseTemplate.initialize_template
+            else:
+                init_tpl = OpenMPBaseTemplate.initialize_template
+
         elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
-            init_tpl = BaseTemplate.cuda_initialize_template
+            init_tpl = CUDABaseTemplate.host_initialize_template
+
         else:
             raise NotImplementedError
 
@@ -967,7 +987,13 @@ void set_%(name)s(%(float_prec)s value) {
         """
         Generate the code for conditioned stop of simulation
         """
-        tpl = BaseTemplate.omp_run_until_template
+        if ConfigManager().get("paradigm", self.net_id) == "openmp":
+            if ConfigManager().get("num_threads", self.net_id) == 1:
+                tpl = SingleThreadBaseTemplate.run_until_template
+            else:
+                tpl = OpenMPBaseTemplate.run_until_template
+        else:
+            tpl = CUDABaseTemplate.run_until_template
 
         # Check if it is useful to generate anything at all
         for pop in self._populations:
@@ -1013,9 +1039,13 @@ void set_%(name)s(%(float_prec)s value) {
         configuration = "// Populations\n"
         for pop in self._populations:
             if pop in self._cuda_config.keys():
+                num_blocks = 1
+                num_threads = 32
+
                 if "num_threads" in self._cuda_config[pop].keys():
                     num_threads = self._cuda_config[pop]["num_threads"]
-                    num_blocks = int(ceil(float(pop.size) / float(num_threads)))
+                    if "num_blocks" not in self._cuda_config[pop].keys():
+                        num_blocks = int(ceil(float(pop.size) / float(num_threads)))
 
                 if "num_blocks" in self._cuda_config[pop].keys():
                     num_blocks = self._cuda_config[pop]["num_blocks"]
@@ -1030,7 +1060,7 @@ void set_%(name)s(%(float_prec)s value) {
                 }
 
                 if ConfigManager().get("verbose", self.net_id):
-                    Messages._print(
+                    print(
                         "population",
                         pop.id,
                         " - kernel config: (",
@@ -1044,6 +1074,9 @@ void set_%(name)s(%(float_prec)s value) {
         configuration += "\n// Projections\n"
         for proj in self._projections:
             if proj in self._cuda_config.keys():
+                num_blocks = 1
+                num_threads = 192
+
                 if "num_threads" in self._cuda_config[proj].keys():
                     num_threads = self._cuda_config[proj]["num_threads"]
                 if "num_blocks" in self._cuda_config[proj].keys():
@@ -1067,7 +1100,7 @@ void set_%(name)s(%(float_prec)s value) {
                     }
 
                     if ConfigManager().get("verbose", self.net_id):
-                        Messages._print(
+                        print(
                             "projection",
                             proj.id,
                             "with target",
@@ -1127,7 +1160,7 @@ void set_%(name)s(%(float_prec)s value) {
 """ % {"pid": proj.id}
 
         # Write config
-        stream_config = BaseTemplate.cuda_stream_setup % {
+        stream_config = CUDABaseTemplate.stream_setup % {
             "nbStreams": max_number_streams,
             "pop_assign": pop_assign,
             "proj_assign": proj_assign,
@@ -1196,7 +1229,7 @@ void set_%(name)s(%(float_prec)s value) {
                 break
 
         if ConfigManager().get("verbose", self.net_id):
-            Messages._print("projection", proj.id, " - kernel size:", guess)
+            print("projection", proj.id, " - kernel size:", guess)
 
         return guess
 

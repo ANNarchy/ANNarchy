@@ -121,7 +121,7 @@ class Network(metaclass=NetworkMeta):
         self._initialized = True
 
         # Object tracking
-        Messages._debug("Instantiate Network object", self)
+        Messages.debug("Instantiate Network object", self)
 
         # Register the network in the NetworkManager()
         self.id = NetworkManager().add_network(self)
@@ -209,31 +209,31 @@ class Network(metaclass=NetworkMeta):
         """
         # if both population and geometry are None, error
         if geometry is None and population is None:
-            Messages._error(
+            Messages.error(
                 "Network.create(): either 'geometry' or 'population' argument must be provided."
             )
 
         # if both are given as population instances, error
         if isinstance(geometry, Population) and population is not None:
-            Messages._error(
+            Messages.error(
                 "Network.create(): cannot provide both 'geometry' and 'population' as Population instances."
             )
 
         # if population is given, check its type
         if population is not None and not isinstance(population, Population):
-            Messages._error(
+            Messages.error(
                 "Network.create(): 'population' argument only accepts instances of ann.Population and its subclasses."
             )
 
         # if a population instance is given, check that the other arguments are None
         if isinstance(geometry, Population) or population is not None:
             if neuron is not None or name is not None or stop_condition is not None:
-                Messages._error(
+                Messages.error(
                     "Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance."
                 )
         if population is not None:
             if geometry is not None:
-                Messages._error(
+                Messages.error(
                     "Network.create(): do not give other arguments when a `Population` instance is provided. Define them when creating the given `Population` instance."
                 )
 
@@ -294,19 +294,19 @@ class Network(metaclass=NetworkMeta):
         """
         # if both projection and pre are None, error
         if pre is None and projection is None:
-            Messages._error(
+            Messages.error(
                 "Network.connect(): either 'pre' or 'projection' argument must be provided."
             )
 
         # if both are given as projection instances, error
         if isinstance(pre, Projection) and projection is not None:
-            Messages._error(
+            Messages.error(
                 "Network.connect(): cannot provide both 'pre' and 'projection' arguments."
             )
 
         # if projection is given, check its type
         if projection is not None and not isinstance(projection, Projection):
-            Messages._error(
+            Messages.error(
                 "Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses."
             )
 
@@ -318,12 +318,12 @@ class Network(metaclass=NetworkMeta):
                 or synapse is not None
                 or name is not None
             ):
-                Messages._error(
+                Messages.error(
                     "Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance."
                 )
         if projection is not None:
             if pre is not None:
-                Messages._error(
+                Messages.error(
                     "Network.connect(): do not give other arguments when a `Projection` instance is provided. Define them when creating the given `Projection` instance."
                 )
 
@@ -338,11 +338,11 @@ class Network(metaclass=NetworkMeta):
         else:
             # Create the projection
             if post is None:
-                Messages._error(
+                Messages.error(
                     "Network.connect(): the post population must be provided."
                 )
             if target == "":
-                Messages._error("Network.connect(): the target must be specified.")
+                Messages.error("Network.connect(): the target must be specified.")
 
             proj = Projection(
                 pre=pre,
@@ -649,7 +649,7 @@ class Network(metaclass=NetworkMeta):
                     proj.cyInstance.reset_ring_buffer()
 
         if synapses and not projections:
-            Messages._warning(
+            Messages.warning(
                 "reset(): if synapses is set to true this automatically enables projections==true"
             )
             projections = True
@@ -783,12 +783,12 @@ class Network(metaclass=NetworkMeta):
         :param seeds: list of seeds for each network. If `None`, the seeds will be be randomly set. If `'same'`, it will be the same as the current network. If `'sequential'`, the seeds will be incremented for each network (42, 43, 44, etc).
         :param measure_time: if the total duration of the simulation should be reported at the end.
         """
-        Messages._debug(
+        Messages.debug(
             "Network was created with ", self._init_args, "and", self._init_kwargs
         )
 
         if type(self) is Network:
-            Messages._error(
+            Messages.error(
                 "Network.parallel_run(): the network must be an instance of a class deriving from Network, not Network itself."
             )
 
@@ -805,7 +805,7 @@ class Network(metaclass=NetworkMeta):
 
         seeds = list(seeds)
         if len(seeds) != number:
-            Messages._error(
+            Messages.error(
                 "Network.parallel_run(): the list of seeds must have the same size as the number of simulations."
             )
 
@@ -821,7 +821,7 @@ class Network(metaclass=NetworkMeta):
             if key in current_init_args.keys():  # put the value in the constructor
                 if isinstance(val, list):
                     if len(val) != number:
-                        Messages._error(
+                        Messages.error(
                             "Network.parallel_run(): the list of values for",
                             key,
                             "must have the same size as the number of simulations.",
@@ -835,7 +835,7 @@ class Network(metaclass=NetworkMeta):
             else:  # put it in the simulation method
                 if isinstance(val, list):
                     if len(val) != number:
-                        Messages._error(
+                        Messages.error(
                             "Network.parallel_run(): the list of values for",
                             key,
                             "must have the same size as the number of simulations.",
@@ -882,7 +882,7 @@ class Network(metaclass=NetworkMeta):
 
         # Time measurement
         if measure_time:
-            Messages._print(
+            print(
                 "Simulating",
                 number,
                 "networks in parallel took",
@@ -921,7 +921,7 @@ class Network(metaclass=NetworkMeta):
 
     def _retrieve_initargs(self):
         # args and kwargs were saved here
-        Messages._debug(
+        Messages.debug(
             self._init_args,
             self._init_kwargs,
         )
@@ -959,7 +959,7 @@ class Network(metaclass=NetworkMeta):
 
         # Sanity check
         if not self.compiled:
-            Messages._error(
+            Messages.error(
                 "The copied network should be compiled before calling Network.copy()."
             )
 
@@ -1038,14 +1038,14 @@ class Network(metaclass=NetworkMeta):
             rng_changed = True
 
         if rng_changed:
-            Messages._debug("RNG generators are now configured as following:")
-            Messages._debug("  seed={} (accounts for C++ and NumPy)".format(self.seed))
-            Messages._debug(
+            Messages.debug("RNG generators are now configured as following:")
+            Messages.debug("  seed={} (accounts for C++ and NumPy)".format(self.seed))
+            Messages.debug(
                 "  use_seed_seq={}".format(
                     "True" if self._get_config("use_seed_seq") else "False"
                 )
             )
-            Messages._debug(
+            Messages.debug(
                 "  disable_parallel_rng={}".format(
                     "True" if self._get_config("disable_parallel_rng") else "False"
                 )
@@ -1055,15 +1055,12 @@ class Network(metaclass=NetworkMeta):
         for key, value in kwargs.items():
             # sanity check: filter out performance flags
             if key in ConfigManager()._performance_related_config_keys:
-                Messages._error(
-                    "The performance related flag '"
-                    + key
-                    + "' can not be configured by setup()"
-                )
+                Messages.warning(f"The '{key}' flag enables an optimization for performance which might effect your results. Please cross-check the simulation results!")
+                ConfigManager().set(key, value, net_id=self.id)
             elif key in ConfigManager().keys():
                 ConfigManager().set(key, value, net_id=self.id)
             else:
-                Messages._warning("setup(): unknown key:", key)
+                Messages.warning("setup(): unknown key:", key)
 
             if key == "sparse_matrix_format":
                 # check if this is a supported format
@@ -1081,7 +1078,7 @@ class Network(metaclass=NetworkMeta):
                     "hyb",
                     "auto",
                 ]:
-                    Messages._error(
+                    Messages.error(
                         "The value",
                         kwargs[key],
                         "provided to sparse_matrix_format is not valid.",
@@ -1095,7 +1092,7 @@ class Network(metaclass=NetworkMeta):
     @seed.setter
     def seed(self, seed: int) -> None:
         "Prevent the setting of a seed by hand."
-        Messages._error("The seed argument should not be overwritten.")
+        Messages.error("The seed argument should not be overwritten.")
 
     @property
     def default_rng(self) -> np.random.Generator:
@@ -1109,7 +1106,7 @@ class Network(metaclass=NetworkMeta):
     @default_rng.setter
     def default_rng(self, new_rng: np.random.Generator) -> None:
         "Prevent the setting of RNG instance by hand."
-        Messages._error("The default_rng argument should not be overwritten.")
+        Messages.error("The default_rng argument should not be overwritten.")
 
     @property
     def dt(self) -> float:
@@ -1224,7 +1221,7 @@ class Network(metaclass=NetworkMeta):
         for pop in self._data.populations:
             if pop.name == name:
                 return pop
-        Messages._print(
+        print(
             "get_population(): the population", name, "does not exist in this network."
         )
         return None
@@ -1238,7 +1235,7 @@ class Network(metaclass=NetworkMeta):
         for proj in self._data.projections:
             if proj.name == name:
                 return proj
-        Messages._print(
+        print(
             "get_projection(): the projection", name, "does not exist in this network."
         )
         return None
@@ -1252,7 +1249,7 @@ class Network(metaclass=NetworkMeta):
         for mon in self._data.monitors:
             if mon.name == name:
                 return mon
-        Messages._print(
+        print(
             "get_monitor(): the monitor", name, "does not exist in this network."
         )
         return None
@@ -1266,7 +1263,7 @@ class Network(metaclass=NetworkMeta):
         for ext in self._data.extensions:
             if ext.name == name:
                 return ext
-        Messages._print(
+        print(
             "get_extension(): the extension", name, "does not exist in this network."
         )
         return None
@@ -1280,7 +1277,7 @@ class Network(metaclass=NetworkMeta):
         for constant in self._data.constants:
             if constant.name == name:
                 return constant
-        Messages._print(
+        print(
             "get_constant(): the constant", name, "does not exist in this network."
         )
         return None
@@ -1321,7 +1318,7 @@ class Network(metaclass=NetworkMeta):
         if isinstance(post, str):
             obj = self.get_population(post.name)
             if obj is None:  # Sanity check
-                Messages._error(
+                Messages.error(
                     "The post-synaptic population '{}' was not found".format(post.name)
                 )
             post = obj
@@ -1329,7 +1326,7 @@ class Network(metaclass=NetworkMeta):
         if isinstance(pre, str):
             obj = self.get_population(pre.name)
             if obj is None:  # Sanity check
-                Messages._error(
+                Messages.error(
                     "The pre-synaptic population '{}' was not found".format(pre.name)
                 )
             pre = obj
@@ -1381,7 +1378,7 @@ class Network(metaclass=NetworkMeta):
             raise NotImplementedError
 
         if not suppress_error and len(res) == 0:
-            Messages._error(
+            Messages.error(
                 f"Could not find projections fitting post={post}, pre={pre}, and target={target}"
             )
 

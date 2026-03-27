@@ -82,7 +82,7 @@ class NetworkManager:
         new_id = len(self._networks)
         self._networks.append(net)
 
-        Messages._debug(
+        Messages.debug(
             "NetworkManager: added network "
             + str(net)
             + " and assigned ID = "
@@ -96,7 +96,7 @@ class NetworkManager:
         if net_id < len(self._networks):
             return self._networks[net_id]
         else:
-            Messages._error("Network", net_id, "not existing ...")
+            Messages.error("Network", net_id, "not existing ...")
 
     def get_networks(self) -> list["Network"]:
         "Returns the list of networks."
@@ -172,7 +172,7 @@ class NetworkManager:
 
         This function will be called from the Network.__del__() method, after destruction of the attached objects.
         """
-        Messages._debug("Remove network", py_instance)
+        Messages.debug("Remove network", py_instance)
 
         net_id = -1
         for net_id, inst in enumerate(self._networks):
@@ -215,12 +215,12 @@ class NetworkManager:
                 if os.path.isdir(network_directory):
                     os.rmdir(network_directory)
 
-            except OSError as err:
+            except OSError:
                 # we notice a not empty directory error
                 if ConfigManagement.get_global_config(
                     "debug"
                 ) or ConfigManagement.get_global_config("verbose"):
-                    Messages._warning(
+                    Messages.warning(
                         "Attempted to clear:",
                         network_directory,
                         "using os.rmdir failed ... retry with shutil",

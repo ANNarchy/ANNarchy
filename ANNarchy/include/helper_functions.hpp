@@ -86,10 +86,20 @@ inline bool check_free_memory(size_t required) {
 #ifdef _DEBUG
     std::cout << "  we will allocate on CPU " << required << " from " << available << " bytes " << std::endl;
 #endif
-    
-    return required < available;        
+
+    return required < available;
 #else
     // TODO 2
     return true;
 #endif
+}
+
+template<typename T>
+std::string vec_to_string(const std::vector<T>& vec, std::string delimiter=" ") {
+    std::string str = "[";
+    for (auto it = vec.begin(); it != vec.end(); it++)
+        str += std::to_string(*it) + delimiter;
+    str += "]";
+
+    return str;
 }

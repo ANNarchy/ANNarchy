@@ -61,25 +61,25 @@ class ConfigManager:
 
     _instance = None
 
-    def __new__(self, *args, **kwds):
+    def __new__(cls, *args, **kwds):
         """
         Only the first call will create a new instance of this class.
         """
-        if self._instance is None:
-            self._instance = super().__new__(self, *args, **kwds)
-            self._config = {  # dictionary because network ids can change
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwds)
+            cls._config = {  # dictionary because network ids can change
                 0: copy.deepcopy(default_config)
             }
 
             # This flags can not be configured through setup()
-            self._performance_related_config_keys = [
+            cls._performance_related_config_keys = [
                 "use_cpp_connectors",
                 "disable_split_matrix",
                 "disable_SIMD_SpMV",
                 "disable_SIMD_Eq",
             ]
 
-        return self._instance
+        return cls._instance
 
     def register_network(self, net_id: int = 0):
         """
@@ -172,11 +172,11 @@ def setup(**keyValueArgs):
     """
     if len(NetworkManager().get_network(0).get_populations()) > 0:
         if "dt" in keyValueArgs:
-            Messages._warning(
+            Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)..."
             )
         if "precision" in keyValueArgs:
-            Messages._warning(
+            Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing precision now might lead to strange behaviors..."
             )
 
@@ -185,14 +185,14 @@ def setup(**keyValueArgs):
     for key in keyValueArgs:
         # sanity check: filter out performance flags
         if key in ConfigManager()._performance_related_config_keys:
-            Messages._error(
+            Messages.error(
                 "Performance related flags can not be configured by setup()"
             )
 
         if key in ConfigManager().keys():
             ConfigManager().set(key, keyValueArgs[key], net_id=0)
         else:
-            Messages._warning("setup(): unknown key:", key)
+            Messages.warning("setup(): unknown key:", key)
 
         if key == "seed":  # also seed numpy, but this is the old way
             np.random.seed(keyValueArgs[key])
@@ -213,7 +213,7 @@ def setup(**keyValueArgs):
                 "hyb",
                 "auto",
             ]:
-                Messages._error(
+                Messages.error(
                     "The value",
                     keyValueArgs[key],
                     "provided to sparse_matrix_format is not valid.",
@@ -246,11 +246,11 @@ def _optimization_flags(**keyValueArgs):
     for key in keyValueArgs:
         # Sanity check: valid key?
         if key not in ConfigManager().keys():
-            Messages._warning("_optimization_flags() received unknown key:", key)
+            Messages.warning("_optimization_flags() received unknown key:", key)
             continue
 
         if key not in ConfigManager()._performance_related_config_keys:
-            Messages._warning(
+            Messages.warning(
                 f"The key '{key}' does not belong to the performance related keys."
             )
             continue
@@ -261,19 +261,19 @@ def _optimization_flags(**keyValueArgs):
         # Warning: use_cpp_connectors and disable_parallel_rng should be both activated
         if key == "use_cpp_connectors":
             if get_global_config(key) == True:
-                Messages._warning(
+                Messages.warning(
                     "use_cpp_connectors is an experimental feature, we greatly appreciate bug reports."
                 )
 
                 # check if the key is in the update list
                 if "disable_parallel_rng" in keyValueArgs.keys():
                     if keyValueArgs["disable_parallel_rng"]:
-                        Messages._warning(
+                        Messages.warning(
                             "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
                         )
                 # is it enabled by default?
                 elif get_global_config("disable_parallel_rng"):
-                    Messages._warning(
+                    Messages.warning(
                         "If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency."
                     )
                 # no conflict
@@ -313,7 +313,7 @@ def _check_paradigm(paradigm, net_id=0):
     try:
         return paradigm == ConfigManager().get("paradigm", net_id)
     except KeyError:
-        Messages._error("Unknown paradigm")
+        Messages.error("Unknown paradigm")
 
 
 def _check_precision(precision, net_id=0):
@@ -328,4 +328,4 @@ def _check_precision(precision, net_id=0):
     try:
         return precision == ConfigManager().get("precision", net_id)
     except KeyError:
-        Messages._error("Unknown precision")
+        Messages.error("Unknown precision")

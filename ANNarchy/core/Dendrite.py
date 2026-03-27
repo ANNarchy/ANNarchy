@@ -80,7 +80,7 @@ class Dendrite:
         if rank in self.pre_ranks:
             return IndividualSynapse(self, rank)
         else:
-            Messages._error(
+            Messages.error(
                 " The neuron of rank " + str(rank) + " has no synapse in this dendrite."
             )
             return None
@@ -108,7 +108,7 @@ class Dendrite:
             return object.__getattribute__(self, name)
         elif hasattr(self, "proj"):
             if name == "rank":  # TODO: remove 'rank' in a future version
-                Messages._warning(
+                Messages.warning(
                     "Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead."
                 )
                 return self.proj.cyInstance.pre_rank(self.idx)
@@ -195,7 +195,7 @@ class Dendrite:
 
                 else:
                     # HD: will break the execution of the program
-                    Messages._error(
+                    Messages.error(
                         "Projection attributes marked as *projection* should not be updated through dendrites."
                     )
             else:
@@ -218,7 +218,7 @@ class Dendrite:
             if key in self.attributes:
                 setattr(self, key, value)
             else:
-                Messages._error("Dendrite has no parameter/variable called", key)
+                Messages.error("Dendrite has no parameter/variable called", key)
 
     def get(self, name: str) -> float:
         """
@@ -231,7 +231,7 @@ class Dendrite:
         :param name: name of the parameter/variable.
         """
         if name == "rank":
-            Messages._warning(
+            Messages.warning(
                 "Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead."
             )
             return self.proj.cyInstance.pre_rank(self.idx)
@@ -240,7 +240,7 @@ class Dendrite:
         elif name in self.attributes:
             return getattr(self, name)
         else:
-            Messages._error("Dendrite has no parameter/variable called", name)
+            Messages.error("Dendrite has no parameter/variable called", name)
 
     #########################
     ### Formatting
@@ -290,13 +290,13 @@ class Dendrite:
         :param delay: synaptic delay in milliseconds that should be a multiple of *dt*.
         """
         if not ConfigManager().get("structural_plasticity", self.proj.net_id):
-            Messages._error(
+            Messages.error(
                 '"structural_plasticity" has not been set to True in setup(), can not add the synapse.'
             )
             return
 
         if self.proj.cyInstance.synapse_exists(self.post_rank, rank):
-            Messages._error(
+            Messages.error(
                 f"Dendrite.create_synapse(): The synapse of rank {rank} already exists for the dendrite {self.post_rank}."
             )
             return
@@ -337,8 +337,8 @@ class Dendrite:
                 *extra_attributes,
             )
         except Exception as e:
-            Messages._print(e)
-            Messages._error(
+            print(e)
+            Messages.error(
                 f"Dendrite.create_synapse(): Could not add synapse of rank {rank} to the dendrite {self.post_rank}."
             )
 
@@ -371,7 +371,7 @@ class Dendrite:
         :param delays: list of synaptic delays (default = dt).
         """
         if not ConfigManager().get("structural_plasticity", self.proj.net_id):
-            Messages._error(
+            Messages.error(
                 '"structural_plasticity" has not been set to True in setup(), can not add the synapses.'
             )
             return
@@ -437,7 +437,7 @@ class Dendrite:
                 post_idx, ranks, weights, delays, *extra_attributes
             )
         except Exception as e:
-            Messages._print(e)
+            print(e)
 
     def prune_synapse(self, rank: int) -> None:
         """
@@ -461,13 +461,13 @@ class Dendrite:
         :param rank: rank of the pre-synaptic neuron
         """
         if not ConfigManager().get("structural_plasticity", self.proj.net_id):
-            Messages._error(
+            Messages.error(
                 '"structural_plasticity" has not been set to True in setup(), can not remove the synapse.'
             )
             return
 
         if not rank in self.pre_ranks:
-            Messages._error(
+            Messages.error(
                 "the synapse with the pre-synaptic neuron of rank "
                 + str(rank)
                 + " did not exist."
@@ -498,7 +498,7 @@ class Dendrite:
         :param ranks: list of ranks of the pre-synaptic neurons.
         """
         if not ConfigManager().get("structural_plasticity", self.proj.net_id):
-            Messages._error(
+            Messages.error(
                 '"structural_plasticity" has not been set to True in setup(), can not remove the synapses.'
             )
             return

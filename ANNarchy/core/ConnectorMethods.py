@@ -18,7 +18,7 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 try:
     from ANNarchy.cython_ext import *
 except Exception as e:
-    Messages._print(e)
+    print(e)
 
 
 ################################
@@ -40,7 +40,7 @@ def connect_one_to_one(
     :param force_multiple_weights: If a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre.size != self.post.size:
-        Messages._warning(
+        Messages.warning(
             "connect_one_to_one() between",
             self.pre.name,
             "and",
@@ -48,7 +48,7 @@ def connect_one_to_one(
             "with target",
             self.target,
         )
-        Messages._print(
+        print(
             "\t the two populations have different sizes, please check the connection pattern is what you expect."
         )
 
@@ -62,7 +62,7 @@ def connect_one_to_one(
         self._single_constant_weight = True
 
     if storage_format == "dense":
-        Messages._error(
+        Messages.error(
             "The usage of 'dense' storage format on one-to-one pattern is not allowed."
         )
 
@@ -165,7 +165,7 @@ def connect_gaussian(
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Messages._error(
+        Messages.error(
             "Gaussian connector is only possible on whole populations, not PopulationViews."
         )
 
@@ -226,7 +226,7 @@ def connect_dog(
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Messages._error(
+        Messages.error(
             "DoG connector is only possible on whole populations, not PopulationViews."
         )
 
@@ -345,7 +345,7 @@ def connect_fixed_number_pre(
         allow_self_connections = True
 
     if number > self.pre.size:
-        Messages._error(
+        Messages.error(
             "fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population."
         )
 
@@ -411,7 +411,7 @@ def connect_fixed_number_post(
         allow_self_connections = True
 
     if number > self.post.size:
-        Messages._error(
+        Messages.error(
             "fixed_number_post: the number of post-synaptic neurons exceeds the size of the population."
         )
 
@@ -596,7 +596,7 @@ def _load_from_lil(
     Load from LILConnectivity instance.
     """
     if not isinstance(synapses, LILConnectivity):
-        Messages._error(
+        Messages.error(
             f"_load_from_lil(): expected a LILConnectivty instance (Projection: pre={pre.name}, post={post.name}, name='{self.name}')."
         )
 
@@ -631,7 +631,7 @@ def connect_from_matrix(
         try:
             weights = np.array(weights)
         except:
-            Messages._error("from_matrix(): You must provide a dense 2D matrix.")
+            Messages.error("from_matrix(): You must provide a dense 2D matrix.")
 
     self._store_connectivity(
         self._load_from_matrix,
@@ -662,7 +662,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         try:
             delays = np.array(delays)
         except:
-            Messages._error("from_matrix(): You must provide a dense 2D matrix.")
+            Messages.error("from_matrix(): You must provide a dense 2D matrix.")
 
     if pre_post:  # if the user prefers pre as the first index...
         weights = weights.T
@@ -672,19 +672,19 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     shape = weights.shape
     if shape != (self.post.size, self.pre.size):
         if not pre_post:
-            Messages._print(
+            print(
                 "ERROR: from_matrix(): the matrix does not have the correct dimensions."
             )
-            Messages._print("Expected:", (self.post.size, self.pre.size))
-            Messages._print("Received:", shape)
+            print("Expected:", (self.post.size, self.pre.size))
+            print("Received:", shape)
 
         else:
-            Messages._print(
+            print(
                 "ERROR: from_matrix(): the matrix does not have the correct dimensions."
             )
-            Messages._print("Expected:", (self.pre.size, self.post.size))
-            Messages._print("Received:", shape)
-        Messages._error("Quitting...")
+            print("Expected:", (self.pre.size, self.post.size))
+            print("Received:", shape)
+        Messages.error("Quitting...")
 
     for i in range(self.post.size):
         if isinstance(self.post, PopulationView):
@@ -731,17 +731,17 @@ def connect_from_sparse(
     try:
         from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
     except:
-        Messages._error(
+        Messages.error(
             "from_sparse(): scipy is not installed, sparse matrices can not be loaded."
         )
 
     if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
-        Messages._error(
+        Messages.error(
             "from_sparse(): only lil, csr and csc matrices are allowed for now."
         )
 
     if not isinstance(delays, (int, float)):
-        Messages._error(
+        Messages.error(
             "from_sparse(): only constant delays are allowed for sparse matrices."
         )
 
@@ -780,12 +780,12 @@ def _load_from_sparse(self, pre, post, weights, delays):
     (pre, post) = weights.shape
 
     if (pre, post) != (len(pre_ranks), len(post_ranks)):
-        Messages._print(
+        print(
             "ERROR: from_sparse(): the sparse matrix does not have the correct dimensions."
         )
-        Messages._print("Expected:", (len(pre_ranks), len(post_ranks)))
-        Messages._print("Received:", (pre, post))
-        Messages._error("Quitting...")
+        print("Expected:", (len(pre_ranks), len(post_ranks)))
+        print("Received:", (pre, post))
+        Messages.error("Quitting...")
 
     for idx_post in range(post):
         idx_pre = weights.getcol(idx_post).indices
@@ -821,8 +821,8 @@ def connect_from_file(
     try:
         data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
-        Messages._print(e)
-        Messages._error(
+        print(e)
+        Messages.error(
             "from_file(): Unable to load the data", filename, "into the projection."
         )
 
@@ -850,13 +850,13 @@ def connect_from_file(
         if NetworkManager().get_network(net_id=self.net_id).compiled:
             # We have already compiled the network, so changing the flag will result in crashes when accessing 'w'
             if single_w != self._single_constant_weight:
-                Messages._print(
+                print(
                     "Projection (name="
                     + self.name
                     + "): potential mismatch between weight vector in the projection and the save file."
                 )
-                Messages._print("    single weight in file:", single_w)
-                Messages._print(
+                print("    single weight in file:", single_w)
+                print(
                     "    single weight in network:", self._single_constant_weight
                 )
         else:
@@ -876,8 +876,8 @@ def connect_from_file(
                 lil.delay = [[lil.max_delay]]
 
     except Exception as e:
-        Messages._print(e)
-        Messages._error("Unable to load the data", filename, "into the projection.")
+        print(e)
+        Messages.error("Unable to load the data", filename, "into the projection.")
 
     # Store the synapses
     self.connector_name = "From File"

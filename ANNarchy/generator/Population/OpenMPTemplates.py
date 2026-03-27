@@ -39,9 +39,7 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-    #ifdef _TRACE_INIT
-        std::cout << "  PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
-    #endif
+        ANNARCHY_LOG_ALLOC("PopStruct%(id)s", this);
     }
 
     int size; // Number of neurons
@@ -56,22 +54,23 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 
-%(declare_spike_arrays)s
     // Neuron specific parameters and variables
+%(declare_spike_arrays)s
 %(declare_parameters_variables)s
 %(declare_delay)s
 %(declare_FR)s
 %(declare_additional)s
 %(declare_profile)s
-    // Access methods to the parameters and variables
-%(access_parameters_variables)s
+
+    // Specialized access methods to the parameters and variables
 %(access_additional)s
 
     // Method called to initialize the data structures
     void init_population() {
-    #ifdef _TRACE_INIT
-        std::cout << "  PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
-    #endif    
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "init_population", this);
+        ANNARCHY_LOG_STATE("size", std::to_string(this->size));
+        ANNARCHY_LOG_STATE("max_delay", std::to_string(this->max_delay));
+
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s
@@ -90,18 +89,13 @@ struct PopStruct%(id)s{
 
     // Method to draw new random numbers
     void update_rng(int tid) {
-    #ifdef _TRACE_SIMULATION_STEPS
-        #pragma omp critical
-        {
-            std::cout << "    PopStruct%(id)s::update_rng() - tid " << tid << std::endl;
-            std::cout << std::flush;
-        }
-    #endif
+        ANNARCHY_TRACE_SIM_STEP_WORKER("PopStruct%(id)s", "update_rng", this, tid, global_num_threads);
 %(update_rng)s
     }
 
     // Method to update global operations on the population (min/max/mean...)
     void update_global_ops(int tid, int nt) {
+        ANNARCHY_TRACE_SIM_STEP_WORKER("PopStruct%(id)s", "update_global_ops", this, tid, nt);
 %(update_global_ops)s
     }
 
@@ -112,29 +106,19 @@ struct PopStruct%(id)s{
 
     // Method to dynamically change the size of the queue for delayed variables
     void update_max_delay(int value) {
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "update_max_delay", this);
+        ANNARCHY_LOG_ARG("new max_delay", value);
 %(update_max_delay)s
     }
 
     // Main method to update neural variables
     void update(int tid) {
-    #ifdef _TRACE_SIMULATION_STEPS
-        #pragma omp critical
-        {
-            std::cout << "    PopStruct%(id)s::update() - tid " << tid << std::endl;
-            std::cout << std::flush;
-        }
-    #endif
+        ANNARCHY_TRACE_SIM_STEP_WORKER("PopStruct%(id)s", "update", this, tid, global_num_threads);
 %(update_variables)s
     }
 
     void spike_gather(int tid) {
-    #ifdef _TRACE_SIMULATION_STEPS
-        #pragma omp critical
-        {
-            std::cout << "    PopStruct%(id)s::spike_gather() - tid " << tid << std::endl;
-            std::cout << std::flush;
-        }
-    #endif
+        ANNARCHY_TRACE_SIM_STEP_WORKER("PopStruct%(id)s", "spike_gather", this, tid, global_num_threads);
 %(test_spike_cond)s
     }
 
@@ -147,8 +131,9 @@ struct PopStruct%(id)s{
         return size_in_bytes;
     }
 
-    // Memory management: track the memory consumption
+    // Memory management: destroy all the C++ data
     void clear() {
+        ANNARCHY_LOG_CALL("PopStruct%(id)s", "clear", this);
 %(clear_container)s
     }
 };
@@ -309,8 +294,7 @@ spike_specific = {
         spiked.clear();
         spiked.shrink_to_fit();
         local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
-        last_spike.clear();
-        last_spike = std::vector<long int>(size, -10000L);
+        std::fill(last_spike.begin(), last_spike.end(), -10000L);
 """,
         "clear": """
 // Spike events
@@ -359,8 +343,7 @@ last_spike.shrink_to_fit();
 """,
         "reset": """
         // Refractory period
-        refractory_remaining.clear();
-        refractory_remaining = std::vector<int>(size, 0);
+        std::fill(refractory_remaining.begin(), refractory_remaining.end(), 0);
 """,
     },
 }

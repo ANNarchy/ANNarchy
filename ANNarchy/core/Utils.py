@@ -110,7 +110,7 @@ def sparse_random_matrix(
     try:
         from scipy.sparse import lil_matrix
     except:
-        Messages._warning("scipy is not installed, sparse matrices won't work")
+        Messages.warning("scipy is not installed, sparse matrices won't work")
         return None
 
     from random import sample
@@ -154,7 +154,7 @@ def sparse_delays_from_weights(
     try:
         from scipy.sparse import lil_matrix
     except:
-        Messages._warning("scipy is not installed, sparse matrices won't work")
+        Messages.warning("scipy is not installed, sparse matrices won't work")
         return None
 
     delay_matrix = lil_matrix(weights.get_shape())

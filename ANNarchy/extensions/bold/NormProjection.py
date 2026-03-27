@@ -55,23 +55,23 @@ class NormProjection(SpecificProjection):
 
         # Check populations
         if not self.pre.neuron_type.type == "spike":
-            Messages._error(
+            Messages.error(
                 "The pre-synaptic population of an NormProjection must be spiking."
             )
 
         if not self.pre.neuron_type.type == "spike":
-            Messages._error(
+            Messages.error(
                 "The post-synaptic population of an NormProjection must be spiking."
             )
 
         if synapse != None and not copied:
-            Messages._error(
+            Messages.error(
                 "NormProjection does not allow the usage of customized spiking synapses yet."
             )
 
         # Not on CUDA
         if _check_paradigm("cuda", self.net_id):
-            Messages._error("NormProjections are not available on CUDA yet.")
+            Messages.error("NormProjections are not available on CUDA yet.")
 
         # Prevent automatic split of matrices
         self._no_split_matrix = True
@@ -99,7 +99,7 @@ class NormProjection(SpecificProjection):
                 break
 
         if not found:
-            Messages._error(
+            Messages.error(
                 "NormProjection: variable `"
                 + self._variable
                 + "` might be invalid. Please check the neuron model of population",
@@ -222,7 +222,7 @@ class NormProjection(SpecificProjection):
                 break
 
         if not found:
-            Messages._error(
+            Messages.error(
                 "NormProjection: variable `"
                 + self._variable
                 + "` might be invalid. Please check the neuron model of population",

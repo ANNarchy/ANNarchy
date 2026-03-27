@@ -49,7 +49,7 @@ class Population:
     ):
         # Check if the network has already been compiled
         if NetworkManager().get_network(net_id).compiled and not copied:
-            Messages._error(
+            Messages.error(
                 "You cannot add a population after the network has been compiled."
             )
 
@@ -90,7 +90,7 @@ class Population:
 
             self.dimension = len(geometry)
         else:
-            Messages._error(
+            Messages.error(
                 "Population(): the geometry must be either an integer or a tuple."
             )
 
@@ -238,7 +238,7 @@ class Population:
                 self.size, self.max_delay
             )
         except:
-            Messages._error("unable to instantiate the population", self.name)
+            Messages.error("unable to instantiate the population", self.name)
 
         if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             t2 = time.time()
@@ -316,15 +316,15 @@ class Population:
             try:
                 self.set(self.init)
             except Exception as e:
-                Messages._print(e)
-                Messages._error(
+                print(e)
+                Messages.error(
                     "Population.reset(): something went wrong while resetting."
                 )
         else:  # only some of them
             for var in attributes:
                 # check it exists
                 if not var in self.attributes:
-                    Messages._warning(
+                    Messages.warning(
                         "Population.reset():",
                         var,
                         "is not an attribute of the population, skipping.",
@@ -334,8 +334,8 @@ class Population:
                 try:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:
-                    Messages._print(e)
-                    Messages._warning(
+                    print(e)
+                    Messages.warning(
                         "Population.reset(): something went wrong while resetting", var
                     )
 
@@ -380,7 +380,7 @@ class Population:
             return object.__getattribute__(self, name)
         elif name == "spike":
             if not self.initialized:
-                Messages._error("Accessing spike events is only valid after compile()")
+                Messages.error("Accessing spike events is only valid after compile()")
             else:
                 return self._get_cython_attribute(name)
         elif hasattr(self, "attributes"):
@@ -444,8 +444,8 @@ class Population:
             else:
                 return getattr(self.cyInstance, attribute)
         except Exception as e:
-            Messages._print(e)
-            Messages._error(
+            print(e)
+            Messages.error(
                 " the variable "
                 + attribute
                 + " does not exist in this population ("
@@ -527,9 +527,9 @@ class Population:
                         setattr(self.cyInstance, attribute + "_host_to_device", True)
 
         except Exception as e:
-            Messages._print(e)
+            print(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
-            Messages._error(err_msg % {"attr": attribute, "pop": self.name})
+            Messages.error(err_msg % {"attr": attribute, "pop": self.name})
 
     def _get_attribute_cpp_type(self, attribute):
         """
@@ -579,7 +579,7 @@ class Population:
     def _function(self, name):
         "Access a user defined function"
         if not self.initialized:
-            Messages._warning(
+            Messages.warning(
                 "the network is not compiled yet, cannot access the function " + name
             )
             return
@@ -618,14 +618,14 @@ class Population:
         """
         # Check if the network is initialized
         if not self.initialized:
-            Messages._warning(
+            Messages.warning(
                 "sum(): the population", self.name, "is not initialized yet."
             )
             return np.zeros(self.geometry)
 
         # Check if a projection has this type
         if not target in self.targets:
-            Messages._warning(
+            Messages.warning(
                 "sum(): the population",
                 self.name,
                 "receives no projection with the target",
@@ -661,14 +661,14 @@ class Population:
             else:
                 return self.neuron_type.description["refractory"]
         else:
-            Messages._warning("Rate-coded neurons do not have refractory periods...")
+            Messages.warning("Rate-coded neurons do not have refractory periods...")
             return None
 
     @refractory.setter
     def refractory(self, value: float | str):
         if self.neuron_type.description["type"] == "spike":
             if isinstance(self.neuron_type.description["refractory"], str):
-                Messages._warning(
+                Messages.warning(
                     "The refractory period is linked to the neural variable",
                     self.neuron_type.description["refractory"],
                     ", doing nothing... Change its value instead.",
@@ -701,7 +701,7 @@ class Population:
             else:  # not initialized yet, saving for later
                 self.neuron_type.description["refractory"] = value
         else:
-            Messages._warning("Rate-coded neurons do not have refractory periods...")
+            Messages.warning("Rate-coded neurons do not have refractory periods...")
 
     ################################
     ## Spiking neurons can compute a mean FR
@@ -717,12 +717,12 @@ class Population:
         :param window: window in ms over which the spikes will be counted.
         """
         if _check_paradigm("cuda", self.net_id):
-            Messages._warning(
+            Messages.warning(
                 "compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... "
             )
 
         if self.neuron_type.type == "rate":
-            Messages._error(
+            Messages.error(
                 "compute_firing_rate(): the neuron is already rate-coded..."
             )
 
@@ -743,7 +743,7 @@ class Population:
             if isinstance(coord[0], int):
                 rank = coord[0]
                 if not rank < self.size:
-                    Messages._error(
+                    Messages.error(
                         " when accessing neuron",
                         str(rank),
                         ": the population",
@@ -814,7 +814,7 @@ class Population:
             # Sanity check
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
-                    Messages._error(
+                    Messages.error(
                         "only one-dimensional lists/arrays are allowed to address a population."
                     )
 
@@ -896,19 +896,19 @@ class Population:
                         len(coords[3]),
                     )
                 else:
-                    Messages._error(
+                    Messages.error(
                         "Slicing is implemented only for population with 4 dimensions at maximum",
                         self.geometry,
                     )
                 if not max(ranks) < self.size:
-                    Messages._error(
+                    Messages.error(
                         "Indices do not match the geometry of the population",
                         self.geometry,
                     )
 
                 return PopulationView(self, ranks, geometry=geometry)
 
-        Messages._warning(
+        Messages.warning(
             "Population" + self.name + ": can not address the population with", indices
         )
         return None
@@ -930,7 +930,7 @@ class Population:
         try:
             rank = self._rank_from_coord(coord, self.geometry)
         except:
-            Messages._error(
+            Messages.error(
                 "rank_from_coordinates(): There is no neuron of coordinates",
                 coord,
                 "in the population",
@@ -939,7 +939,7 @@ class Population:
             )
 
         if rank > self.size:
-            Messages._error(
+            Messages.error(
                 "rank_from_coordinates(), neuron",
                 str(coord),
                 ": the population",
@@ -959,7 +959,7 @@ class Population:
         """
         # Check the rank
         if not rank < self.size:
-            Messages._error(
+            Messages.error(
                 "The given rank",
                 str(rank),
                 "is larger than the size of the population",
@@ -969,7 +969,7 @@ class Population:
         try:
             coord = self._coord_from_rank(rank, self.geometry)
         except:
-            Messages._error(
+            Messages.error(
                 "The given rank",
                 str(rank),
                 "is larger than the size of the population",
@@ -1038,7 +1038,7 @@ class Population:
                     desc[var["name"]] = getattr(self.cyInstance, var["name"])
 
             except:
-                Messages._warning(
+                Messages.warning(
                     "Can not save the attribute "
                     + var["name"]
                     + " in the population "
@@ -1099,7 +1099,7 @@ class Population:
         Updates the population with the stored data set.
         """
         if not "attributes" in desc.keys():
-            Messages._error(
+            Messages.error(
                 "Saved with a too old version of ANNarchy (< 4.2).", exit=True
             )
 
@@ -1114,13 +1114,13 @@ class Population:
                 setattr(self.cyInstance, var, data)
 
             except Exception as e:
-                Messages._print(e)
-                Messages._print(var, data, type(data))
-                Messages._warning(
+                print(e)
+                print(var, data, type(data))
+                Messages.warning(
                     "Can not load the variable "
                     + var
                     + " in the population "
                     + self.name
                 )
-                Messages._print("Skipping this variable.")
+                print("Skipping this variable.")
                 continue

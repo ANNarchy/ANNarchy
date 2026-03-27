@@ -133,7 +133,7 @@ constants_template = r"""
 functions_template = r"""
 \noindent
 \begin{tabularx}{\linewidth}{|p{0.25\linewidth}|X|}\hline
-\textbf{Functions} &  
+\textbf{Functions} &
 %(parameters)s
 \\ \hline
 \end{tabularx}
@@ -192,7 +192,7 @@ def report_latex(
     """
 
     # stdout
-    Messages._print("Generating report in", filename)
+    print("Generating report in", filename)
 
     # Generate the summary
     summary = _generate_summary(net_id)
@@ -693,7 +693,7 @@ def _generate_synapse_models(net_id):
         # Synaptic variables
         variables = (
             r"""
-\textbf{Equations} & %(variables)s  
+\textbf{Equations} & %(variables)s
 \\ \hline"""
             % {"variables": eqs}
             if eqs != ""

@@ -2,6 +2,7 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import hashlib
 
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -66,7 +67,32 @@ class Synapse:
     """
 
     # Default name and description for reporting
-    _default_names = {"rate": "Rate-coded synapse", "spike": "Spiking synapse"}
+    _default_names = {
+        "rate": "Rate-coded synapse",
+        "spike": "Spiking synapse"
+    }
+
+    # A list of created synapse types, either pre- or user-defined
+    _instantiated_types = set()
+    _synapse_type_ids = {}
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+
+        if cls.__name__ == "Synapse":
+            # User-defined synapses has no unique class name, we fall back to a hash value
+            key = cls._compute_hash_id(args, kwargs)
+
+        else:
+            key = cls.__name__
+
+        if key not in Synapse._instantiated_types and (len(args)>0 or kwargs):
+            # first time instantiated
+            Synapse._instantiated_types.add(key)
+            GlobalObjectManager().add_synapse_type(instance)
+            Synapse._synapse_type_ids[key] = GlobalObjectManager().num_synapse_types()
+
+        return instance
 
     def __init__(
         self,
@@ -102,30 +128,23 @@ class Synapse:
 
         # Check the operation
         if self.type == "spike" and self.operation != "sum":
-            Messages._error(
+            Messages.error(
                 "Spiking synapses can only perform a sum of presynaptic potentials."
             )
 
-        if not self.operation in ["sum", "min", "max", "mean"]:
-            Messages._error(
+        if self.operation not in ["sum", "min", "max", "mean"]:
+            Messages.error(
                 "The only operations permitted are: sum (default), min, max, mean."
             )
 
         # Sanity check
         if self.pre_axon_spike and self.post_spike:
-            Messages._error(
+            Messages.error(
                 "The usage of axonal spike events is currently not allowed for plastic connections."
             )
 
         # Description
         self.description = None
-
-        # Reporting
-        if not hasattr(self, "_instantiated"):  # User-defined
-            GlobalObjectManager().add_synapse_type(synapse=self)
-        elif len(self._instantiated) == 0:  # First instantiation of the class
-            GlobalObjectManager().add_synapse_type(synapse=self)
-        self._rk_synapses_type = GlobalObjectManager().num_synapse_types()
 
         if name:
             self.name = name
@@ -140,13 +159,46 @@ class Synapse:
             else:
                 self.short_description = "User-defined rate-coded synapse."
 
+    @staticmethod
+    def _compute_hash_id(args, kwargs, key_length=24):
+        """
+        Compute a hash value to later (re-)identify an model object.
+        """
+        # Extract all significant model fields.
+        params = kwargs['parameters'] if 'parameters' in kwargs.keys() else args[0] if len(args)>1 else ""
+        equations = kwargs['equations'] if 'equations' in kwargs.keys() else args[1] if len(args)>2 else ""
+        psp = kwargs['psp'] if 'psp' in kwargs.keys() else args[2] if len(args)>3 else None
+
+        # Combine them to one large string. A fixed ordering ensures a correct hash.
+        key_data = (params, equations, psp)
+        key_str = repr(key_data)
+
+        # Create hash on them
+        return hashlib.sha256(key_str.encode()).hexdigest()[:key_length]
+
+    @property
+    def _rk_synapses_type(self):
+        # for reporting
+        if self.__class__.__name__ == "Synapse":
+            key = self._compute_hash_id(
+                args=(),
+                kwargs={
+                    'parameters': self.parameters,
+                    'equations': self.equations,
+                    'psp': self.psp,
+                }
+            )
+        else:
+            key = self.__class__.__name__
+        return self._synapse_type_ids[key]
+
     def _analyse(self, net_id):
         # Analyse the synapse type
         if not self.description:
             self.description = analyse_synapse(self, net_id)
 
     def __add__(self, synapse):
-        Messages._error("adding synapse models is not implemented yet.")
+        Messages.error("adding synapse models is not implemented yet.")
 
         # self._variables.update(synapse.variables)
 

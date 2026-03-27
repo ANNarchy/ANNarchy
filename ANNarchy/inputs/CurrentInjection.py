@@ -52,24 +52,24 @@ class CurrentInjection(SpecificProjection):
 
         # Check populations
         if not self.pre.neuron_type.type == "rate":
-            Messages._error(
+            Messages.error(
                 "The pre-synaptic population of a CurrentInjection must be rate-coded."
             )
 
         if not self.post.neuron_type.type == "spike":
-            Messages._error(
+            Messages.error(
                 "The post-synaptic population of a CurrentInjection must be spiking."
             )
 
         if not self.post.size == self.pre.size:
-            Messages._error(
+            Messages.error(
                 "CurrentInjection: The pre- and post-synaptic populations must have the same size."
             )
 
         if _check_paradigm("cuda", self.net_id) and (
             isinstance(pre, PopulationView) or isinstance(post, PopulationView)
         ):
-            Messages._error(
+            Messages.error(
                 "CurrentInjection on GPUs is not allowed for PopulationViews"
             )
 

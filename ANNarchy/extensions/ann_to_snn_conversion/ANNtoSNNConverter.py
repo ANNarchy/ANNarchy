@@ -166,7 +166,7 @@ class ANNtoSNNConverter:
 
         if self._read_out == "time_to_k_spikes":
             if "k" not in kwargs.keys():
-                Messages._error(
+                Messages.error(
                     "When read_out is set to 'time_to_k_spikes', the k parameter need to be provided."
                 )
             self._k_param = kwargs["k"]
@@ -211,7 +211,7 @@ class ANNtoSNNConverter:
 
         # Input Population
         if not isinstance(model.layers[0], tf.keras.layers.InputLayer):
-            Messages._error("The first layer of the network must be an Input layer.")
+            Messages.error("The first layer of the network must be an Input layer.")
 
         input_name = model.layers[0].name
         input_shape = get_shape(model.layers[0].output)[1:]
@@ -477,7 +477,7 @@ class ANNtoSNNConverter:
             scale_factor = [scale_factor] * len(weight_matrices)
         elif isinstance(scale_factor, (list, np.ndarray)):
             if len(scale_factor) != len(weight_matrices):
-                Messages._error(
+                Messages.error(
                     "The length of the scale_factor list must be equal to the number of projections."
                 )
             else:
@@ -519,4 +519,4 @@ def get_shape(tensor) -> tuple:
         try:
             return tuple(tensor.shape.as_list())
         except:
-            Messages._error("ANN_to_SNN: unable to estimate the layer's size.")
+            Messages.error("ANN_to_SNN: unable to estimate the layer's size.")

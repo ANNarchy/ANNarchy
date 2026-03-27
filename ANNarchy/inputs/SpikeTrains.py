@@ -151,7 +151,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         if isinstance(rates, (list, np.ndarray)):
             rates = list(rates)
             if len(rates) != len(schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list."
                 )
         else:
@@ -160,7 +160,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         # corr also
         if isinstance(corr, (list, np.ndarray)):
             if len(corr) != len(schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list."
                 )
             corr = list(corr)
@@ -242,7 +242,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         if isinstance(rates, (list, np.ndarray)):
             rates = list(rates)
             if len(rates) != len(schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list."
                 )
         else:
@@ -251,7 +251,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         # corr also
         if isinstance(corr, (list, np.ndarray)):
             if len(corr) != len(schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list."
                 )
             corr = list(corr)
@@ -785,7 +785,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule. Please consider update() if you want to change the number of elements in rates."
                 )
 
@@ -811,7 +811,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             else:
                 value = [float(value)]
             if not len(value) == len(self.schedule):
-                Messages._error(
+                Messages.error(
                     "HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule. Please consider update() if you want to change the number of elements in corr."
                 )
 

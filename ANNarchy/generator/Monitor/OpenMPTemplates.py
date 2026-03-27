@@ -14,28 +14,21 @@ public:
     PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
-    #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s (this = " << this << ") instantiated." << std::endl;
-    #endif
 %(init_code)s
 
         // add monitor to global list
         this->_id = addRecorder(static_cast<Monitor*>(this));
-    #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
-    #endif
+
+        ANNARCHY_LOG_ALLOC("PopRecorder%(id)s", this);
+        ANNARCHY_LOG_STATE("list id:", this->_id);
     }
 
     ~PopRecorder%(id)s() {
-    #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s(this = " << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_DEALLOC("PopRecorder%(id)s", this);
     }
 
     void record() {
-    #ifdef _TRACE_SIMULATION_STEPS
-        std::cout << "PopRecorder%(id)s::record()" << std::endl;
-    #endif
+        ANNARCHY_TRACE_SIM_STEP("PopRecorder%(id)s", "record", this);
 %(recording_code)s
     }
 
@@ -62,9 +55,7 @@ public:
 %(clear_individual_container_code)s
 
     void clear() {
-    #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::clear(this = " << this << ")" << std::endl;
-    #endif
+        ANNARCHY_LOG_CALL("PopRecorder%(id)s", "clear", this);
 %(clear_all_container_code)s
 
         removeRecorder(this);
@@ -84,9 +75,7 @@ public:
         this->record_%(name)s = false; """,
         "recording": """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-        #ifdef _TRACE_SIMULATION_STEPS
-            std::cout << "    Record '%(name)s' for pop%(id)s." << std::endl;
-        #endif
+            ANNARCHY_TRACE_SIM_MSG("  - record '%(name)s' of PopStruct%(id)s.");
             if(!this->partial) {
                 this->%(name)s.push_back(pop%(id)s->%(name)s);
             } else {

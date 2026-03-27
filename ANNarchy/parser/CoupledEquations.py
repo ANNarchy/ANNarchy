@@ -65,8 +65,8 @@ class CoupledEquations(Equation):
         for var in self.variables:
             methods.append(var["method"])
         if len(list(set(methods))) > 1:  # mixture of methods
-            Messages._print(methods)
-            Messages._error(
+            print(methods)
+            Messages.error(
                 "Cannot mix different numerical methods when solving a coupled system of equations."
             )
 
@@ -120,8 +120,8 @@ class CoupledEquations(Equation):
         try:
             solution = sp.solve(list(equations.values()), list(new_vars.keys()))
         except Exception as e:
-            Messages._print(expression_list)
-            Messages._error(
+            print(expression_list)
+            Messages.error(
                 "The multiple ODEs can not be solved together using the implicit Euler method."
             )
 

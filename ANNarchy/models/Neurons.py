@@ -24,8 +24,6 @@ def list_standard_neurons():
 ##################
 ### Leaky Integrator
 ##################
-
-
 class LeakyIntegrator(Neuron):
     r"""
     Leaky-integrator rate-coded neuron, optionally noisy.
@@ -72,9 +70,6 @@ class LeakyIntegrator(Neuron):
     :param sum: Input sums.
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         tau: float = 10.0,
@@ -108,9 +103,6 @@ class LeakyIntegrator(Neuron):
             name="Leaky-Integrator",
             description="Leaky-Integrator with positive transfer function and additive noise.",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 ##################
@@ -198,9 +190,6 @@ class Izhikevich(Neuron):
     :param conductance: Conductances used as inputs.
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         a: float = 0.02,
@@ -263,9 +252,6 @@ class Izhikevich(Neuron):
             description="Quadratic integrate-and-fire spiking neuron with adaptation.",
         )
 
-        # For reporting
-        self._instantiated.append(True)
-
 
 ##################
 ### IF neurons
@@ -318,9 +304,6 @@ class IF_curr_exp(Neuron):
 
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest: float = -65.0,
@@ -357,7 +340,7 @@ class IF_curr_exp(Neuron):
         }
 
         # Equations for the variables
-        equations = """    
+        equations = """
             cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc - g_inh + i_offset : exponential, init=%(v_reset)s
             tau_syn_E * dg_exc/dt = - g_exc : exponential
             tau_syn_I * dg_inh/dt = - g_inh : exponential
@@ -379,9 +362,6 @@ class IF_curr_exp(Neuron):
             name="Integrate-and-Fire",
             description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current.",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 class IF_cond_exp(Neuron):
@@ -434,9 +414,6 @@ class IF_cond_exp(Neuron):
     :param i_offset: Offset current (nA)
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest=-65.0,
@@ -462,7 +439,7 @@ class IF_cond_exp(Neuron):
             v_thresh = %(v_thresh)s
             v_reset = %(v_reset)s
             i_offset = %(i_offset)s
-            e_rev_E = %(e_rev_E)s 
+            e_rev_E = %(e_rev_E)s
             e_rev_I = %(e_rev_I)s
         """ % {
             "v_rest": v_rest,
@@ -479,7 +456,7 @@ class IF_cond_exp(Neuron):
         }
 
         # Equations for the variables
-        equations = """    
+        equations = """
             cm * dv/dt = cm/tau_m*(v_rest -v)   + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset : exponential, init=%(v_reset)s
             tau_syn_E * dg_exc/dt = - g_exc : exponential
             tau_syn_I * dg_inh/dt = - g_inh : exponential
@@ -501,9 +478,6 @@ class IF_cond_exp(Neuron):
             name="Integrate-and-Fire",
             description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductances.",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 # Alpha conductances
@@ -565,9 +539,6 @@ class IF_curr_alpha(Neuron):
     :param i_offset: Offset current (nA)
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest=-65.0,
@@ -594,9 +565,9 @@ class IF_curr_alpha(Neuron):
         """
 
         # Equations for the variables
-        equations = """  
+        equations = """
             gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
-            gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)  
+            gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
             cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc - alpha_inh + i_offset : exponential, init=%(v_reset)s
             tau_syn_E * dg_exc/dt = - g_exc : exponential
             tau_syn_I * dg_inh/dt = - g_inh : exponential
@@ -620,9 +591,6 @@ class IF_curr_alpha(Neuron):
             name="Integrate-and-Fire",
             description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents.",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 class IF_cond_alpha(Neuron):
@@ -685,9 +653,6 @@ class IF_cond_alpha(Neuron):
 
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest=-65.0,
@@ -713,7 +678,7 @@ class IF_cond_alpha(Neuron):
             v_thresh = %(v_thresh)s
             v_reset = %(v_reset)s
             i_offset = %(i_offset)s
-            e_rev_E = %(e_rev_E)s 
+            e_rev_E = %(e_rev_E)s
             e_rev_I = %(e_rev_I)s
         """ % {
             "v_rest": v_rest,
@@ -730,7 +695,7 @@ class IF_cond_alpha(Neuron):
         }
 
         # Equations for the variables
-        equations = """    
+        equations = """
             gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
             gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
             cm * dv/dt = cm/tau_m*(v_rest -v)   + alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset : exponential, init=%(v_reset)s
@@ -756,9 +721,6 @@ class IF_cond_alpha(Neuron):
             name="Integrate-and-Fire",
             description="Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductances.",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 ##################
@@ -835,9 +797,6 @@ class EIF_cond_exp_isfa_ista(Neuron):
     :param v_spike: Spike threshold (mV)
     '''
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest=-70.6,
@@ -894,12 +853,12 @@ class EIF_cond_exp_isfa_ista(Neuron):
             "v_spike": v_spike,
         }
         # Equations for the variables
-        equations = """    
+        equations = """
             I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset
 
             tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=%(v_reset)s
 
-            tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
+            tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
 
             tau_syn_E * dg_exc/dt = - g_exc : exponential
             tau_syn_I * dg_inh/dt = - g_inh : exponential
@@ -922,9 +881,6 @@ class EIF_cond_exp_isfa_ista(Neuron):
             name="Adaptive exponential Integrate-and-Fire",
             description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.).",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 class EIF_cond_alpha_isfa_ista(Neuron):
@@ -1005,9 +961,6 @@ class EIF_cond_alpha_isfa_ista(Neuron):
     :param v_spike: Spike threshold (mV)
     '''
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         v_rest=-70.6,
@@ -1064,16 +1017,16 @@ class EIF_cond_alpha_isfa_ista(Neuron):
             "v_spike": v_spike,
         }
         # Equations for the variables
-        equations = """    
+        equations = """
 
             gmax_exc = exp((tau_syn_E - dt/2.0)/tau_syn_E)
             gmax_inh = exp((tau_syn_I - dt/2.0)/tau_syn_I)
-            
+
             I = alpha_exc * (e_rev_E - v) + alpha_inh * (e_rev_I - v) + i_offset
 
             tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=%(v_reset)s
 
-            tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w 
+            tau_w * dw/dt = a * (v - v_rest) / 1000.0 - w
 
             tau_syn_E * dg_exc/dt = - g_exc : exponential
             tau_syn_I * dg_inh/dt = - g_inh : exponential
@@ -1098,9 +1051,6 @@ class EIF_cond_alpha_isfa_ista(Neuron):
             name="Adaptive exponential Integrate-and-Fire",
             description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).",
         )
-
-        # For reporting
-        self._instantiated.append(True)
 
 
 ##################
@@ -1180,9 +1130,6 @@ class HH_cond_exp(Neuron):
 
     """
 
-    # For reporting
-    _instantiated = []
-
     def __init__(
         self,
         gbar_Na=20.0,
@@ -1201,20 +1148,20 @@ class HH_cond_exp(Neuron):
         v_thresh=0.0,
     ):
         parameters = """
-        gbar_Na    = %(gbar_Na)s   
-        gbar_K     = %(gbar_K)s     
-        gleak      = %(gleak)s      
-        cm         = %(cm)s        
-        v_offset   = %(v_offset)s 
-        e_rev_Na   = %(e_rev_Na)s 
-        e_rev_K    = %(e_rev_K)s   
-        e_rev_leak = %(e_rev_leak)s   
-        e_rev_E    = %(e_rev_E)s    
-        e_rev_I    = %(e_rev_I)s   
-        tau_syn_E  = %(tau_syn_E)s 
-        tau_syn_I  = %(tau_syn_I)s 
-        i_offset   = %(i_offset)s  
-        v_thresh   = %(v_thresh)s  
+        gbar_Na    = %(gbar_Na)s
+        gbar_K     = %(gbar_K)s
+        gleak      = %(gleak)s
+        cm         = %(cm)s
+        v_offset   = %(v_offset)s
+        e_rev_Na   = %(e_rev_Na)s
+        e_rev_K    = %(e_rev_K)s
+        e_rev_leak = %(e_rev_leak)s
+        e_rev_E    = %(e_rev_E)s
+        e_rev_I    = %(e_rev_I)s
+        tau_syn_E  = %(tau_syn_E)s
+        tau_syn_I  = %(tau_syn_I)s
+        i_offset   = %(i_offset)s
+        v_thresh   = %(v_thresh)s
         """ % {
             "gbar_Na": gbar_Na,
             "gbar_K": gbar_K,
@@ -1239,7 +1186,7 @@ class HH_cond_exp(Neuron):
             # Voltage-dependent rate constants
             an = 0.032 * (15.0 - v + v_offset) / (exp((15.0 - v + v_offset)/5.0) - 1.0)
             am = 0.32  * (13.0 - v + v_offset) / (exp((13.0 - v + v_offset)/4.0) - 1.0)
-            ah = 0.128 * exp((17.0 - v + v_offset)/18.0) 
+            ah = 0.128 * exp((17.0 - v + v_offset)/18.0)
 
             bn = 0.5   * exp ((10.0 - v + v_offset)/40.0)
             bm = 0.28  * (v - v_offset - 40.0) / (exp((v - v_offset - 40.0)/5.0) - 1.0)
@@ -1251,7 +1198,7 @@ class HH_cond_exp(Neuron):
             dh/dt = ah * (1.0 - h) - bh * h : init = 1.0, exponential
 
             # Membrane equation
-            cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v) 
+            cm * dv/dt = gleak*(e_rev_leak -v) + gbar_K * n**4 * (e_rev_K - v) + gbar_Na * m**3 * h * (e_rev_Na - v)
                 + g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset: exponential, init=%(e_rev_leak)s
 
             # Exponentially-decaying conductances
@@ -1272,6 +1219,3 @@ class HH_cond_exp(Neuron):
             name="Hodgkin-Huxley",
             description="Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents.",
         )
-
-        # For reporting
-        self._instantiated.append(True)

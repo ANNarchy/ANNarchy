@@ -49,8 +49,8 @@ def extract_randomdist(description, net_id):
 
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
-                    Messages._print(eq)
-                    Messages._error(
+                    print(eq)
+                    Messages.error(
                         "The distribution "
                         + dist
                         + " requires "
@@ -58,8 +58,8 @@ def extract_randomdist(description, net_id):
                         + "parameters"
                     )
                 elif len(arguments) > distributions_arguments[dist]:
-                    Messages._print(eq)
-                    Messages._error(
+                    print(eq)
+                    Messages.error(
                         "Too many parameters provided to the distribution " + dist
                     )
 
@@ -73,7 +73,7 @@ def extract_randomdist(description, net_id):
                             arg = arguments[idx].strip() + "%(global_index)s"
                             dependencies.append(arguments[idx].strip())
                         else:
-                            Messages._error(
+                            Messages.error(
                                 arguments[idx]
                                 + " is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution "
                                 + dist
@@ -139,8 +139,8 @@ def extract_globalops_neuron(name, eq, description, net_id):
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = "_" + op + "_" + var.strip()
             else:
-                Messages._print(eq)
-                Messages._error("There is no local attribute " + var + ".")
+                print(eq)
+                Messages.error("There is no local attribute " + var + ".")
 
     return eq, untouched, globs
 
@@ -173,7 +173,7 @@ def extract_globalops_synapse(name, eq, desc, net_id):
             untouched[newname] = "%(post_prefix)s_" + op + "_" + var
 
         for _, var in proj_matches:
-            Messages._error(
+            Messages.error(
                 "Detected global operation '"
                 + op
                 + "' on synaptic variable '"
@@ -202,8 +202,8 @@ def extract_prepost(name, eq, description, net_id):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == "":
-                    Messages._print(eq)
-                    Messages._error("pre.sum() requires one argument.")
+                    print(eq)
+                    Messages.error("pre.sum() requires one argument.")
 
                 rep = "_pre_sum_" + target.strip()
                 dependencies["pre"].append("sum(" + target + ")")
@@ -226,8 +226,8 @@ def extract_prepost(name, eq, description, net_id):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == "":
-                    Messages._print(eq)
-                    Messages._error("post.sum() requires one argument.")
+                    print(eq)
+                    Messages.error("post.sum() requires one argument.")
 
                 dependencies["post"].append("sum(" + target + ")")
                 rep = "_post_sum_" + target.strip()
@@ -266,7 +266,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
                 if locality in ["postsynaptic"]:
                     locality = "semiglobal"
                 if not locality in ["global", "semiglobal", "local"]:
-                    Messages._error(
+                    Messages.error(
                         f"Parameter {key}: the locality must be in ['global', 'semiglobal', 'local']."
                     )
 
@@ -279,7 +279,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
                 if ctype == bool:
                     ctype = "bool"
                 if not ctype in ["float", "int", "bool"]:
-                    Messages._error(
+                    Messages.error(
                         f"Parameter {key}: the data type must be in ['float', 'int', 'bool']."
                     )
 
@@ -334,7 +334,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
             # Extract the name of the variable
             name = extract_name(equation)
             if name in ["_undefined", ""]:
-                Messages._error("Definition can not be analysed: " + equation)
+                Messages.error("Definition can not be analysed: " + equation)
 
             # Process constraint
             bounds, flags, ctype, init = extract_boundsflags(
@@ -364,7 +364,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
             }
             result.append(desc)
     else:
-        Messages._error(
+        Messages.error(
             f"parameters {description} should either be a dictionary or a multi-string."
         )
 
@@ -396,7 +396,7 @@ def extract_variables(description, object_type="neuron", net_id=0):
     elif isinstance(description, (str,)):
         pass
     else:
-        Messages._error(
+        Messages.error(
             "equations must be either a string or a list of strings/variables."
         )
 
@@ -411,7 +411,7 @@ def extract_variables(description, object_type="neuron", net_id=0):
         constraint = definition["constraint"]
         name = definition["name"]
         if name == "_undefined":
-            Messages._error("The variable", name, "can not be analysed.")
+            Messages.error("The variable", name, "can not be analysed.")
 
         # Check the validity of the equation
         check_equation(equation)
@@ -514,15 +514,15 @@ def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
             try:
                 init = eval("int(" + init + ")")
             except:
-                Messages._print(equation)
-                Messages._error("The value of the parameter is not an integer.")
+                print(equation)
+                Messages.error("The value of the parameter is not an integer.")
         # Floats
         else:
             try:
                 init = eval("float(" + init + ")")
             except:
-                Messages._print(equation)
-                Messages._error("The value of the parameter is not a float.")
+                print(equation)
+                Messages.error("The value of the parameter is not a float.")
 
     else:  # Default = 0 according to ctype
         if ctype == "bool":
@@ -561,7 +561,7 @@ def extract_functions(description, net_id, local_global=False):
 
         functions_list = [o[0] for o in getmembers(sympy)]
         if func_name in functions_list:
-            Messages._error(
+            Messages.error(
                 "The function name", func_name, "is reserved by sympy. Use another one."
             )
 
@@ -575,7 +575,7 @@ def extract_functions(description, net_id, local_global=False):
             return_type = types[0].strip()
             arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
-            Messages._error(
+            Messages.error(
                 "You must specify exactly the types of return value and arguments in "
                 + eq
             )
@@ -653,13 +653,13 @@ def get_attributes(parameters, variables, neuron):
             if "population" in p["flags"]:
                 global_var.append(p["name"])
             elif "projection" in p["flags"]:
-                Messages._error(
+                Messages.error(
                     "The attribute",
                     p["name"],
                     'belongs to a neuron, the flag "projection" is forbidden.',
                 )
             elif "postsynaptic" in p["flags"]:
-                Messages._error(
+                Messages.error(
                     "The attribute",
                     p["name"],
                     'belongs to a neuron, the flag "postsynaptic" is forbidden.',
@@ -668,7 +668,7 @@ def get_attributes(parameters, variables, neuron):
                 local_var.append(p["name"])
         else:
             if "population" in p["flags"]:
-                Messages._error(
+                Messages.error(
                     "The attribute",
                     p["name"],
                     'belongs to a synapse, the flag "population" is forbidden.',
@@ -728,7 +728,7 @@ def convert_to_multistring(equations):
         pass
 
     else:
-        Messages._error(
+        Messages.error(
             "equations must be either a string or a list of strings/variables."
         )
 
@@ -739,8 +739,8 @@ def extract_spike_variable(description, net_id):
     # Spike condition
     cond = prepare_string(description["raw_spike"])
     if len(cond) > 1:
-        Messages._print(description["raw_spike"])
-        Messages._error("The spike condition must be a single expression")
+        print(description["raw_spike"])
+        Messages.error("The spike condition must be a single expression")
 
     translator = Equation("raw_spike_cond", cond[0].strip(), description)
     raw_spike_code = translator.parse()
@@ -781,8 +781,8 @@ def extract_axon_spike_condition(description, net_id):
 
     cond = prepare_string(description["raw_axon_spike"])
     if len(cond) > 1:
-        Messages._print(description["raw_axon_spike"])
-        Messages._error("The spike condition must be a single expression")
+        print(description["raw_axon_spike"])
+        Messages.error("The spike condition must be a single expression")
 
     translator = Equation("raw_axon_spike_cond", cond[0].strip(), description)
     raw_spike_code = translator.parse()
@@ -983,8 +983,8 @@ def extract_structural_plasticity(statement, description, net_id=0):
             arguments = v.split(",")
             # Check the number of provided arguments
             if len(arguments) < distributions_arguments[dist]:
-                Messages._print(eq)
-                Messages._error(
+                print(eq)
+                Messages.error(
                     "The distribution "
                     + dist
                     + " requires "
@@ -992,8 +992,8 @@ def extract_structural_plasticity(statement, description, net_id=0):
                     + "parameters"
                 )
             elif len(arguments) > distributions_arguments[dist]:
-                Messages._print(eq)
-                Messages._error(
+                print(eq)
+                Messages.error(
                     "Too many parameters provided to the distribution " + dist
                 )
             # Process the arguments
@@ -1002,8 +1002,8 @@ def extract_structural_plasticity(statement, description, net_id=0):
                 try:
                     arg = float(arguments[idx])
                 except:  # A global parameter
-                    Messages._print(eq)
-                    Messages._error(
+                    print(eq)
+                    Messages.error(
                         "Random distributions for creating/pruning synapses must use foxed values."
                     )
 
@@ -1016,8 +1016,8 @@ def extract_structural_plasticity(statement, description, net_id=0):
 
             # Store its definition
             if rd:
-                Messages._print(eq)
-                Messages._error("Only one random distribution per equation is allowed.")
+                print(eq)
+                Messages.error("Only one random distribution per equation is allowed.")
 
             rd = {
                 "name": "rand_" + str(0),
@@ -1080,7 +1080,7 @@ def find_method(variable):
     elif "explicit" in variable["flags"]:
         method = "explicit"
     elif "exact" in variable["flags"]:
-        Messages._warning(
+        Messages.warning(
             'The "exact" flag should now be replaced by "event-driven". It will stop being valid in a future release.'
         )
         method = "event-driven"
@@ -1098,5 +1098,5 @@ def check_equation(equation):
     "Makes a formal check on the equation (matching parentheses, etc)"
     # Matching parentheses
     if equation.count("(") != equation.count(")"):
-        Messages._print(equation)
-        Messages._error("The number of parentheses does not match.")
+        print(equation)
+        Messages.error("The number of parentheses does not match.")
