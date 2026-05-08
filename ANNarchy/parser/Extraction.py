@@ -10,7 +10,7 @@ from ANNarchy.core.Random import (
     distributions_arguments,
     distributions_equivalents,
 )
-from ANNarchy.core.Parameters import Parameter, Variable, Creating, Pruning
+from ANNarchy.core.Attributes import Parameter, Variable, Creating, Pruning
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import (
