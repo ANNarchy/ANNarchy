@@ -38,6 +38,8 @@ from .models.Neurons import (
     LeakyIntegrator,
     EIF_cond_alpha_isfa_ista,
     EIF_cond_exp_isfa_ista,
+    GIF_curr,
+    GIF_curr_exp,
     HH_cond_exp,
     IF_cond_alpha,
     IF_cond_exp,

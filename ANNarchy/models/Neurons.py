@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Neuron import Neuron
-
+from ANNarchy.core.Attributes import Variable
 
 def list_standard_neurons():
     "Returns a list of standard neuron models available."
@@ -15,6 +15,8 @@ def list_standard_neurons():
         IF_cond_exp,
         IF_curr_alpha,
         IF_cond_alpha,
+        GIF_curr,
+        GIF_curr_exp,
         HH_cond_exp,
         EIF_cond_alpha_isfa_ista,
         EIF_cond_exp_isfa_ista,
@@ -1052,6 +1054,196 @@ class EIF_cond_alpha_isfa_ista(Neuron):
             description="Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).",
         )
 
+
+##################
+### GIF
+##################
+class GIF_curr(Neuron):
+    """
+    Generalized leaky Integrate-and-Fire neuron
+
+    > Schwalger T, Deger M, Gerstner W (2017) Towards a theory of cortical columns: From spiking neurons to interacting neural populations of finite size. PLOS Computational Biology 13(4): e1005507.
+
+    The model equations are:
+
+    $$\\tau_m \\frac{du}{dt} = -u + u_r + R*(I_{ext} + I_{exc} + I_{inh})$$
+
+    $$\\tau_v \\frac{dv}{dt} = -(v-u_{th})$$
+
+    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
+
+    $$\\lambda = c * exp(\\frac{u-v}{\\delta_{u}})$$
+
+    By default the current is defined as "R*(g_exc - g_inh)", but this can be changed by setting the `conductance` argument:
+
+    ```python
+    neuron = ann.Izhikevich(current='R*g_exc - R*g_inh')
+    ```
+
+    The resistance $R$ is automatically computed based on $C_m$ and $\\tau_m$.
+
+    The synapses are instantaneous, i.e the corresponding current is increased from the synaptic efficiency w at the time step when a spike is received.
+    """
+    def __init__(
+        self,
+        C_m: float = 250.0,
+        tau_m: float = 10.0,
+        tau_v: float = 1000.0,
+        J_v: float = 1000,
+        u_r: float = -65.0,
+        u_th: float = -50.0,
+        c: float = 10.0,
+        delta_u: float = 5.0,
+        I_ext: float = 375.0,
+        current: str = "R*(g_exc - g_inh)",
+        refractory_period: float = 0.0
+    ) -> None:
+
+        parameters = dict(
+            # membrane potential
+            tau_m       = tau_m,
+            R           = float(tau_m / C_m),
+            # spiking behavior
+            tau_v       = tau_v,
+            J_v         = J_v,
+            u_r         = u_r,
+            u_th        = u_th,
+            # escape rate
+            c           = c,
+            delta_u     = delta_u,
+            # synaptic inputs
+            I_ext       = I_ext
+        )
+
+        # allow to disable the current completely
+        if len(current)>0:
+            current = " + " + current
+
+        equations = [
+            # membrane potential
+            Variable(f"tau_m * du/dt = -u + u_r + R*I_ext {current}", init='u_r'),
+            # adaptive spike threshold, v is incremented by each spike, otherwise decays toward u_t
+            Variable("tau_v * dv/dt = -(v-u_th)", init='u_th'),
+            # escape rate in Hz, resp. spikes/s
+            Variable("Lambda = c * exp((u-v)/delta_u)"),
+            # Note: we need to map from ms -> s, that it fits to rate in Hz
+            Variable("p = Uniform(0.0, 1.0) * 1000.0 / dt"),
+        ]
+
+        spike = "p < Lambda"
+
+        reset = """
+            u = u_r
+            v += J_v/tau_v
+        """
+
+        Neuron.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
+            spike=spike,
+            reset=reset,
+            name="GIF",
+            description="Generalized leaky Integrate-and-Fire neuron with currents and instantaneous synapses.",
+            refractory=refractory_period
+        )
+
+class GIF_curr_exp(Neuron):
+    """
+    Generalized leaky Integrate-and-Fire neuron
+
+    > Schwalger T, Deger M, Gerstner W (2017) Towards a theory of cortical columns: From spiking neurons to interacting neural populations of finite size. PLOS Computational Biology 13(4): e1005507.
+
+    The model equations are:
+
+    $$\\tau_m \\frac{du}{dt} = -u + u_r + R*(I_{ext} + I_{exc} + I_{inh})$$
+
+    $$\\tau_v \\frac{dv}{dt} = -(v-u_{th})$$
+
+    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
+
+    $$\\lambda = c * exp(\\frac{u-v}{\\delta_{u}})$$
+
+    By default the current is defined as "R*(g_exc - g_inh)", but this can be changed by setting the `current` argument:
+
+    ```python
+    neuron = ann.Izhikevich(current='R*g_exc - R*g_inh')
+    ```
+
+    The resistance $R$ is automatically computed based on $C_m$ and $\\tau_m$.
+
+    The currents are modelled using a trace whose decay is controlled by additional parameters (i.e., tau_g_exc and tau_g_inh).
+    """
+    def __init__(
+        self,
+        C_m: float = 250.0,
+        tau_m: float = 10.0,
+        tau_v: float = 1000.0,
+        J_v: float = 1000,
+        u_r: float = -65.0,
+        u_th: float = -50.0,
+        c: float = 10.0,
+        delta_u: float = 5.0,
+        tau_g_exc: float = 5.0,
+        tau_g_inh: float = 5.0,
+        I_ext: float = 375.0,
+        current: str = "R*(g_exc - g_inh)",
+        refractory_period: float = 0.0
+    ) -> None:
+
+        parameters = dict(
+            # membrane potential
+            tau_m       = tau_m,
+            R           = float(tau_m / C_m),
+            # spiking behavior
+            tau_v       = tau_v,
+            J_v         = J_v,
+            u_r         = u_r,
+            u_th        = u_th,
+            # escape rate
+            c           = c,
+            delta_u     = delta_u,
+            # synaptic inputs
+            tau_g_exc   = tau_g_exc,
+            tau_g_inh   = tau_g_inh,
+            I_ext       = I_ext
+        )
+
+        # allow to disable the current completely
+        if len(current)>0:
+            current = " + " + current
+
+        equations = [
+            # membrane potential
+            Variable(f"tau_m * du/dt = -u + u_r + R*I_ext {current}", init='u_r'),
+            # adaptive spike threshold, v is incremented by each spike, otherwise decays toward u_t
+            Variable("tau_v * dv/dt = -(v-u_th)", init='u_th'),
+            # escape rate in Hz, resp. spikes/s
+            Variable("Lambda = c * exp((u-v)/delta_u)"),
+            # Note: we need to map from ms -> s, that it fits to rate in Hz
+            Variable("p = Uniform(0.0, 1.0) * 1000.0 / dt"),
+            # external input
+            Variable("tau_g_exc * dg_exc/dt = -g_exc"),
+            Variable("tau_g_inh * dg_inh/dt = -g_inh"),
+        ]
+
+        spike = "p < Lambda"
+
+        reset = """
+            u = u_r
+            v += J_v/tau_v
+        """
+
+        Neuron.__init__(
+            self,
+            parameters=parameters,
+            equations=equations,
+            spike=spike,
+            reset=reset,
+            name="GIF",
+            description="Generalized leaky Integrate-and-Fire neuron with input currents.",
+            refractory=refractory_period
+        )
 
 ##################
 ### HH
