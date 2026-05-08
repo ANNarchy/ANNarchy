@@ -130,6 +130,7 @@ class Variable:
             if not has_flag:
                 has_flag = True
                 representation += " : "
+
             if object_type == "neuron":
                 val = "population"  # 'global' and 'population' would work
             elif object_type == "synapse":
@@ -137,6 +138,9 @@ class Variable:
                     val = "projection"
                 else:
                     val = "postsynaptic"
+            else:
+                raise ValueError("No default flag for object_type =", object_type)
+
             flags.append(f"{val}")
 
         return representation + ", ".join(flags)
