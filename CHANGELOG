@@ -1,3 +1,15 @@
+**5.0.2**
+
+* added the generalized integrate-and-fire neuron as described in Schwalger et al. (2017) to default models.
+* improved codestyle using ruff (see also Issue #38, #40)
+* added some sanity check for TimedArray, report()
+* added automatic format selection to unittests (contributes to Issue #31)
+
+Bugfixes:
+* *Parameters* constructor still used locality='local' as default, but it should be global (commit 48de472)
+* use std::numeric_limits::lowest instead of std::numeric_limits::min (commit fbf812d)
+* ANN-to-SNN: missing parameter in PSO neuron definition. In case of dense matrices now Dense_T format is used (commit e976c0e)
+
 **5.0.1**
 
 * added Network.memory_footprint() which prints out the current memory requirement of the Network (Python and CPP side)
