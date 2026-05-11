@@ -1070,7 +1070,7 @@ class GIF_curr(Neuron):
 
     $$\\tau_v \\frac{dv}{dt} = -(v-u_{th})$$
 
-    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
+    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
 
     $$\\lambda = c * exp(\\frac{u-v}{\\delta_{u}})$$
 
@@ -1160,7 +1160,7 @@ class GIF_curr_exp(Neuron):
 
     $$\\tau_v \\frac{dv}{dt} = -(v-u_{th})$$
 
-    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
+    Note that in this model, the spike emission is the result of a stochastic process, where the threshold $\\lambda$, also called hazard-rate, follows the difference between the membrane potential $u$ and an adaptive threshold $v$:
 
     $$\\lambda = c * exp(\\frac{u-v}{\\delta_{u}})$$
 
