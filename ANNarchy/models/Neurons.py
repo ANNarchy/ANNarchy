@@ -1121,7 +1121,7 @@ class GIF_curr(Neuron):
 
         equations = [
             # membrane potential
-            Variable(f"tau_m * du/dt = -u + u_r + R*I_ext {current}", init='u_r'),
+            Variable(f"tau_m * du/dt = -u + u_r + R*I_ext {current}", init=u_r),
             # adaptive spike threshold, v is incremented by each spike, otherwise decays toward u_t
             Variable("tau_v * dv/dt = -(v-u_th)", init='u_th'),
             # escape rate in Hz, resp. spikes/s
