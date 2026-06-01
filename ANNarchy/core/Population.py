@@ -517,6 +517,9 @@ class Population:
                         )
 
             else:
+                if not np.isscalar(value):
+                    raise ValueError(f"Population (name={self.name}): Expected single value for global attribute '{attribute}' but received {type(value)}.")
+
                 setattr(self.cyInstance, attribute, value)
                 if _check_paradigm("cuda", self.net_id):
                     # Variables need to be updated during next simulate() call.
