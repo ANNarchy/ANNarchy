@@ -4,9 +4,10 @@
 """
 
 from typing import Union
-import numpy as np
 import copy
+import numpy
 
+from ANNarchy.core.CTypes import float64
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 
@@ -21,7 +22,7 @@ default_config = dict(
     visible_cores=[],
     paradigm="openmp",
     # Datatype-related
-    precision="double",
+    default_dtype=float64,
     only_int_idx_type=True,
     # Logging
     verbose=False,
@@ -107,12 +108,15 @@ class ConfigManager:
 
         If the key does not exist, a terminating exception is raised.
         """
+        if key == "precision":
+            return self._config[net_id]["default_dtype"].decl_type
+
         if key in self.keys():
             return self._config[net_id][key]
-        else:
-            raise Messages.ANNarchyException(
-                f"The requested argument '{key}' does not belong to global configuration keys."
-            )
+
+        raise Messages.ANNarchyException(
+            f"The requested argument '{key}' does not belong to global configuration keys."
+        )
 
     def set(self, key: str, value: str | float | bool, net_id: int = 0):
         """
@@ -175,14 +179,12 @@ def setup(**keyValueArgs):
             Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)..."
             )
-        if "precision" in keyValueArgs:
+        if "default_dtype" in keyValueArgs:
             Messages.warning(
-                "setup(): populations or projections have already been created at the global level. Changing precision now might lead to strange behaviors..."
+                "setup(): populations or projections have already been created at the global level. Changing default dtype for attributes now might lead to strange behaviors..."
             )
 
-    config_manager = ConfigManager()
-
-    for key in keyValueArgs:
+    for key, _ in keyValueArgs.items():
         # sanity check: filter out performance flags
         if key in ConfigManager()._performance_related_config_keys:
             Messages.error(
@@ -195,7 +197,7 @@ def setup(**keyValueArgs):
             Messages.warning("setup(): unknown key:", key)
 
         if key == "seed":  # also seed numpy, but this is the old way
-            np.random.seed(keyValueArgs[key])
+            numpy.random.seed(keyValueArgs[key])
 
         if key == "sparse_matrix_format":
             # check if this is a supported format

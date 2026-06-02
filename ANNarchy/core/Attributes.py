@@ -6,9 +6,7 @@
 from dataclasses import dataclass
 from ANNarchy.core.Random import RandomDistribution
 
-# Parameters
-
-
+# Parameters are attributes which does not change during simulate
 @dataclass
 class Parameter:
     """
@@ -48,7 +46,7 @@ class Parameter:
     type: str = "float"
 
 
-# Variables
+# Variables are attributes which does change during simulate via equations
 @dataclass
 class Variable:
     """
