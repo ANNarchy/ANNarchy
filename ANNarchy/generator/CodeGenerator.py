@@ -492,7 +492,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
                 )
                 init_code += (
                     """
-        %(name)s = 0.0;"""
+        %(name)s = %(float_prec)s{0};"""
                     % obj_str
                 )
 

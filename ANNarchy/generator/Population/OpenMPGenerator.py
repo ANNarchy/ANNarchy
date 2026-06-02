@@ -564,10 +564,10 @@ class OpenMPGenerator(PopulationGenerator):
     std::vector< std::queue<long int> > _spike_history;
     long int _mean_fr_window;
     %(float_prec)s _mean_fr_rate;
-    void compute_firing_rate(%(float_prec)s window){
-        if(window>0.0){
-            _mean_fr_window = int(window/dt);
-            _mean_fr_rate = 1000./window;
+    void compute_firing_rate(%(float_prec)s window) {
+        if (window > %(float_prec)s{0}) {
+            _mean_fr_window = static_cast<long int>(window/dt);
+            _mean_fr_rate = %(float_prec)s{1000}/window;
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
@@ -576,7 +576,7 @@ class OpenMPGenerator(PopulationGenerator):
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
         _mean_fr_window = 0;
-        _mean_fr_rate = 1.0;"""
+        _mean_fr_rate = %(float_prec)s{1};""" % {"float_prec": ConfigManager().get("precision", self._net_id)}
             reset_FR = """
         // Mean Firing Rate
         for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
@@ -605,7 +605,7 @@ class OpenMPGenerator(PopulationGenerator):
                 while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
                     _spike_history[i].pop(); // Suppress spikes outside the window
                 }
-                r[i] = _mean_fr_rate * %(float_prec)s(_spike_history[i].size());
+                r[i] = _mean_fr_rate * %(float_prec)s{static_cast<int>(_spike_history[i].size())};
             }
         } """ % {"float_prec": ConfigManager().get("precision", self._net_id)}
 

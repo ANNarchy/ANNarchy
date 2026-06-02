@@ -158,7 +158,7 @@ attribute_decl = {
 """,
     "global": """
     // Global %(attr_type)s %(name)s
-    %(type)s  %(name)s ;
+    %(type)s %(name)s;
 """,
 }
 
@@ -171,11 +171,11 @@ attribute_decl = {
 attribute_cpp_init = {
     "local": """
         // Local %(attr_type)s %(name)s
-        %(name)s = std::vector<%(type)s>(size, %(init)s);
+        %(name)s = std::vector<%(type)s>(size, %(type)s{%(init)s});
 """,
     "global": """
         // Global %(attr_type)s %(name)s
-        %(name)s = %(init)s;
+        %(name)s = %(type)s{%(init)s};
 """,
 }
 

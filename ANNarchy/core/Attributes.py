@@ -4,7 +4,7 @@
 """
 
 from dataclasses import dataclass
-from ANNarchy.core.Random import RandomDistribution
+from .Random import RandomDistribution
 
 # Parameters are attributes which does not change during simulate
 @dataclass
