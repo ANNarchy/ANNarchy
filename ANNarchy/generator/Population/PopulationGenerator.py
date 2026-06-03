@@ -231,29 +231,35 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         already_processed = []
 
         # Parameters
-        for var in pop.neuron_type.description["parameters"]:
+        for par in pop.neuron_type.description["parameters"]:
             # Avoid doublons
-            if var["name"] in already_processed:
+            if par["name"] in already_processed:
                 continue
 
-            if _check_paradigm("cuda", self._net_id) and var["locality"] == "global":
-                code += attr_tpl[var["locality"]]["parameter"] % {"name": var["name"]}
+            # Note that GPUs and CPUs handle bool values differently ...
+            init = (
+                "false"
+                if par["ctype"] in ["char", "bool"]
+                else ("0" if par["ctype"] == "int" else "0.0")
+            )
+            if _check_paradigm("cuda", self._net_id) and par["locality"] == "global":
+                par_ids = {
+                    "name": par["name"],
+                    "type": par["ctype"],
+                    "init": init
+                }
+                code += attr_tpl[par["locality"]]["parameter"] % par_ids
             else:
-                init = (
-                    "false"
-                    if var["ctype"] == "bool"
-                    else ("0" if var["ctype"] == "int" else "0.0")
-                )
-                var_ids = {
+                par_ids = {
                     "id": pop.id,
-                    "name": var["name"],
-                    "type": var["ctype"],
+                    "name": par["name"],
+                    "type": par["ctype"],
                     "init": init,
                     "attr_type": "parameter",
                 }
-                code += attr_tpl[var["locality"]] % var_ids
+                code += attr_tpl[par["locality"]] % par_ids
 
-            already_processed.append(var["name"])
+            already_processed.append(par["name"])
 
         # Variables
         for var in pop.neuron_type.description["variables"]:
@@ -261,9 +267,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if var["name"] in already_processed:
                 continue
 
+            # Note that GPUs and CPUs handle bool values differently ...
             init = (
                 "false"
-                if var["ctype"] == "bool"
+                if var["ctype"]in ["char", "bool"]
                 else ("0" if var["ctype"] == "int" else "0.0")
             )
             var_ids = {
