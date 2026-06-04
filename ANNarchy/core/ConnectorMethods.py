@@ -843,7 +843,8 @@ def connect_from_file(
             lil.w = [[float(data["w"])]]
         elif isinstance(data["w"], (np.ndarray,)) and data["w"].size == 1:
             single_w = True
-            lil.w = [[float(data["w"])]]
+            print(data["w"])
+            lil.w = [[float(data["w"][0])]]
         else:
             lil.w = data["w"]
 
