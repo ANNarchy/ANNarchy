@@ -843,8 +843,12 @@ def connect_from_file(
             lil.w = [[float(data["w"])]]
         elif isinstance(data["w"], (np.ndarray,)) and data["w"].size == 1:
             single_w = True
-            print(data["w"])
-            lil.w = [[float(data["w"][0])]]
+            try:
+                lil.w = [[float(data["w"])]]
+            except TypeError:
+                # newer NumPy versions, throw an TypeError exception:
+                # "only 0-dimensional arrays can be converted to Python scalars"
+                lil.w = [[float(data["w"][0][0])]]
         else:
             lil.w = data["w"]
 
