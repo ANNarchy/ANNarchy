@@ -10,8 +10,13 @@ class CTypeBase:
     overloaded by the deriving classes, otherwise an exception is raised.
     """
     @property
-    def decl_type(self) -> str:
-        "Returns data type as string for the C++ code generation."
+    def cpp_decl_type(self) -> str:
+        "Returns data type used int the C++ simulation code as string."
+        raise NotImplementedError
+
+    @property
+    def py_decl_type(self) -> str:
+        "Returns data type used in the nanobind interface to the C++ simulation code as string."
         raise NotImplementedError
 
     @property
@@ -19,6 +24,9 @@ class CTypeBase:
         "Returns number of bits, raises exception if not implemented by child type."
         raise NotImplementedError
 
+#
+#   Floating-point precision type
+#
 @dataclass(frozen=True)
 class FloatType(CTypeBase):
     """
@@ -31,10 +39,24 @@ class FloatType(CTypeBase):
     FP64 = (11, 52)
 
     @property
-    def decl_type(self) -> str:
-        "Returns data type as string for the C++ code generation."
+    def cpp_decl_type(self) -> str:
+        "Returns data type used int the C++ simulation code as string."
         if (self.exp, self.mantissa) == FloatType.FP32:
             return "float"
+
+        if (self.exp, self.mantissa) == FloatType.FP64:
+            return "double"
+
+        raise ValueError(
+           f"Unsupported float format: exp={self.exp}, mantissa={self.mantissa}"
+        )
+
+    @property
+    def py_decl_type(self) -> str:
+        "Returns data type used in the nanobind interface to the C++ simulation code as string."
+        if (self.exp, self.mantissa) == FloatType.FP32:
+            # ANNarchy4.x behavior force to double always
+            return "double"
 
         if (self.exp, self.mantissa) == FloatType.FP64:
             return "double"

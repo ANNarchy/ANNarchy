@@ -109,7 +109,7 @@ class ConfigManager:
         If the key does not exist, a terminating exception is raised.
         """
         if key == "precision":
-            return self._config[net_id]["default_dtype"].decl_type
+            return self._config[net_id]["default_dtype"].cpp_decl_type
 
         if key in self.keys():
             return self._config[net_id][key]

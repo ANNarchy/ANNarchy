@@ -3,6 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+from ANNarchy.generator.Utils import tabify
 from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
@@ -107,6 +108,9 @@ class NanoBindGenerator:
                 f"""\t\t.def("device_to_host", &PopStruct{pop.id}::device_to_host)\n"""
             )
 
+        # default data type used for floating values.
+        default_float_type = ConfigManager().get("default_dtype", self.net_id)
+
         # Model attributes
         for attr in pop.neuron_type.description["attributes"]:
             # internal variables should not exposed to Python
@@ -114,9 +118,16 @@ class NanoBindGenerator:
                 continue
 
             # Attributes are accessed directly from Python
-            attributes += """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(
-                id=pop.id, name=attr
-            )
+            ids = {
+                'name': attr,
+                'id': pop.id,
+                'py_float_prec': default_float_type.py_decl_type,
+                'cpp_float_prec': default_float_type.cpp_decl_type
+            }
+            if attr in pop.neuron_type.description["global"]:
+                attributes += tabify(pop_attr_accessor_global % ids, 2)
+            else:
+                attributes += tabify(pop_attr_accessor_local % ids, 2)
 
             # On GPUs, we need to trigger a host-to-device transfer on next call of simulate()
             if _check_paradigm("cuda", self.net_id):
@@ -152,7 +163,7 @@ class NanoBindGenerator:
 
         # Type-specific functions
         if pop.neuron_type.type == "spike":
-            additional_func += f"""\t\t.def("compute_firing_rate", &PopStruct{pop.id}::compute_firing_rate)\n"""
+            additional_func += """\t\t.def("compute_firing_rate", [](PopStruct%(id)s& obj, %(py_float_prec)s window) {return obj.compute_firing_rate(%(cpp_float_prec)s{window});} )\n""" % {'id': pop.id, 'py_float_prec': default_float_type.py_decl_type, 'cpp_float_prec': default_float_type.cpp_decl_type}
 
             if pop.neuron_type.refractory or pop.refractory:
                 additional_func += (

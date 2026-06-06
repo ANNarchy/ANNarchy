@@ -489,32 +489,20 @@ class Population:
                         )
 
                 elif isinstance(value, list):
+                    setattr(self.cyInstance, attribute, value)
+                    # Attributes need to be updated during next simulate() call.
                     if _check_paradigm("cuda", self.net_id):
-                        # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
-                        if ctype == "char":
-                            value = [str(1) if x else str(0) for x in value]
-                        setattr(self.cyInstance, attribute, value)
                         setattr(self.cyInstance, attribute + "_host_to_device", True)
-                    else:
-                        setattr(self.cyInstance, attribute, value)
 
                 else:
+                    setattr(
+                        self.cyInstance,
+                        attribute,
+                        [value for _ in range(self.size)],
+                    )
+                    # Attributes need to be updated during next simulate() call.
                     if _check_paradigm("cuda", self.net_id):
-                        # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
-                        if ctype == "char":
-                            value = str(1) if value else str(0)
-                        setattr(
-                            self.cyInstance,
-                            attribute,
-                            [value for _ in range(self.size)],
-                        )
                         setattr(self.cyInstance, attribute + "_host_to_device", True)
-                    else:
-                        setattr(
-                            self.cyInstance,
-                            attribute,
-                            [value for _ in range(self.size)],
-                        )
 
             else:
                 if not np.isscalar(value):
@@ -522,7 +510,7 @@ class Population:
 
                 setattr(self.cyInstance, attribute, value)
                 if _check_paradigm("cuda", self.net_id):
-                    # Variables need to be updated during next simulate() call.
+                    # Attributes need to be updated during next simulate() call.
                     if attribute in [
                         attr["name"]
                         for attr in self.neuron_type.description["variables"]
