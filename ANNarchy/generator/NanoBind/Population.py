@@ -28,7 +28,7 @@ pop_attr_accessor_global = """
 .def_prop_rw(
     "%(name)s",
     [](const PopStruct%(id)s& obj) {
-        return obj.%(name)s;
+        return %(py_float_prec)s{obj.%(name)s};
     },
     [](PopStruct%(id)s& obj, %(py_float_prec)s value) {
         obj.%(name)s = static_cast<%(cpp_float_prec)s>(value);
