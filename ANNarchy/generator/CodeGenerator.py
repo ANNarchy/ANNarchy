@@ -331,12 +331,16 @@ class CodeGenerator(object):
         # Custom constants
         custom_constant = self._header_custom_constants()
 
+        # data type used for floating values.
+        float_type = ConfigManager().get("default_dtype", self.net_id)
+
         # Final code
         header_code = ""
         if ConfigManager().get("paradigm", self.net_id) == "openmp":
             if ConfigManager().get("num_threads", self.net_id) == 1:
                 header_code = SingleThreadBaseTemplate.header_template % {
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": float_type.cpp_decl_type,
+                    "py_float_prec": float_type.py_decl_type,
                     "pop_struct": pop_struct,
                     "proj_struct": proj_struct,
                     "pop_ptr": pop_ptr,
@@ -351,7 +355,8 @@ class CodeGenerator(object):
 
             else:
                 header_code = OpenMPBaseTemplate.header_template % {
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": float_type.cpp_decl_type,
+                    "py_float_prec": float_type.py_decl_type,
                     "pop_struct": pop_struct,
                     "proj_struct": proj_struct,
                     "pop_ptr": pop_ptr,
@@ -492,7 +497,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
                 )
                 init_code += (
                     """
-        %(name)s = 0.0;"""
+        %(name)s = %(float_prec)s{0};"""
                     % obj_str
                 )
 
@@ -624,9 +629,13 @@ void set_%(name)s(%(float_prec)s value) {
             # custom constants
             custom_constant, _ = self._body_custom_constants()
 
+            # data type used for floating values.
+            float_type = ConfigManager().get("default_dtype", self.net_id)
+
             # code fields for openMP/single thread template
             base_dict = {
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": float_type.cpp_decl_type,
+                "py_float_prec": float_type.py_decl_type,
                 "pop_ptr": pop_ptr,
                 "proj_ptr": proj_ptr,
                 "glops_def": glop_definition,
@@ -865,6 +874,7 @@ void set_%(name)s(%(float_prec)s value) {
             raise NotImplementedError
 
         return init_tpl % {
+            "cpp_float_prec": ConfigManager().get("default_dtype", self.net_id).cpp_decl_type,
             "prof_init": profiling_init,
             "pop_init": population_init,
             "proj_init": projection_init,

@@ -157,7 +157,7 @@ attribute_decl = {
 """,
     "global": """
     // Global %(attr_type)s %(name)s
-    %(type)s  %(name)s ;
+    %(type)s %(name)s;
 """,
 }
 
@@ -170,18 +170,18 @@ attribute_decl = {
 attribute_cpp_init = {
     "local": """
         // Local %(attr_type)s %(name)s
-        %(name)s = std::vector<%(type)s>(size, %(init)s);
+        %(name)s = std::vector<%(type)s>(size, %(type)s{%(init)s});
 """,
     "global": """
         // Global %(attr_type)s %(name)s
-        %(name)s = %(init)s;
+        %(name)s = %(type)s{%(init)s};
 """,
 }
 
 attribute_delayed = {
     "local": {
         "init": """
-        _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, 0.0));""",
+        _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, %(type)s{0}));""",
         "update": """
         #pragma omp single
         {
@@ -195,12 +195,12 @@ attribute_delayed = {
         }
 """,
         "resize": """
-    _delayed_%(name)s.resize(max_delay, std::vector< %(type)s >(size, 0.0));
+    _delayed_%(name)s.resize(max_delay, std::vector< %(type)s >(size, %(type)s{0}));
 """,
     },
     "global": {
         "init": """
-        _delayed_%(name)s = std::deque< %(type)s >(max_delay, 0.0);""",
+        _delayed_%(name)s = std::deque< %(type)s >(max_delay, %(type)s{0});""",
         "update": """
         #pragma omp single
         {

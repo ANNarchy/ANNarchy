@@ -63,6 +63,7 @@ PSO = Neuron(
         k= 8
         vt = 1
         rates=0
+        mask_tau=20.0
     """,
     equations="""
         p= pow(2,(-1+(modulo(t-1,k))))

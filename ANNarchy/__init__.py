@@ -7,7 +7,7 @@ from .core.Global import *
 from .core.Simulate import *
 from .core.Constant import Constant
 from .core.Neuron import Neuron
-from .core.Parameters import Parameter, Variable, Creating, Pruning
+from .core.Attributes import Parameter, Variable, Creating, Pruning
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
@@ -38,6 +38,8 @@ from .models.Neurons import (
     LeakyIntegrator,
     EIF_cond_alpha_isfa_ista,
     EIF_cond_exp_isfa_ista,
+    GIF_curr,
+    GIF_curr_exp,
     HH_cond_exp,
     IF_cond_alpha,
     IF_cond_exp,
@@ -56,6 +58,7 @@ from .models.Synapses import (
 from .extensions import *
 from .intern.ConfigManagement import setup
 from .intern import Messages
+from .core.CTypes import float32, float64
 
 # Cython modules
 try:

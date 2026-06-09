@@ -6,6 +6,8 @@ from .Neurons import (
     IF_cond_exp,
     IF_curr_alpha,
     IF_cond_alpha,
+    GIF_curr,
+    GIF_curr_exp,
     HH_cond_exp,
     EIF_cond_alpha_isfa_ista,
     EIF_cond_exp_isfa_ista,

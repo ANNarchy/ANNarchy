@@ -24,6 +24,35 @@ pop_struct_wrapper = """
         .def("clear", &PopStruct%(id)s::clear);
 """
 
+pop_attr_accessor_global = """
+.def_prop_rw(
+    "%(name)s",
+    [](const PopStruct%(id)s& obj) {
+        return %(py_float_prec)s{obj.%(name)s};
+    },
+    [](PopStruct%(id)s& obj, %(py_float_prec)s value) {
+        obj.%(name)s = static_cast<%(cpp_float_prec)s>(value);
+    }
+)"""
+
+pop_attr_accessor_local = """
+.def_prop_rw(
+    "%(name)s",
+    [](const PopStruct%(id)s& obj) {
+        std::vector<%(py_float_prec)s> res;
+        res.reserve(obj.%(name)s.size());
+        for (%(cpp_float_prec)s tmp : obj.%(name)s)
+            res.push_back(%(py_float_prec)s{tmp});
+        return res;
+    },
+    [](PopStruct%(id)s& obj, std::vector<%(py_float_prec)s> values) {
+        assert(obj.%(name)s.size() == values.size());
+
+        for (size_t i = 0; i < obj.%(name)s.size(); ++i)
+            obj.%(name)s[i] = %(cpp_float_prec)s{values[i]};
+    }
+)"""
+
 pop_mon_wrapper = """
     // Monitor for Population %(id)s
     nanobind::class_<PopRecorder%(id)s>(m, "PopRecorder%(id)s_wrapper")

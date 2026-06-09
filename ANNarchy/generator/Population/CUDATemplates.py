@@ -199,7 +199,7 @@ attribute_decl = {
 attribute_cpp_init = {
     "local": """
         // Local %(attr_type)s %(name)s
-        %(name)s = std::vector<%(type)s>(size, %(init)s);
+        %(name)s = std::vector<%(type)s>(size, %(type)s{%(init)s});
         cudaMalloc(&gpu_%(name)s, size * sizeof(%(type)s));
         cudaMemcpy(gpu_%(name)s, %(name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
     #ifdef _DEBUG
@@ -214,11 +214,11 @@ attribute_cpp_init = {
     "global": {
         "parameter": """
         // Global parameter %(name)s
-        %(name)s = 0.0;
+        %(name)s = %(type)s{%(init)s};
 """,
         "variable": """
         // Global variable %(name)s
-        %(name)s = %(init)s;
+        %(name)s = %(type)s{%(init)s};
         cudaMalloc(&gpu_%(name)s, sizeof(%(type)s));
         cudaMemcpy(gpu_%(name)s, &%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
     #ifdef _DEBUG
@@ -239,7 +239,7 @@ attribute_delayed = {
     std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
         "init": """
         gpu_delayed_%(name)s = std::deque< %(type)s* >(max_delay, NULL);
-        std::vector<%(type)s> tmp_%(name)s = std::vector<%(type)s>( size, 0.0);
+        std::vector<%(type)s> tmp_%(name)s = std::vector<%(type)s>(size, %(type)s{0});
         for ( int i = 0; i < max_delay; i++ ) {
             cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s) * size);
             cudaMemcpy(gpu_delayed_%(name)s[i], tmp_%(name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
@@ -291,7 +291,7 @@ gpu_delayed_%(name)s.shrink_to_fit();
     std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
         "init": """
         gpu_delayed_%(name)s = std::deque< %(type)s* >(max_delay, NULL);
-        %(type)s tmp_%(name)s = static_cast<%(type)s>(0.0);
+        %(type)s tmp_%(name)s = %(type)s{0};
         for ( int i = 0; i < max_delay; i++ ) {
             cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s));
             cudaMemcpy( gpu_delayed_%(name)s[i], &tmp_%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice );

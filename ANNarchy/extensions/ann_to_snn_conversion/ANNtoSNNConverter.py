@@ -280,7 +280,7 @@ class ANNtoSNNConverter:
                     name=f"dense_proj_{len(self._snn_network.get_populations())}",
                 )
 
-                proj.from_matrix(W, storage_format="dense")
+                proj.from_matrix(W, storage_format="dense", storage_order="pre_to_post")
 
                 # Add to the network
                 weights.append(W)
