@@ -24,15 +24,17 @@ enable_testing()
 
 include_directories(../ANNarchy/include/)
 
-add_executable(
-  ANNarchy_CPP_Templates
-  test_MatrixReinitialize.cpp
-  test_Matrix6x8_WithAllRows.cpp
-  test_Matrix6x8_WithEmptyRows.cpp
-  test_Matrix8x6_WithAllRows.cpp
-  test_Matrix8x6_WithEmptyRows.cpp
-  test_PartMatrix5x8_WithAllRows.cpp
-  test_PartMatrix14x5_WithAllRows.cpp
+add_executable(ANNarchy_CPP_Templates
+  # SpMV formats
+  spmv_formats/test_MatrixReinitialize.cpp
+  spmv_formats/test_Matrix6x8_WithAllRows.cpp
+  spmv_formats/test_Matrix6x8_WithEmptyRows.cpp
+  spmv_formats/test_Matrix8x6_WithAllRows.cpp
+  spmv_formats/test_Matrix8x6_WithEmptyRows.cpp
+  spmv_formats/test_PartMatrix5x8_WithAllRows.cpp
+  spmv_formats/test_PartMatrix14x5_WithAllRows.cpp
+  # Fixed-point Type
+  fixed_point/test_fixed_t.cpp
 )
 
 target_link_libraries(ANNarchy_CPP_Templates gtest gtest_main gcov)

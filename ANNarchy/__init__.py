@@ -58,7 +58,7 @@ from .models.Synapses import (
 from .extensions import *
 from .intern.ConfigManagement import setup
 from .intern import Messages
-from .core.CTypes import float32, float64
+from .core.CTypes import float32, float64, FixedType
 
 # Cython modules
 try:

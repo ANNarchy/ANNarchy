@@ -30,6 +30,9 @@ header_template = """#pragma once
     #include <immintrin.h>
 #endif
 
+// Fixed-point precision type
+#include "FixedPoint.hpp"
+
 // Useful functions
 #include "logging.hpp"
 #include "helper_functions.hpp"
