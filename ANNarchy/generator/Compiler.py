@@ -586,22 +586,35 @@ class Compiler(object):
         os.chdir(target_dir)
 
         # CMake is quite talky by default (printing out compiler versions etc.)
-        # We reduce the number of printed messages except the user enabled verbose mode.
+        # We pipe the printed messages into a file except the user enabled verbose mode.
         verbose = (
             "> compile_stdout.log 2> compile_stderr.log"
             if not ConfigManager().get("verbose", self.net_id)
             else ""
         )
 
+        # Define the build target configuration
+        run_mode = "Debug" if ConfigManager().get("debug", self.net_id) else "Release"
+
+        # Optional modes, e.g., profiling, tracing
+        prof_mode = "ON" if self.profile_enabled else "OFF"
+
+        # Build final cmake command. One can add other arguments for debugging, such as:
+        # -DCMAKE_EXPORT_COMPILE_COMMANDS=ON   - creates a 'compile_commands.json' which can be used to track compilation commands
+        run_command = 'cmake -S "{}" -B "{}" -DCMAKE_BUILD_TYPE={} -DUSE_PROFILE={} {}'.format(
+            target_dir, target_dir, run_mode, prof_mode, verbose
+        )
+
         # Generate the Makefile from CMakeLists
         make_process = subprocess.Popen(
-            'cmake -S "{}" -B "{}" {}'.format(target_dir, target_dir, verbose),
+            run_command,
             shell=True,
         )
         if make_process.wait() != 0:
             Messages.error("CMake generation failed.")
 
         # Start the compilation
+        # Again, we pipe the printed messages into a file except the user enabled verbose mode.
         verbose = (
             "> compile_stdout.log 2> compile_stderr.log"
             if not ConfigManager().get("verbose", self.net_id)
@@ -674,9 +687,6 @@ class Compiler(object):
 
             if self.trace_calls in ["simulate", "both"]:
                 cpu_flags += " -D_TRACE_SIMULATION_STEPS"
-
-        if self.profile_enabled:
-            cpu_flags += " -g"
 
         # OpenMP flag
         omp_flag = ""
