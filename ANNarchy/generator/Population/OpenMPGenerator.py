@@ -210,6 +210,7 @@ class OpenMPGenerator(PopulationGenerator):
             # version tag
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
+            "net_id": self._net_id,
             "float_prec": ConfigManager().get("precision", self._net_id),
             "id": pop.id,
             "name": pop.name,
@@ -268,7 +269,7 @@ class OpenMPGenerator(PopulationGenerator):
             "init": """    pop%(id)s->init_population();\n""" % {"id": pop.id},
         }
 
-        # Generate the calls to be made in the main ANNarchy.cpp
+        # Generate the calls to be made in the main ANNarchyCore[net_id].cpp
         if (
             len(pop.neuron_type.description["variables"]) > 0
             or "update_variables" in pop._specific_template.keys()
@@ -483,7 +484,7 @@ class OpenMPGenerator(PopulationGenerator):
         """
         Simulation can either end after a fixed point in time or
         dependent on a population related condition. The code for
-        this is generated here and added to the ANNarchy.cpp/.cu
+        this is generated here and added to the ANNarchyCore[net_id].cpp/.cu
         file.
         """
         if not pop.stop_condition:  # no stop condition has been defined

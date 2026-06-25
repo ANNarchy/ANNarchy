@@ -177,6 +177,7 @@ class CUDAGenerator(ProjectionGenerator):
             # version tag
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
+            "net_id": self._net_id,
             "id_pre": proj.pre.id,
             "id_post": proj.post.id,
             "id_proj": proj.id,

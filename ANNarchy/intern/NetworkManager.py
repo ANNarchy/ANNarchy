@@ -206,10 +206,10 @@ class NetworkManager:
             network_directory = self._networks[0].directory
 
             # Removes the library used in last running instance
-            if os.path.isfile(network_directory + "/ANNarchyCore0.so"):
-                os.remove(network_directory + "/ANNarchyCore0.so")
-            if os.path.isfile(network_directory + "/ANNarchyCore0.dylib"):
-                os.remove(network_directory + "/ANNarchyCore0.dylib")
+            if os.path.isfile(network_directory + "/ANNarchyWrapper0.so"):
+                os.remove(network_directory + "/ANNarchyWrapper0.so")
+            if os.path.isfile(network_directory + "/ANNarchyWrapper0.dylib"):
+                os.remove(network_directory + "/ANNarchyWrapper0.dylib")
 
             try:
                 if os.path.isdir(network_directory):

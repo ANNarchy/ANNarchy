@@ -199,6 +199,7 @@ class CUDAGenerator(PopulationGenerator):
             # version tag
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
+            "net_id": self._net_id,
             "float_prec": ConfigManager().get("precision", self._net_id),
             "id": pop.id,
             "name": pop.name,
@@ -831,7 +832,7 @@ class CUDAGenerator(PopulationGenerator):
         """
         Simulation can either end after a fixed point in time or
         dependent on a population related condition. The code for
-        this is generated here and added to the ANNarchy.cpp/.cu
+        this is generated here and added to the /.cu
         file.
         """
         if not pop.stop_condition:  # no stop condition has been defined

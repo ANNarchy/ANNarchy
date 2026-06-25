@@ -415,9 +415,9 @@ class Compiler(object):
 
         # Shared libraries have os-dependent suffixes
         if sys.platform.startswith("linux"):
-            lib_path = self.annarchy_dir + "/ANNarchyCore" + str(self.net_id) + ".so"
+            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".so"
         elif sys.platform.startswith("darwin"):
-            lib_path = self.annarchy_dir + "/ANNarchyCore" + str(self.net_id) + ".dylib"
+            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".dylib"
         else:
             raise NotImplementedError
 
@@ -533,7 +533,7 @@ class Compiler(object):
                 if not os.path.isfile(
                     self.annarchy_dir + "/generate/net" + str(self.net_id) + "/" + file
                 ):
-                    if file.startswith("ANNarchyCore"):
+                    if file.startswith("ANNarchyWrapper"):
                         continue
                     os.remove(
                         self.annarchy_dir + "/build/net" + str(self.net_id) + "/" + file
@@ -559,7 +559,7 @@ class Compiler(object):
         return changed
 
     def compilation(self):
-        """Create ANNarchyCore.so and py extensions if something has changed."""
+        """Create ANNarchyWrapper.so and py extensions if something has changed."""
         # STDOUT
         if not self.silent:
             if ConfigManager().get("verbose", self.net_id):
@@ -618,9 +618,9 @@ class Compiler(object):
             print(msg)
             try:
                 if sys.platform.startswith("linux"):
-                    os.remove("ANNarchyCore" + str(self.net_id) + ".so")
+                    os.remove("ANNarchyWrapper" + str(self.net_id) + ".so")
                 elif sys.platform.startswith("darwin"):
-                    os.remove("ANNarchyCore" + str(self.net_id) + ".dylib")
+                    os.remove("ANNarchyWrapper" + str(self.net_id) + ".dylib")
                 else:
                     raise NotImplementedError
             except:
@@ -828,7 +828,7 @@ def load_cython_lib(libname, libpath):
     TODO:
 
     As described in PEP 489 "Module Reloading" a reloading of dynamic extension modules is
-    not supported. This leads to some problems for our reusage of the ANNarchyCore library ...
+    not supported. This leads to some problems for our reusage of the ANNarchyWrapper library ...
 
     Sources:
 
@@ -862,7 +862,7 @@ def _instantiate(
 
     # subdirectory where the library lies
     annarchy_dir = NetworkManager().get_network(net_id=import_id).directory
-    libname = "ANNarchyCore" + str(import_id)
+    libname = "ANNarchyWrapper" + str(import_id)
     if sys.platform.startswith("linux"):
         libpath = annarchy_dir + "/" + libname + ".so"
     elif sys.platform.startswith("darwin"):

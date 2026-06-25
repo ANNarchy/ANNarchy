@@ -166,7 +166,7 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
 %(invoke_kernel_def)s
 """
 
-device_kernel = """#include "ANNarchyKernel.cuh"
+device_kernel = """#include "ANNarchyKernel%(net_id)s.cuh"
 
 /********************************************************************/
 /*  Device kernel definitions                                       */
@@ -326,8 +326,8 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events) {
 """
 
 host_body_template = """// ANNarchy-related header
-#include "ANNarchy.hpp"
-#include "ANNarchyKernel.cuh"
+#include "ANNarchyCore%(net_id)s.hpp"
+#include "ANNarchyKernel%(net_id)s.cuh"
 
 %(prof_include)s
 #include <math.h>
