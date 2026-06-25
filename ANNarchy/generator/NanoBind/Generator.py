@@ -30,7 +30,7 @@ class NanoBindGenerator:
 
     def generate(self):
         """
-        Generate the code stored in `ANNarchyCore[net_id].cpp`.
+        Generate the code stored in `ANNarchyWrapper[net_id].cpp`.
         """
         pop_struct_code = ""
         proj_struct_code = ""

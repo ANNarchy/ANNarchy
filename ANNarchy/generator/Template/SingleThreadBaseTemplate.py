@@ -132,7 +132,7 @@ void setSeed(long int seed, int num_sources, bool use_seed_seq);
 """
 
 body_template = """
-#include "ANNarchy.hpp"
+#include "ANNarchyCore%(net_id)s.hpp"
 
 %(prof_include)s
 

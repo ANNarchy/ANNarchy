@@ -9,9 +9,9 @@ basetemplate = """#include <nanobind/nanobind.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/bind_vector.h>
 
-#include "ANNarchy.hpp"
+#include "ANNarchyCore%(net_id)s.hpp"
 
-NB_MODULE(ANNarchyCore%(net_id)s, m) {
+NB_MODULE(ANNarchyWrapper%(net_id)s, m) {
 
     // Global functions
     m.def("set_seed", &setSeed);

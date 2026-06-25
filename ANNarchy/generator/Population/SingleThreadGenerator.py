@@ -209,6 +209,7 @@ class SingleThreadGenerator(PopulationGenerator):
             # version tag
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
+            "net_id": self._net_id,
             "float_prec": ConfigManager().get("precision", self._net_id),
             "id": pop.id,
             "name": pop.name,

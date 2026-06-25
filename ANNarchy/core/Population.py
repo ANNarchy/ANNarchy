@@ -226,7 +226,7 @@ class Population:
         Instantiates the population after compilation of the C++ simulation core.
         The function should solely called by Compiler._instantiate().
 
-        :param module: cython module (ANNarchyCore instance)
+        :param module: nanobind module (ANNarchyWrapper instance)
         """
         if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time

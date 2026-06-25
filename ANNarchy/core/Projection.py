@@ -360,7 +360,7 @@ class Projection:
         Instantiates the projection after compilation. The function should be
         called by Compiler._instantiate().
 
-        :param module:  cython module (ANNarchyCore instance)
+        :param module:  nanobind module (ANNarchyWrapper instance)
         """
         if NetworkManager().get_network(net_id=self.net_id)._profiler is not None:
             import time
@@ -404,7 +404,7 @@ class Projection:
 
         Returns True, if the connector was successfully instantiated. Potential errors are kept by  Python exceptions. If the Cython connector call fails (return False) the most likely reason is that there was not enough memory available.
 
-        :param module:  cython module (ANNarchyCore instance)
+        :param module:  nanobind wrapper (ANNarchyWrapper instance)
 
         """
         # Local import to prevent circular import (HD: 28th June 2021)

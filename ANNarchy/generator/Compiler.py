@@ -415,9 +415,9 @@ class Compiler(object):
 
         # Shared libraries have os-dependent suffixes
         if sys.platform.startswith("linux"):
-            lib_path = self.annarchy_dir + "/ANNarchyCore" + str(self.net_id) + ".so"
+            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".so"
         elif sys.platform.startswith("darwin"):
-            lib_path = self.annarchy_dir + "/ANNarchyCore" + str(self.net_id) + ".dylib"
+            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".dylib"
         else:
             raise NotImplementedError
 
@@ -533,7 +533,7 @@ class Compiler(object):
                 if not os.path.isfile(
                     self.annarchy_dir + "/generate/net" + str(self.net_id) + "/" + file
                 ):
-                    if file.startswith("ANNarchyCore"):
+                    if file.startswith("ANNarchyWrapper"):
                         continue
                     os.remove(
                         self.annarchy_dir + "/build/net" + str(self.net_id) + "/" + file
@@ -559,7 +559,7 @@ class Compiler(object):
         return changed
 
     def compilation(self):
-        """Create ANNarchyCore.so and py extensions if something has changed."""
+        """Create ANNarchyWrapper.so and py extensions if something has changed."""
         # STDOUT
         if not self.silent:
             if ConfigManager().get("verbose", self.net_id):
@@ -586,22 +586,35 @@ class Compiler(object):
         os.chdir(target_dir)
 
         # CMake is quite talky by default (printing out compiler versions etc.)
-        # We reduce the number of printed messages except the user enabled verbose mode.
+        # We pipe the printed messages into a file except the user enabled verbose mode.
         verbose = (
             "> compile_stdout.log 2> compile_stderr.log"
             if not ConfigManager().get("verbose", self.net_id)
             else ""
         )
 
+        # Define the build target configuration
+        run_mode = "Debug" if ConfigManager().get("debug", self.net_id) else "Release"
+
+        # Optional modes, e.g., profiling, tracing
+        prof_mode = "ON" if self.profile_enabled else "OFF"
+
+        # Build final cmake command. One can add other arguments for debugging, such as:
+        # -DCMAKE_EXPORT_COMPILE_COMMANDS=ON   - creates a 'compile_commands.json' which can be used to track compilation commands
+        run_command = 'cmake -S "{}" -B "{}" -DCMAKE_BUILD_TYPE={} -DUSE_PROFILE={} {}'.format(
+            target_dir, target_dir, run_mode, prof_mode, verbose
+        )
+
         # Generate the Makefile from CMakeLists
         make_process = subprocess.Popen(
-            'cmake -S "{}" -B "{}" {}'.format(target_dir, target_dir, verbose),
+            run_command,
             shell=True,
         )
         if make_process.wait() != 0:
             Messages.error("CMake generation failed.")
 
         # Start the compilation
+        # Again, we pipe the printed messages into a file except the user enabled verbose mode.
         verbose = (
             "> compile_stdout.log 2> compile_stderr.log"
             if not ConfigManager().get("verbose", self.net_id)
@@ -618,9 +631,9 @@ class Compiler(object):
             print(msg)
             try:
                 if sys.platform.startswith("linux"):
-                    os.remove("ANNarchyCore" + str(self.net_id) + ".so")
+                    os.remove("ANNarchyWrapper" + str(self.net_id) + ".so")
                 elif sys.platform.startswith("darwin"):
-                    os.remove("ANNarchyCore" + str(self.net_id) + ".dylib")
+                    os.remove("ANNarchyWrapper" + str(self.net_id) + ".dylib")
                 else:
                     raise NotImplementedError
             except:
@@ -674,9 +687,6 @@ class Compiler(object):
 
             if self.trace_calls in ["simulate", "both"]:
                 cpu_flags += " -D_TRACE_SIMULATION_STEPS"
-
-        if self.profile_enabled:
-            cpu_flags += " -g"
 
         # OpenMP flag
         omp_flag = ""
@@ -828,7 +838,7 @@ def load_cython_lib(libname, libpath):
     TODO:
 
     As described in PEP 489 "Module Reloading" a reloading of dynamic extension modules is
-    not supported. This leads to some problems for our reusage of the ANNarchyCore library ...
+    not supported. This leads to some problems for our reusage of the ANNarchyWrapper library ...
 
     Sources:
 
@@ -862,7 +872,7 @@ def _instantiate(
 
     # subdirectory where the library lies
     annarchy_dir = NetworkManager().get_network(net_id=import_id).directory
-    libname = "ANNarchyCore" + str(import_id)
+    libname = "ANNarchyWrapper" + str(import_id)
     if sys.platform.startswith("linux"):
         libpath = annarchy_dir + "/" + libname + ".so"
     elif sys.platform.startswith("darwin"):

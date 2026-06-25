@@ -117,11 +117,10 @@ class CodeGenerator(object):
         self._annarchy_dir/generate). More detailed the following files are
         generated, by this class:
 
-            * *ANNarchy.cpp*: main simulation loop, object instantiation
-            * *ANNarchy.hpp*: collection of all objects, interface to Python
-              extension
-            * *ANNarchyCore.pyx*: Python extension file, gathering all
-               functions/ objects, which should be accessible from Python
+            * *ANNarchyCore[net_id].cpp*: contains main simulation loop, object instantiation
+            * *ANNarchyCore[net_id].hpp*: header file for simulation core
+            * *ANNarchyWrapper[net_id].cpp*: nanobind interface file, gathering all
+              functions/ objects, which should be accessible from Python
             * for each population a seperate header file, contain semantic
               logic of a population respectively neuron object (filename:
               pop<id>).
@@ -169,14 +168,14 @@ class CodeGenerator(object):
 
         # Generate header code for the analysed pops and projs
         if ConfigManager().get("paradigm", self.net_id) == "openmp":
-            with open(source_dest + "ANNarchy.hpp", "w") as ofile:
+            with open(source_dest + "ANNarchyCore" + str(self.net_id) + ".hpp", "w") as ofile:
                 ofile.write(self._generate_header())
 
         elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             invoke_header, host_header = self._generate_header()
-            with open(source_dest + "ANNarchyKernel.cuh", "w") as ofile:
+            with open(source_dest + "ANNarchyKernel" + str(self.net_id) + ".cuh", "w") as ofile:
                 ofile.write(invoke_header)
-            with open(source_dest + "ANNarchy.hpp", "w") as ofile:
+            with open(source_dest + "ANNarchyCore" + str(self.net_id) + ".hpp", "w") as ofile:
                 ofile.write(host_header)
 
         else:
@@ -187,22 +186,22 @@ class CodeGenerator(object):
 
         # Generate cpp code for the analysed pops and projs
         if ConfigManager().get("paradigm", self.net_id) == "openmp":
-            with open(source_dest + "ANNarchy.cpp", "w") as ofile:
+            with open(source_dest + "ANNarchyCore" + str(self.net_id) + ".cpp", "w") as ofile:
                 ofile.write(self._generate_body())
 
         elif ConfigManager().get("paradigm", self.net_id) == "cuda":
             device_code, host_code = self._generate_body()
-            with open(source_dest + "ANNarchy.cpp", "w") as ofile:
+            with open(source_dest + "ANNarchyCore" + str(self.net_id) + ".cpp", "w") as ofile:
                 ofile.write(host_code)
-            with open(source_dest + "ANNarchyKernel.cu", "w") as ofile:
+            with open(source_dest + "ANNarchyKernel" + str(self.net_id) + ".cu", "w") as ofile:
                 ofile.write(device_code)
 
         else:
             raise NotImplementedError
 
-        # Generate cython code for the analysed pops and projs
+        # Generate nanobind wrapper code for the analysed pops and projs, as well as the simulation control
         with open(
-            source_dest + "ANNarchyCore" + str(self.net_id) + ".cpp", "w"
+            source_dest + "ANNarchyWrapper" + str(self.net_id) + ".cpp", "w"
         ) as ofile:
             ofile.write(self._nb_gen.generate())
 
@@ -307,7 +306,7 @@ class CodeGenerator(object):
 
     def _generate_header(self):
         """
-        Generate the ANNarchy.hpp code. This header represents the interface to
+        Generate the ANNarchyCore[net_id].hpp code. This header represents the interface to
         the Python extension and therefore includes all network objects.
         """
         # struct declaration for each population
@@ -543,7 +542,7 @@ void set_%(name)s(%(float_prec)s value) {
         will be used in different files, dependent on the chosen
         target platform:
 
-        * openmp: ANNarchy.cpp
+        * openmp: ANNarchyCore[net_id].cpp
         * cuda: ANNarchyHost.cu and ANNarchyDevice.cu
         """
         # struct declaration for each population
@@ -621,7 +620,7 @@ void set_%(name)s(%(float_prec)s value) {
             ).generate_body_dict()
 
         #
-        # Generate the ANNarchy.cpp code, the corrsponding template differs
+        # Generate the ANNarchyCore[net_id].cpp code, the corrsponding template differs
         # greatly. For further information take a look into the corresponding
         # branches.
         #
@@ -634,6 +633,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             # code fields for openMP/single thread template
             base_dict = {
+                "net_id": self.net_id,
                 "float_prec": float_type.cpp_decl_type,
                 "py_float_prec": float_type.py_decl_type,
                 "pop_ptr": pop_ptr,
@@ -782,7 +782,8 @@ void set_%(name)s(%(float_prec)s value) {
 
             device_code = (
                 CUDABaseTemplate.device_kernel
-                % {  # Target: ANNarchyKernel.cu
+                % {  # Target: ANNarchyKernel[net_id].cu
+                    "net_id": self.net_id,
                     "common_kernel": common_kernel,
                     "pop_kernel": pop_kernel,
                     "pop_invoke_kernel": pop_invoke_kernel,
@@ -805,6 +806,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             base_dict = {
                 # network definitions
+                "net_id": self.net_id,
                 "float_prec": ConfigManager().get("precision", self.net_id),
                 "pop_ptr": pop_ptr,
                 "proj_ptr": proj_ptr,
@@ -829,7 +831,7 @@ void set_%(name)s(%(float_prec)s value) {
             base_dict.update(prof_dict)
             host_code = (
                 CUDABaseTemplate.host_body_template % base_dict
-            )  # Target: ANNarchy.cpp
+            )  # Target: ANNarchyCore[net_id].cpp
 
             return device_code, host_code
         else:
