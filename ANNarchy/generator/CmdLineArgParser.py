@@ -149,6 +149,9 @@ class CmdLineArgParser(object):
         if options.num_threads is not None:
             ConfigManagement._update_global_config("num_threads", options.num_threads)
 
+        if options.debug is not False:
+            ConfigManagement._update_global_config("debug", options.debug)
+
         if options.visible_cores is not None:
             try:
                 core_list = [int(x) for x in options.visible_cores.split(",")]
