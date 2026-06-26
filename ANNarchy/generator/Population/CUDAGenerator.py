@@ -939,7 +939,7 @@ class CUDAGenerator(PopulationGenerator):
                     _spike_history[i].pop(); // Suppress spikes outside the window
                     r_host_to_device = true; // the queue changed the length
                 }
-                r[i] = _mean_fr_rate * %(float_prec)s{static_cast<int>(_spike_history[i].size())};
+                r[i] = _mean_fr_rate * static_cast<%(float_prec)s>(_spike_history[i].size());
             }
 
             // transfer to device
