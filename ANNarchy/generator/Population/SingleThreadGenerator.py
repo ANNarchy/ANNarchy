@@ -594,7 +594,7 @@ class SingleThreadGenerator(PopulationGenerator):
                     while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
                         _spike_history[i].pop(); // Suppress spikes outside the window
                     }
-                    r[i] = _mean_fr_rate * %(float_prec)s{static_cast<int>(_spike_history[i].size())};
+                    r[i] = _mean_fr_rate * static_cast<%(float_prec)s>(_spike_history[i].size());
                 }
             } """ % {"float_prec": ConfigManager().get("precision", self._net_id)}
 
