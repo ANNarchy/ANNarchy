@@ -112,7 +112,7 @@ pooling_template_cuda = {
     # no read-back is required
     "host_device_transfer": """
         if (pre_coords_dirty) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "ProjStruct%(id_proj)s (pooling): update device coords." << std::endl;
         #endif
             auto err = cudaGetLastError();
@@ -418,7 +418,7 @@ cuda_pooling_code_3d = {
     if (proj%(id_proj)s->_transmission && pop%(id_post)s->_active ) {
         pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s->stream), pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto proj%(id_proj)s_pool_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_pool_err != cudaSuccess) {
             std::cout << "Pooling projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_pool_err ) << std::endl;

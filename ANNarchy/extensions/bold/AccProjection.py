@@ -103,7 +103,7 @@ class AccProjection(SpecificProjection):
     void start(int baseline_period) {
         init_baseline_period=baseline_period;
         time_for_init_baseline = t + baseline_period;
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
@@ -270,7 +270,7 @@ class AccProjection(SpecificProjection):
     void start(int baseline_period) {
         init_baseline_period=baseline_period;
         time_for_init_baseline = t + baseline_period;
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }

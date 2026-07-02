@@ -84,7 +84,7 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, char, false>
 public:
     BSRMatrixCUDA(const unsigned int num_rows, const unsigned int num_columns, const unsigned int block_size) :
         BSRMatrix<IT, ST, char, false>(num_rows, num_columns, block_size) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixCUDA::BSRMatrixCUDA()" << std::endl;
     #endif
             gpu_block_row_pointer_ = nullptr;
@@ -97,7 +97,7 @@ public:
      *  @details    Please note, the clear() method should be called in advance.
      */
     ~BSRMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixCUDA::~BSRMatrixCUDA()" << std::endl;
     #endif
     }
@@ -107,7 +107,7 @@ public:
      *  @details    responsible to delete the allocated GPU memory.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
@@ -132,7 +132,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -149,7 +149,7 @@ public:
 
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BCSRMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
         assert( this->tile_mask_.size() == host_variable.size() );

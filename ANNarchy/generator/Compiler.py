@@ -143,14 +143,19 @@ def compile(
             net_id=net_id,
         )
 
-    # Debug the simulation kernel, maybe enabled on command-line?
+    # Debug the simulation kernel
     if not debug_build:
-        debug_build = options.debug  # debug build
-    _update_global_config("debug", debug_build)
+        debug_build = options.debug
 
     # Trace function calls in simulation kernel
     if trace_calls is None:
-        trace_calls = options.trace_calls  # debug build
+        trace_calls = options.trace_calls
+        if trace_calls is not None:
+            # enabling trace calls, enables debug too
+            debug_build = True
+
+    # Write to global config
+    _update_global_config("debug", debug_build)
     _update_global_config("trace_calls", trace_calls)
 
     # Clean
@@ -678,7 +683,7 @@ class Compiler(object):
         if not self.debug_build:
             cpu_flags = self.compiler_flags
         else:
-            cpu_flags = "-O0 -g -D_DEBUG -march=native"
+            cpu_flags = "-O0 -g -march=native"
 
         # trace of function calls should be possible without debug mode
         if self.trace_calls is not None:
@@ -721,7 +726,7 @@ class Compiler(object):
             cuda_gen = ""  # TODO: -arch sm_%(ver)s
 
             if self.debug_build:
-                gpu_flags = "-g -G -D_DEBUG"
+                gpu_flags = "-g -G"
 
             # read the config file for the cuda lib path
             if "cuda" in self.user_config.keys():

@@ -156,7 +156,7 @@ public:
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
     #endif
         std::map< int, int > post_indices = std::map< int, int > ();
@@ -175,7 +175,7 @@ public:
 
         // add monitor to global list
         this->_id = addRecorder(static_cast<Monitor*>(this));
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
     #endif
 
@@ -207,7 +207,7 @@ public:
     }
 
     void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container_code)s

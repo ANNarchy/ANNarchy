@@ -87,7 +87,7 @@ class HYBMatrix {
             row_length_hist[it->size()]++;
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Row-length distribution: " << std::endl;
         for (auto it = row_length_hist.begin(); it != row_length_hist.end(); it++) {
             std::cout << "  " << static_cast<long>(it->first) << ": " << static_cast<long>(it->second) << std::endl;
@@ -103,7 +103,7 @@ class HYBMatrix {
             }
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "selected " << key << " based on row-length distribution." << std::endl;
     #endif
         return key;
@@ -125,7 +125,7 @@ class HYBMatrix {
      *              that all rows are completely filled. But also enough rows must be then in the ELLPACK partition.
      */
     IT determine_ell_size_avg(const std::vector<IT> row_indices, const std::vector<std::vector<IT>> column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::determine_ell_size() - try to determine a good partition size" << std::endl;
     #endif
         auto row_sizes = std::vector<IT>();
@@ -148,7 +148,7 @@ class HYBMatrix {
         }
         double avg_nnz = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "   possible range (min, avg, max): " << min_nnz << ", " << avg_nnz << ", " << max_nnz << std::endl;
     #endif
 
@@ -161,7 +161,7 @@ class HYBMatrix {
                 selected_size = i;
             }
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "   selected size: "<< selected_size << " which will cover " << max_cov*100.0 << " percent of rows." << std::endl;
     #endif
         return selected_size;
@@ -178,7 +178,7 @@ class HYBMatrix {
     }
 
     ~HYBMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::~HYBMatrix()" << std::endl;
     #endif
         delete ell_matrix_;
@@ -190,13 +190,13 @@ class HYBMatrix {
      *  @details    This function is only intended for the usage within the HYBMatrixCUDA class.
      */
     void replace_pointer(ELLMatrix<IT, ST, row_major>* ell_ptr, COOMatrix<IT, ST>* coo_ptr) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::replace_pointer() - destroy 'old' content" << std::endl;
     #endif
         delete ell_matrix_;
         delete coo_matrix_;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::replace_pointer() - set new pointer" << std::endl;
     #endif
         ell_matrix_ = ell_ptr;
@@ -204,7 +204,7 @@ class HYBMatrix {
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::clear()" << std::endl;
     #endif
         // clean up partial matrices
@@ -284,7 +284,7 @@ class HYBMatrix {
             //ell_size_ = determine_ell_size_avg(row_indices, column_indices);
             ell_size_ = determine_ell_size_hist(row_indices, column_indices);
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "  ell_size = " << ell_size_ << std::endl;
     #endif
@@ -303,7 +303,7 @@ class HYBMatrix {
                 coo_part_column_indices.push_back(std::vector<IT>(col_it->begin()+ell_size_, col_it->end()));
             }
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "  ELL-sizes = [";
         for (auto it = ell_part_column_indices.begin(); it != ell_part_column_indices.end(); it++) {
             std::cout << it->size() << ", ";
@@ -321,7 +321,7 @@ class HYBMatrix {
         if (!ell_success || !coo_success)
             return false;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "  nnz in ell = " << ell_matrix_->nb_synapses() << " (" << static_cast<double>(ell_matrix_->nb_synapses()) / static_cast<double>(nb_synapses()) * 100.0 << "%)" << std::endl;
         std::cout << "  nnz in coo = " << coo_matrix_->nb_synapses() << " (" << static_cast<double>(coo_matrix_->nb_synapses()) / static_cast<double>(nb_synapses()) * 100.0 << "%)" << std::endl;
@@ -405,7 +405,7 @@ class HYBMatrix {
 
     template<typename VT>
     hyb_local<VT>* init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         auto new_variable = new hyb_local<VT>();
@@ -418,7 +418,7 @@ class HYBMatrix {
 
     template <typename VT>
     hyb_local<VT>* init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         int num_non_zeros = ell_matrix_->nb_synapses() + coo_matrix_->nb_synapses();
         std::cout << "HYBMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros << std::endl;
     #endif
@@ -432,7 +432,7 @@ class HYBMatrix {
 
     template <typename VT>
     inline void update_matrix_variable_all(hyb_local<VT>* variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrix()::update_matrix_variable_all()" << std::endl;
     #endif
 

@@ -60,7 +60,7 @@ class COOMatrix {
 
     COOMatrix(COOMatrix<IT, ST>* other):
         num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::copy constructor"<< std::endl;
     #endif
         this->post_ranks_ = other->post_ranks_;
@@ -69,13 +69,13 @@ class COOMatrix {
     }
 
     ~COOMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::~COOMatrix()" << std::endl;
     #endif
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -186,7 +186,7 @@ class COOMatrix {
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
@@ -208,7 +208,7 @@ class COOMatrix {
         row_indices_.shrink_to_fit();
         column_indices_.shrink_to_fit();
     
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << row_indices_.size() << " coordinate pairs created." << std::endl;
 
     #ifdef _DEBUG_CONN
@@ -307,7 +307,7 @@ class COOMatrix {
      */
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         return std::vector<VT> (row_indices_.size(), default_value);
@@ -315,7 +315,7 @@ class COOMatrix {
 
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::init_matrix_variable_uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         std::uniform_real_distribution<VT> dis (a,b);
@@ -327,7 +327,7 @@ class COOMatrix {
         // ATTENTION: we assume sorted indices (otherwise the copy here is not correct)
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::update_matrix_variable_all()" << std::endl;
     #endif
         assert( (post_ranks_.size() == data.size()) );
@@ -350,7 +350,7 @@ class COOMatrix {
         // ATTENTION: we assume sorted indices (otherwise the copy here is not correct)
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrix::update_matrix_variable_row(" << lil_idx << ")" << std::endl;
     #endif
         assert( (lil_idx < post_ranks_.size()) );

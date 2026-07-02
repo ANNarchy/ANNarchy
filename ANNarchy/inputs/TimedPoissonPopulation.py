@@ -613,7 +613,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // Reset old events
     clear_num_events<<< 1, 1, 0, pop%(id)s->stream >>>(pop%(id)s->gpu_spike_count);
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
     if(err_clear_num_events_%(id)s != cudaSuccess)
         std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
@@ -628,7 +628,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         pop%(id)s->gpu_spiked,
         pop%(id)s->gpu_last_spike
     );
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
     if(err_pop_spike_gather_%(id)s != cudaSuccess)
         std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
@@ -636,7 +636,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // transfer back the spike counter (needed by record)
     cudaMemcpyAsync( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
@@ -644,7 +644,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // transfer back the spiked array (needed by record)
     cudaMemcpyAsync( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
-#ifdef _DEBUG
+#ifndef NDEBUG
     err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;

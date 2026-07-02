@@ -53,7 +53,7 @@ protected:
     std::vector<IT>     block_inv_index_;
 
     bool inverse_connectivity_matrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRInvMatrixBitmask::inverse_connectivity_matrix()" << std::endl;
     #endif
 
@@ -105,13 +105,13 @@ public:
      */
     explicit BSRInvMatrixBitmask(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
         BSRMatrixBitmask<IT, ST, MT, row_major>(num_rows, num_columns, tile_size) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRInvMatrixBitmask::BSRInvMatrixBitmask(this=" << this << ")" << std::endl;
     #endif
     }
 
     ~BSRInvMatrixBitmask() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRInvMatrixBitmask::~BSRInvMatrixBitmask(this=" << this << ")" << std::endl;
     #endif
     }
@@ -120,7 +120,7 @@ public:
      * \details     Clear the STL container
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRInvMatrixBitmask::clear()" << std::endl;
     #endif
         // clear forward view
@@ -146,7 +146,7 @@ public:
     //
 
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRInvMatrixBitmask::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -159,7 +159,7 @@ public:
         success = inverse_connectivity_matrix();
 
         // Debug
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         this->print_data_representation();
     #endif
         return success;

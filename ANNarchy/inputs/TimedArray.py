@@ -359,7 +359,7 @@ class TimedArray(SpecificPopulation):
 
         self._specific_template["update_variables"] = """
         if(_active) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
 
@@ -399,7 +399,7 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
@@ -466,7 +466,7 @@ class TimedArray(SpecificPopulation):
         if(_active){
             #pragma omp single
             {
-            #ifdef _DEBUG
+            #ifndef NDEBUG
                 std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
             #endif
 
@@ -549,7 +549,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template["access_additional"] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::string arg_str = "";
         for (auto it = schedule.begin(); it != schedule.end(); it++)
             arg_str += std::to_string(*it) + ' ';
@@ -560,12 +560,12 @@ class TimedArray(SpecificPopulation):
     std::vector<int> get_schedule() { return _schedule; }
 
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_buffer(buffer = " << std::to_string(buffer.size()) << " x " << std::to_string(buffer[0].size()) << " container)" << std::endl;
     #endif
         // clear a previous allocated container.
         if ( !_gpu_buffer.empty() ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "  clear previously allocated buffers ..." << std::endl;
         #endif
             for (auto it = _gpu_buffer.begin(); it != _gpu_buffer.begin(); it++) {
@@ -620,7 +620,7 @@ class TimedArray(SpecificPopulation):
         cudaMemcpy( r.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);
         r_device_to_host = t;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_buffer() - current r: [ ";
         for(auto it = r.begin(); it != r.end(); it++)
             std::cout << *it << " ";
@@ -640,7 +640,7 @@ class TimedArray(SpecificPopulation):
     }
 
     void set_period(int period) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_period(period="<<std::to_string(period)<<")" << std::endl;
     #endif
         _period = period;
@@ -671,7 +671,7 @@ class TimedArray(SpecificPopulation):
         # we switch the GPU buffer which is read out in each time step
         self._specific_template["update_variables"] = """
         if(_active) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
             // Check if it is time to set the input
@@ -710,7 +710,7 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - current r: [ ";
             auto tmp = std::vector<double>(size);
             cudaMemcpy( tmp.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);

@@ -180,7 +180,7 @@ class CSRCMatrixT{
      */
     template<typename VT, bool zero_based=true>
     std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -265,7 +265,7 @@ class CSRCMatrixT{
      *              temporary create a LIL structure (post_to_re) and convert afterwards
      */
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixT::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
@@ -322,7 +322,7 @@ class CSRCMatrixT{
      *  @brief      computes the inverted view on the matrix
      */
     void inverse_connectivity_matrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixT::inverse_connectivity_matrix()" << std::endl;
     #endif
         //
@@ -586,13 +586,13 @@ class CSRCMatrixT{
     }
 
     ~CSRCMatrixT() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixT::~CSRCMatrixT()" << std::endl;
     #endif
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixT::clear()" << std::endl;
     #endif
         std::fill(row_ptr_.begin(), row_ptr_.end(), 0);

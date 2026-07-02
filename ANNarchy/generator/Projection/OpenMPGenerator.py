@@ -1832,7 +1832,7 @@ _last_event%(local_index)s = t;
         max_delay = d;
         int add_steps = d - prev_max;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Delayed arrays was " << _delayed_spikes.size() << std::endl;
     #endif
 
@@ -1853,7 +1853,7 @@ _last_event%(local_index)s = t;
         max_delay = d;
         int add_steps = d - prev_max;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Delayed arrays was " << std::endl;
         for (int tid = 0; tid < global_num_threads; tid++)
             std::cout << _delayed_spikes.size() << " for thread " << tid << std::endl;
@@ -1867,7 +1867,7 @@ _last_event%(local_index)s = t;
         // The delay index has to be updated
         idx_delay = (idx_delay + add_steps) % max_delay;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Delayed arrays is now " << _delayed_spikes.size() << std::endl;
         std::cout << "Idx " << idx_delay << std::endl;
         for(int i = 0; i< max_delay; i++)

@@ -58,7 +58,7 @@ protected:
      *  \note       This function expects a dense row idx.
      */
     virtual std::vector<IT> decode_column_indices(IT row_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::decode_column_indices(row_idx = " << row_idx << ")" << std::endl;
     #endif
 
@@ -92,7 +92,7 @@ public:
      */
     explicit DenseMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::DenseMatrix(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
     #endif
 
@@ -106,7 +106,7 @@ public:
      *              framework should never be destroyed by the base pointer.
      */
     ~DenseMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::~DenseMatrix()" << std::endl;
     #endif
     }
@@ -117,7 +117,7 @@ public:
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -167,7 +167,7 @@ public:
      *  \returns    a list of column indices of a specific row.
      */
     std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::get_dendrite_pre_rank(lil_idx="<<lil_idx<<")"<<std::endl;
     #endif
         assert(lil_idx < post_ranks_.size());
@@ -257,7 +257,7 @@ public:
      *  \param[in]  pre_ranks   a list-in-list that contains for each row the corresponding column indices
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -299,7 +299,7 @@ public:
      */
     template<typename VT, bool zero_based=true>
     std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -376,7 +376,7 @@ public:
      *  \param[in]  rng                     an instance of a merseanne twister generator (need to be seeded in prior if necessary).
      */
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
@@ -416,7 +416,7 @@ public:
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::init_matrix_variable()" << std::endl;
         std::cout << "  using constant value " << default_value << std::endl;
     #endif
@@ -452,7 +452,7 @@ public:
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
@@ -488,7 +488,7 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::update_matrix_variable_all()" << std::endl;
     #endif
         // sanity check: target large enough?
@@ -513,7 +513,7 @@ public:
         // assign the row index
         assert(lil_idx < post_ranks_.size());
         auto row_idx = post_ranks_[lil_idx];
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::update_matrix_variable_row(lil_idx="<<lil_idx<<") --> access row_idx="<<row_idx << std::endl;
     #endif
 
@@ -546,7 +546,7 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT col_idx, const VT value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::update_matrix_variable(lil_idx=" << lil_idx << ", col_idx=" << col_idx << ")" << std::endl;
     #endif
         assert(lil_idx < post_ranks_.size());
@@ -568,7 +568,7 @@ public:
      */
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT>& variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::get_matrix_variable_all()" << std::endl;
     #endif
         auto values = std::vector< std::vector < VT > >();
@@ -590,12 +590,12 @@ public:
      */
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector<VT>& variable, const IT &lil_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::get_matrix_variable_row(lil_idx=" << lil_idx << ")" << std::endl;
     #endif
         assert(lil_idx < post_ranks_.size());
         auto row_idx = post_ranks_[lil_idx];
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "  will access dense matrix row_idx=" << row_idx << std::endl;
     #endif
 
@@ -626,7 +626,7 @@ public:
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrix::get_matrix_variable_row(lil_idx=" << lil_idx << ", col_idx=" << col_idx << ")" << std::endl;
     #endif
         assert(lil_idx < post_ranks_.size());

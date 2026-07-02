@@ -92,7 +92,7 @@ public:
      *  Default constructor
      */
     explicit ELLRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : ELLRMatrix<IT, ST, false>(num_rows, num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::ELLRMatrixCUDA()" << std::endl;
     #endif
         gpu_post_ranks_ = nullptr;
@@ -104,7 +104,7 @@ public:
      *  Initialize host side with other ELLPACK-R instance (host side)
      */
     ELLRMatrixCUDA<IT, ST>( ELLRMatrix<IT, ST, false>* other ) : ELLRMatrix<IT, ST, false>( other ) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::copy constructor"<< std::endl;    
     #endif
         host_to_device_transfer();
@@ -114,7 +114,7 @@ public:
      *  @brief      Destructor
      */
     ~ELLRMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::~ELLRMatrixCUDA()" << std::endl;
     #endif
     }
@@ -124,7 +124,7 @@ public:
      *  @details    should be called before destructor.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
@@ -135,7 +135,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -155,7 +155,7 @@ public:
     }
 
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
     #endif
         // Initialization on host side
@@ -170,7 +170,7 @@ public:
     }
 
     bool fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
@@ -189,7 +189,7 @@ public:
     //
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrixCUDA::init_matrix_variable_gpu<>() for " << host_variable.size() << " elements." << std::endl;
     #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
@@ -202,7 +202,7 @@ public:
 
         // Copy
         cudaMemcpy(new_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
             std::cerr << "ELLRMatrixCUDA::init_matrix_variable_gpu<>(): " << cudaGetErrorString(err) << std::endl;

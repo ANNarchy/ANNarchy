@@ -14,20 +14,20 @@ public:
     PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
         {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "PopRecorder%(id)s (" << this << ") instantiated." << std::endl;
     #endif
 %(init_code)s
 
         // add monitor to global list
         this->_id = addRecorder(static_cast<Monitor*>(this));
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "PopRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
     #endif
     }
 
     ~PopRecorder%(id)s() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s - this = " << this << std::endl;
     #endif
     }
@@ -59,7 +59,7 @@ public:
 %(clear_individual_container_code)s
 
     void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "PopRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_all_container_code)s
@@ -81,7 +81,7 @@ public:
         "recording": """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             cudaMemcpy(pop%(id)s->%(name)s.data(), pop%(id)s->gpu_%(name)s, pop%(id)s->size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             auto err = cudaGetLastError();
             if ( err != cudaSuccess ) {
                 std::cout << "record %(name)s on pop%(id)s failed: " << cudaGetErrorString(err) << std::endl;
@@ -173,7 +173,7 @@ public:
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
     #endif
         std::map< int, int > post_indices = std::map< int, int > ();
@@ -192,7 +192,7 @@ public:
 
         // add monitor to global list
         this->_id = addRecorder(static_cast<Monitor*>(this));
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
     #endif
     };
@@ -220,7 +220,7 @@ public:
     }
 
     void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjRecorder%(id)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container_code)s
@@ -297,7 +297,7 @@ if (this->record_%(name)s)
             auto data = std::vector<%(type)s>(proj%(id)s->nb_dendrites(), %(type)s{0});
             cudaMemcpy( data.data(), proj%(id)s->gpu_%(name)s, proj%(id)s->nb_dendrites() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             auto err = cudaGetLastError();
             if ( err != cudaSuccess )
                 std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
@@ -349,7 +349,7 @@ if (this->record_%(name)s)
             cudaMemcpy( &tmp, proj%(id)s->gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
             this->%(name)s.push_back(tmp);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             auto err = cudaGetLastError();
             if ( err != cudaSuccess )
                 std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;

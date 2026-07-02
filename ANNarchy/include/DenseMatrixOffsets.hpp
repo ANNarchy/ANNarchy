@@ -51,7 +51,7 @@ protected:
      *  @brief      Decode the column indices for nonzeros in the matrix.
      */
     virtual std::vector<IT> decode_column_indices(IT row_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixOffsets::decode_column_indices()" << std::endl;
     #endif
         auto indices = std::vector<IT>();
@@ -84,7 +84,7 @@ public:
      */
     explicit DenseMatrixOffsets(const IT low_row_rank, const IT high_row_rank, const IT low_column_rank, const IT high_column_rank):
         DenseMatrix<IT, ST, MT, row_major>(high_row_rank - low_row_rank, high_column_rank - low_column_rank) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixOffsets::DenseMatrixOffsets()" << std::endl;
     #endif
 
@@ -145,7 +145,7 @@ public:
      *  @todo       Instead of duplicating the code, one might transform the post_ranks/pre_ranks array and then call the DenseMatrix::init_matrix_from_lil()
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixOffsets::init_matrix_from_lil()" << std::endl;
     #endif
 

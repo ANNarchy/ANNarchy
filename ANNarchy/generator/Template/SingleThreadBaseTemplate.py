@@ -385,13 +385,13 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
  *  Life-time management
  */
 void create_cpp_instances() {
-#if defined(_TRACE_INIT) || defined(_DEBUG)
+#if defined(_TRACE_INIT) || !defined(NDEBUG)
     std::cout << "Instantiate C++ objects ..." << std::endl;
 #endif
 }
 
 void destroy_cpp_instances() {
-#if defined(_TRACE_INIT) || defined(_DEBUG)
+#if defined(_TRACE_INIT) || !defined(NDEBUG)
     std::cout << "Destroy C++ objects ..." << std::endl;
 #endif
 }

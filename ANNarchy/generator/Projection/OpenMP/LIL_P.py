@@ -177,7 +177,7 @@ delay = {
         for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->nb_dendrites(), std::vector< int >() ) );
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Inited _delayed_spikes[" << global_num_threads << "][" << max_delay << "] and " << std::endl;
         for (int tid = 0; tid < global_num_threads; tid++) {
             std::cout << "   _delayed_spikes[" << tid << "][:] with vectors of size = " << _delayed_spikes[tid][0].size() << " element(s) " << std::endl;

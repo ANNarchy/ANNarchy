@@ -32,7 +32,7 @@ protected:
     bool check_free_device_memory(size_t required) {
         size_t free, total;
         cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
         return (required < free);
@@ -75,7 +75,7 @@ protected:
     }
 
     bool host_to_device_transfer() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDA::host_to_device()" << std::endl;
     #endif
         //
@@ -143,7 +143,7 @@ public:
      *  @brief      Destructor
      */
     ~CSRCMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDA::~CSRCMatrixCUDA()" << std::endl;
     #endif
     }
@@ -153,7 +153,7 @@ public:
      *  @details    should be called before destructor.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
@@ -164,7 +164,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
 
@@ -178,7 +178,7 @@ public:
     }
 
     bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // host side

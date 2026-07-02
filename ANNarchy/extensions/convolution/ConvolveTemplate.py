@@ -141,7 +141,7 @@ convolve_template_cuda = {
     # no read-back is required
     "host_device_transfer": """
         if (pre_coords_dirty) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "ProjStruct%(id_proj)s (convolution): update device coords." << std::endl;
         #endif
             auto flat_coords = transform_2d_to_1d<int>(pre_coords);
@@ -174,7 +174,7 @@ conv_filter_template = {
     // Local parameter w
     %(type_w)s get_w() { return w; }
     void set_w(%(type_w)s value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s (convolution): set new filter on host" << std::endl;
     #endif
         w = value;
@@ -183,7 +183,7 @@ conv_filter_template = {
 """,
         "host_device_transfer": """
         if ( host_w_dirty ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "ProjStruct%(id_proj)s (convolution): update device filter." << std::endl;
         #endif
             auto flat_data = transform_%(pre_dim)sd_to_1d<%(ctype)s>(w);
@@ -234,7 +234,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp
             pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {
             std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
@@ -269,7 +269,7 @@ cuda_convolution_bank_of_filter = {
             pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {
             std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
@@ -319,7 +319,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
             pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {
             std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
@@ -379,7 +379,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
             pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s->gpu_pre_coords, proj%(id_proj)s->gpu_w%(pre_variables_call)s
         );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
         if ( proj%(id_proj)s_conv_err != cudaSuccess) {
             std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;

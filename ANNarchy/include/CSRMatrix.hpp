@@ -75,7 +75,7 @@ class CSRMatrix {
 
     explicit CSRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Created CSR matrix " << this << " with dense dimension: " << static_cast<long>(num_rows_) << " times " << static_cast<long>(num_columns_) << std::endl;
     #endif
 
@@ -90,7 +90,7 @@ class CSRMatrix {
      *  @details    Is not declared as virtual as inheriting classes in our framework should never be destroyed by the base pointer.
      */
     ~CSRMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::~CSRMatrix()" << std::endl;
     #endif
         // not destroyed by clear()
@@ -99,7 +99,7 @@ class CSRMatrix {
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::clear()" << std::endl;
     #endif
         std::fill(row_begin_.begin(), row_begin_.end(), 0);
@@ -140,7 +140,7 @@ class CSRMatrix {
      *  @see        LILMatrix::init_matrix_from_lil()
      */
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         // sanity check of inputs
@@ -186,7 +186,7 @@ class CSRMatrix {
 
     #if defined(_DEBUG_CONN)
         print_data_representation(2, true);
-    #elif defined(_DEBUG)
+    #elif !defined(NDEBUG)
         print_data_representation(2, false);
     #endif
         return true;
@@ -198,7 +198,7 @@ class CSRMatrix {
      */
     template<typename VT, bool zero_based=true>
     std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -271,7 +271,7 @@ class CSRMatrix {
         // Sanity check
         assert( (num_non_zeros_ == coo_pairs) );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Extracted " << coo_pairs << " from " << filename << std::endl;
     #endif
 
@@ -286,7 +286,7 @@ class CSRMatrix {
     //  ANNarchy connectivity patterns
     //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
@@ -316,7 +316,7 @@ class CSRMatrix {
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
@@ -392,7 +392,7 @@ class CSRMatrix {
 
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros_ << std::endl;
     #endif
         std::uniform_real_distribution<VT> dis (a,b);
@@ -403,7 +403,7 @@ class CSRMatrix {
 
     template <typename VT>
     std::vector<VT> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
     #endif
         std::normal_distribution<VT> dis (mean, sigma);

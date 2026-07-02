@@ -42,7 +42,7 @@ public:
      *              framework should never be destroyed by the base pointer.
      */
     ~DiaMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::~DiaMatrix()" << std::endl;
     #endif
     }
@@ -53,7 +53,7 @@ public:
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -158,7 +158,7 @@ public:
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -192,7 +192,7 @@ public:
             diagonals_.push_back(map_it->second);
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         this->print_data_representation();
     #endif
 
@@ -201,7 +201,7 @@ public:
 
     template <typename VT>
     std::vector<std::vector< VT >> init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         // fill all places with 0
@@ -229,7 +229,7 @@ public:
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         std::uniform_real_distribution<VT> dis (a,b);
@@ -256,7 +256,7 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<std::vector<VT>> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::update_matrix_variable_all()" << std::endl;
     #endif
         assert( (post_ranks_.size() == data.size()) );
@@ -275,7 +275,7 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<std::vector<VT>> &variable, const IT lil_idx, const std::vector<VT> data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DiaMatrix::update_matrix_variable_row(lil_idx = " << lil_idx << ")" << std::endl;
     #endif
         auto pre_ranks = get_dendrite_pre_rank(lil_idx);

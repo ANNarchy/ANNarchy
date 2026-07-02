@@ -747,7 +747,7 @@ class ProjectionGenerator(object):
                         bool requires_sorting) {
         // The LIL entries are not sorted which might lead to worse psp access patterns
         if (requires_sorting) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "   ... sort the LIL entries by row index ..." << std::endl;
         #endif
             auto tmp = std::vector<%(idx_type)s>(row_indices.size());

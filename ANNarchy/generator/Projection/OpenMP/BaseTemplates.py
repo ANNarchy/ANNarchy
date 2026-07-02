@@ -140,7 +140,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 attribute_template = {
     "local": """
     std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
     #endif
 %(local_get1)s
@@ -151,7 +151,7 @@ attribute_template = {
     }
 
     std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
     #endif
 %(local_get2)s
@@ -162,7 +162,7 @@ attribute_template = {
     }
 
     %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
     #endif
 %(local_get3)s
@@ -173,7 +173,7 @@ attribute_template = {
     }
 
     void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto min_value = std::numeric_limits<%(ctype)s>::max();
         auto max_value = std::numeric_limits<%(ctype)s>::lowest();
         for (auto it = value.cbegin(); it != value.cend(); it++ ){
@@ -190,14 +190,14 @@ attribute_template = {
     }
 
     void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::set_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = " << rk_post << ", min("<<name<<")="<<std::to_string(*std::min_element(value.begin(), value.end())) << ", max("<<name<<")="<<std::to_string(*std::max_element(value.begin(), value.end()))<< ")" << std::endl;
     #endif
 %(local_set2)s
     }
 
     void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::set_local_attribute_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<", value = " << std::to_string(value) << ")" << std::endl;
     #endif
 %(local_set3)s

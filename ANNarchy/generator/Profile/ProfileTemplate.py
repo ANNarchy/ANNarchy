@@ -16,7 +16,7 @@ profile_base_template = """#pragma once
 #include <math.h>
 %(timer_import)s
 
-#ifdef _DEBUG
+#ifndef NDEBUG
     #define debug_cout(x) (std::cout << x << std::endl)
 #else
     #define debug_cout(x)
@@ -379,7 +379,7 @@ extern class Profiling* prof_ptr;
     "run_post": """
     prof_ptr->evaluate();
         prof_ptr->store();
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "profiling results: " << std::endl;
         std::cout << *prof_ptr << std::endl;
     #endif

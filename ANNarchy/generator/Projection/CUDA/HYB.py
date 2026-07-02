@@ -12,7 +12,7 @@ launch_config = {
         _threads_per_block = 64;
         _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """,
@@ -25,7 +25,7 @@ launch_config = {
             _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """,
@@ -109,13 +109,13 @@ attribute_host_to_device = {
         // %(name)s: local
         if ( %(name)s_host_to_device )
         {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s->ell, %(name)s->ell.data(), %(name)s->ell.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             cudaMemcpy( gpu_%(name)s->coo, %(name)s->coo.data(), %(name)s->coo.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
@@ -175,7 +175,7 @@ rate_psp_kernel = {
                        /* result */
                        %(target_arg)s );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto ell_err = cudaGetLastError();
         if ( ell_err != cudaSuccess ) {
             std::cout << "cu_proj%(id_proj)s_psp (ELL-partition): " << cudaGetErrorString(ell_err) << std::endl;
@@ -195,7 +195,7 @@ rate_psp_kernel = {
                 %(target_arg)s
             );
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             auto err_coo = cudaGetLastError();
             if ( err_coo != cudaSuccess ) {
                 std::cout << "cu_proj%(id_proj)s_psp (COO-partition): " << cudaGetErrorString(err_coo) << std::endl;

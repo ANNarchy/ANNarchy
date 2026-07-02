@@ -135,7 +135,7 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      */
     template<typename VT, bool zero_based=true>
     std::vector<std::vector<VT>> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILInvMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         // create forward view
@@ -151,7 +151,7 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      *  @see LILMatrix::fixed_number_pre_pattern()
      */
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILInvMatrix::fixed_number_pre_pattern():" << std::endl;
     #endif
         // create forward view
@@ -165,7 +165,7 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
      *  @see LILMatrix::fixed_probability_pattern()
      */
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILInvMatrix::fixed_probability_pattern():" << std::endl;
     #endif
         // create forward view
@@ -192,7 +192,7 @@ class LILInvMatrix: public LILMatrix<IT, ST> {
 
     // Returns size in bytes for connectivity
     size_t size_in_bytes() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILInvMatrix::size_in_bytes(this=" << this << ")" << std::endl;
     #endif
         // constants

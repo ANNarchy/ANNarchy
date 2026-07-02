@@ -107,7 +107,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     void clear() override final {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::clear(this = " << this << ")" << std::endl;
     #endif
 %(clear_container)s
@@ -115,7 +115,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Memory transfers
     void host_to_device() {
-    #if defined(_TRACE_INIT) || defined(_DEBUG)
+    #if defined(_TRACE_INIT) || !defined(NDEBUG)
         std::cout << "  ProjStruct%(id_proj)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
     #endif    
 %(host_to_device)s
@@ -130,7 +130,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 attribute_template = {
     "local": """
     std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
     #endif
 %(local_get1)s
@@ -141,7 +141,7 @@ attribute_template = {
     }
 
     std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
     #endif
 %(local_get2)s
@@ -152,7 +152,7 @@ attribute_template = {
     }
 
     %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
     #endif
 %(local_get3)s
@@ -331,7 +331,7 @@ curand = {
         "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
         init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
             std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
@@ -346,7 +346,7 @@ curand = {
         "init": """
         cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
         init_curand_states( size, gpu_%(rd_name)s, global_seed );
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
             std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;

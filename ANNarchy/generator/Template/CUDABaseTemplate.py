@@ -95,7 +95,7 @@ void step();
 void initialize(const %(float_prec)s _dt) ;
 
 inline void setDevice(const int device_id) {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Setting device " << device_id << " as compute device ..." << std::endl;
 #endif
     cudaError_t err = cudaSetDevice(device_id);
@@ -284,7 +284,7 @@ void init_curand_states( int numBlocks, int numThreads, curandState* states, uns
     rng_setup_kernel<<< numBlocks, numThreads >>>( numBlocks * numThreads, sequence_offset, states, seed);
     sequence_offset += numBlocks * numThreads;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "init_curand_state: " << cudaGetErrorString(err) << std::endl;
@@ -397,13 +397,13 @@ void initialize(%(float_prec)s _dt) {
  *  Life-time management
  */
 void create_cpp_instances() {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Instantiate C++ objects ..." << std::endl;
 #endif
 }
 
 void destroy_cpp_instances() {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Destroy C++ objects ..." << std::endl;
 #endif
 }
@@ -559,7 +559,7 @@ void single_step()
 
 // Simulate the network for the given number of steps
 void run(const int nbSteps) {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "host to device transfers." << std::endl;
 #endif
 
@@ -567,7 +567,7 @@ void run(const int nbSteps) {
 
     stream_assign();
 
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "simulate " << nbSteps << " steps." << std::endl;
 #endif
 
@@ -593,14 +593,14 @@ int run_until(const int steps, std::vector<int> populations, bool or_and) {
 }
 
 void step() {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "host to device transfers." << std::endl;
 #endif
 %(host_device_transfer)s
 
     stream_assign();
 
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "simulate a single step." << std::endl;
 #endif
 
