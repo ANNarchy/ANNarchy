@@ -108,6 +108,11 @@ class TimedArray(SpecificPopulation):
                 "TimedArray: either *rates* or *geometry* argument must be set."
             )
 
+        if geometry is not None:
+            # Convert geometry into tuple for subsequent sanity check
+            if isinstance(geometry, int):
+                geometry = tuple([geometry])
+
         # Geometry of the population
         if rates is not None:
             if geometry is None:
@@ -115,7 +120,7 @@ class TimedArray(SpecificPopulation):
             else:
                 if geometry != rates.shape[1:]:
                     Messages.warning(
-                        "TimedArray: mismatch between *rates* and *geometry* dimensions detected."
+                        f"TimedArray: mismatch between *rates*={rates.shape} and *geometry*={geometry} dimensions detected."
                     )
 
         # Create input neuron type
