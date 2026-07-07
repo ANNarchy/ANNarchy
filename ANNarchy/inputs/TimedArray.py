@@ -161,7 +161,7 @@ class TimedArray(SpecificPopulation):
         rates: np.ndarray,
         schedule: float = None,
         period: float = None,
-        reset: bool = False,
+        reset: bool = True,
     ) -> None:
         """
         Set a new array of inputs.
@@ -171,7 +171,7 @@ class TimedArray(SpecificPopulation):
 
         :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
         :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
-        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates. If False, the simulation will continue with values of the provided rates at the position of the current internal timers.  Default: False.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
 
         Example:
 
@@ -226,15 +226,13 @@ class TimedArray(SpecificPopulation):
 
             tmp = [float(schedule * i) for i in range(rates.shape[0])]
             if not np.allclose(tmp, self.schedule):
-                # got a new schedule, we need to reset blocks
-                if self.initialized:
+                if self.initialized and reset:
                     self.reset()
             self.schedule = tmp
 
         else:
             if not np.allclose(schedule, self.schedule):
-                # got a new schedule, we need to reset blocks
-                if self.initialized:
+                if self.initialized and reset:
                     self.reset()
             self.schedule = schedule
 

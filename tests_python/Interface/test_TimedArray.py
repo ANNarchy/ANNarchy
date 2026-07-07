@@ -342,7 +342,7 @@ class test_TimedArrayUpdate(unittest.TestCase):
         and also the last input in the output population (from the 10th simulation step).
         """
         self._network.simulate(5)
-        self.input.update(self.overwrite_inputs)
+        self.input.update(self.overwrite_inputs, reset=False)
         self._network.simulate(6)
         numpy.testing.assert_allclose(
             self.output.sum("exc_1"), [2, 0, 0, 0, 0, 0, 0, 0, 0, 1]
@@ -387,7 +387,7 @@ class test_TimedArrayUpdate(unittest.TestCase):
         self._network.simulate(1)
         numpy.testing.assert_allclose(self.input2.r, self.initial_inputs[2])
         numpy.testing.assert_allclose(self.output.sum("exc_2"), self.initial_inputs[1])
-        self.input2.update(self.overwrite_inputs, schedule=2.0)
+        self.input2.update(self.overwrite_inputs, schedule=2.0, reset=False)
         numpy.testing.assert_allclose(self.input2.r, self.overwrite_inputs[2])
         numpy.testing.assert_allclose(
             self.output.sum("exc_2"), self.initial_inputs[1]
