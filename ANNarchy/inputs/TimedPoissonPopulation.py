@@ -156,6 +156,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
         :param schedule: list of times (in ms) where the firing rate should change.
         :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers.
         """
         # If period or schedule are not provided, use the existing ones
         if schedule is None:
