@@ -237,8 +237,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         :param tau: correlation time constant in ms.
         :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
         """
-        Messages.warning("HomogeneousCorrelatedSpikeTrains: an automatic reset has been introduced when updating the rates/schedule. More details on https://github.com/ANNarchy/ANNarchy/issues/47.")
-
         # either overwrite or reuse previous tau
         if tau is not None:
             self.tau = tau

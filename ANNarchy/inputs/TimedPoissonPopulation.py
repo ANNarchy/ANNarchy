@@ -157,10 +157,6 @@ class TimedPoissonPopulation(SpecificPopulation):
         :param schedule: list of times (in ms) where the firing rate should change.
         :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
         """
-        Messages.warning(
-            "TimedPoissonPopulation: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."
-        )
-
         # If period or schedule are not provided, use the existing ones
         if schedule is None:
             schedule = self.schedule
