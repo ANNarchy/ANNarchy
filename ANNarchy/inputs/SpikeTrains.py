@@ -226,6 +226,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         corr: float | list[float],
         schedule: list[float] = None,
         tau: float = None,
+        reset: bool = True
     ):
         """ """
         # either overwrite or reuse previous tau
@@ -257,6 +258,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             corr = list(corr)
         else:
             corr = [float(corr) for _ in range(len(schedule))]
+
+        # before update reset the internal timers
+        if self.initialized and reset:
+            self.reset()
 
         # store schedule
         self.schedule = schedule
