@@ -169,10 +169,6 @@ class TimedArray(SpecificPopulation):
         The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
         geometry is set during construction phase of the object.
 
-        :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
-        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
-
         Example:
 
         Set an input for the next 10 time steps:
@@ -205,6 +201,9 @@ class TimedArray(SpecificPopulation):
         inp.update(rates=inputs_b, schedule=2., period=20., reset=True) # inputs_b shape = (10, N)
         ```
 
+        :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers.
         """
         Messages.warning(
             "TimedArray: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."
@@ -214,10 +213,14 @@ class TimedArray(SpecificPopulation):
         if isinstance(rates, list):
             rates = np.array(rates)
 
-        # Sanity check: first dimension can not be empty
+        # Sanity check: first dimension can not be empty, other dimensions should equal geometry
         if rates.shape[0] == 0:
             Messages.error(
                 "TimedArray: the first dimension of the rates array should be larger than 0."
+            )
+        if self.geometry != rates.shape[1:]:
+            Messages.error(
+                f"TimedArray: mismatch between shape of given rates={rates.shape} (i.e., geometry={rates.shape[1:]}) and expected geometry={self.geometry}."
             )
 
         # If period or schedule not provided, use the existing ones
