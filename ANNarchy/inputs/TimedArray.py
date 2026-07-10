@@ -206,6 +206,15 @@ class TimedArray(SpecificPopulation):
         ```
 
         """
+        # Convert list[list|np.array] -> np.array
+        if isinstance(rates, list):
+            rates = np.array(rates)
+
+        # Sanity check: first dimension can not be empty
+        if rates.shape[0] == 0:
+            Messages.error(
+                "TimedArray: the first dimension of the rates array should be larger than 0."
+            )
 
         # If period or schedule not provided, use the existing ones
         if schedule is None:
@@ -334,6 +343,8 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+        assert(!buffer.empty());
+
         _buffer = buffer;
         if (_schedule[_block] > _t)
             r = _buffer[_block-1];
