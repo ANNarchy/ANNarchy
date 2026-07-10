@@ -148,7 +148,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         rates: np.ndarray,
         schedule: float = None,
         period: float = None,
-        reset: bool = False,
+        reset: bool = True,
     ) -> None:
         """
         Set new parameters for the timed poisson input population.
@@ -228,6 +228,8 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) {
+        assert(!buffer.empty());
+
         _buffer = buffer;
         if (_schedule[_block] > _t)
             r = _buffer[_block-1];
