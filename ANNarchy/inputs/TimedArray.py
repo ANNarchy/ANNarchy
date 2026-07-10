@@ -161,7 +161,7 @@ class TimedArray(SpecificPopulation):
         rates: np.ndarray,
         schedule: float = None,
         period: float = None,
-        reset: bool = True,
+        reset: bool = True
     ) -> None:
         """
         Set a new array of inputs.
@@ -206,6 +206,10 @@ class TimedArray(SpecificPopulation):
         ```
 
         """
+        Messages.warning(
+            "TimedArray: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."
+        )
+
         # Convert list[list|np.array] -> np.array
         if isinstance(rates, list):
             rates = np.array(rates)

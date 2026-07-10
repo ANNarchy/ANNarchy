@@ -228,7 +228,17 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         tau: float = None,
         reset: bool = True
     ):
-        """ """
+        """
+        Update the parameters of the homogeneous correlated spike trains.
+
+        :param rates: rate in Hz of the population (must be a float or a list of float)
+        :param corr: total correlation strength (float in [0, 1], or a list)
+        :param schedule: list of times where new values of ``rates``and ``corr``will be used to computre mu and sigma.
+        :param tau: correlation time constant in ms.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
+        """
+        Messages.warning("HomogeneousCorrelatedSpikeTrains: an automatic reset has been introduced when updating the rates/schedule. More details on https://github.com/ANNarchy/ANNarchy/issues/47.")
+
         # either overwrite or reuse previous tau
         if tau is not None:
             self.tau = tau
