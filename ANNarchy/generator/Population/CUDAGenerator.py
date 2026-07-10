@@ -330,7 +330,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Sanitiy check
         code += """
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err_clear = cudaGetLastError();
         if ( err_clear != cudaSuccess )
             std::cout << "Pop%(id)s::clear() - cudaFree: " << cudaGetErrorString(err_clear) << std::endl;
@@ -364,7 +364,7 @@ class CUDAGenerator(PopulationGenerator):
             code = """
     if ( pop%(id)s->_active ) {
 %(reset_code)s
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
             std::cout << "clear_sum: " << cudaGetErrorString(err) << std::endl;
@@ -497,7 +497,7 @@ class CUDAGenerator(PopulationGenerator):
             if (spike_count > 0) {
                 cudaMemcpy( last_spiked, gpu_spiked, spike_count * sizeof(int), cudaMemcpyDeviceToDevice);
 
-            #ifdef _DEBUG
+            #ifndef NDEBUG
                 auto err1 = cudaGetLastError();
                 if (err1 != cudaSuccess) {
                     std::cerr << "PopStruct%(id)s::update_delay() - spiked :" << cudaGetErrorString(err1) << std::endl;
@@ -508,7 +508,7 @@ class CUDAGenerator(PopulationGenerator):
             host_delayed_num_events.pop_back();
             host_delayed_num_events.push_front(spike_count);
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "PopStruct::update_delay() at t = " << t << std::endl;
             std::cout << "[";
             for (auto i = 0; i < host_delayed_num_events.size(); i++)
@@ -939,7 +939,7 @@ class CUDAGenerator(PopulationGenerator):
                     _spike_history[i].pop(); // Suppress spikes outside the window
                     r_host_to_device = true; // the queue changed the length
                 }
-                r[i] = _mean_fr_rate * %(float_prec)s{static_cast<int>(_spike_history[i].size())};
+                r[i] = _mean_fr_rate * static_cast<%(float_prec)s>(_spike_history[i].size());
             }
 
             // transfer to device
@@ -1690,13 +1690,13 @@ class CUDAGenerator(PopulationGenerator):
         // refractory
         if( refractory_dirty )
         {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "HtoD refractory ( pop%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
             refractory_dirty = false;
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
                 std::cout << "  error " << cudaGetErrorString(err) << std::endl;

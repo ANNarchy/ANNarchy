@@ -226,8 +226,19 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         corr: float | list[float],
         schedule: list[float] = None,
         tau: float = None,
+        reset: bool = True
     ):
-        """ """
+        """
+        Update the parameters of the homogeneous correlated spike trains.
+
+        :param rates: rate in Hz of the population (must be a float or a list of float)
+        :param corr: total correlation strength (float in [0, 1], or a list)
+        :param schedule: list of times where new values of ``rates``and ``corr``will be used to computre mu and sigma.
+        :param tau: correlation time constant in ms.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
+        """
+        Messages.warning("HomogeneousCorrelatedSpikeTrains: an automatic reset has been introduced when updating the rates/schedule. More details on https://github.com/ANNarchy/ANNarchy/issues/47.")
+
         # either overwrite or reuse previous tau
         if tau is not None:
             self.tau = tau
@@ -257,6 +268,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             corr = list(corr)
         else:
             corr = [float(corr) for _ in range(len(schedule))]
+
+        # before update reset the internal timers
+        if self.initialized and reset:
+            self.reset()
 
         # store schedule
         self.schedule = schedule
@@ -665,7 +680,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         // Reset old events
         clear_num_events<<< 1, 1, 0, pop%(id)s->stream >>>(pop%(id)s->gpu_spike_count);
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
         if (err_clear_num_events_%(id)s != cudaSuccess)
             std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
@@ -680,7 +695,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             pop%(id)s->gpu_rand_0,
             pop%(id)s->sigma
         );
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
             if( err_pop%(id)s_global_step != cudaSuccess) {
                 std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop%(id)s_global_step) << std::endl;
@@ -697,7 +712,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             pop%(id)s->gpu_spiked,
             pop%(id)s->gpu_last_spike
         );
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
         if(err_pop_spike_gather_%(id)s != cudaSuccess) {
             std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
@@ -707,7 +722,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         // transfer back the spike counter (needed by record)
         cudaMemcpy( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         cudaError_t err_pop%(id)s_async_copy = cudaGetLastError();
         if ( err_pop%(id)s_async_copy != cudaSuccess ) {
             std::cout << "record_spike_count: " << cudaGetErrorString(err_pop%(id)s_async_copy) << std::endl;
@@ -718,7 +733,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         // transfer back the spiked array (needed by record)
         if (pop%(id)s->spike_count > 0) {
             cudaMemcpy( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err_pop%(id)s_async_copy2 = cudaGetLastError();
             if ( err_pop%(id)s_async_copy2 != cudaSuccess ) {
                 std::cout << "record_spike: " << cudaGetErrorString(err_pop%(id)s_async_copy2) << std::endl;

@@ -386,7 +386,7 @@ void initialize(const %(py_float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
 #endif
     // sanity check
@@ -429,13 +429,13 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
  *  Life-time management
  */
 void create_cpp_instances() {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Instantiate C++ objects ..." << std::endl;
 #endif
 }
 
 void destroy_cpp_instances() {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Destroy C++ objects ..." << std::endl;
 #endif
 }
@@ -454,7 +454,7 @@ void setDt(const %(py_float_prec)s dt_) { dt=%(float_prec)s{dt_};}
  */
 void setNumberThreads(const int threads, const std::vector<int> core_list)
 {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Set new number of threads:" << threads << std::endl;
     if (!core_list.empty()) {
         std::cout << "Use thread placement: [";

@@ -90,7 +90,7 @@ class SELLMatrix {
      *  @brief      Destructor.
      */
     ~SELLMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrix::~SELLMatrix(this=" << this << ")" << std::endl;
     #endif
     }
@@ -99,7 +99,7 @@ class SELLMatrix {
      *  @brief      clear the contained data
      */
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrix::clear(this=" << this << ")" << std::endl;
     #endif
         num_blocks_ = 0;
@@ -283,7 +283,7 @@ class SELLMatrix {
      *  @brief      initialize connectivity based on a provided LIL representation.        
      */
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrix::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -392,7 +392,7 @@ class SELLMatrix {
             return false;
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         print_matrix_statistics();
         std::cout << "  created " << num_blocks_ << " blocks with " << block_size_ << " rows each" << std::endl;
         std::cout << "    min. size: " << min_block_length << std::endl;
@@ -432,7 +432,7 @@ class SELLMatrix {
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         auto variable = std::vector<VT>(mask_.size());
@@ -509,7 +509,7 @@ class SELLMatrix {
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT>& variable, const std::vector< std::vector<VT> >& data)
     {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrix::update_matrix_variable_all()" << std::endl;
     #endif
         if (data.size() != post_ranks_.size())

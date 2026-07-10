@@ -39,7 +39,7 @@ struct hyb_local_gpu {
     }
 
     void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "hyb_local_gpu::clear()" << std::endl;
     #endif
         cudaFree(ell);
@@ -67,13 +67,13 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
 
   public:
     explicit HYBMatrixCUDA(const IT num_rows, const IT num_columns): HYBMatrix<IT, ST, false>(num_rows, num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrixCUDA::HYBMatrixCUDA()" << std::endl;
     #endif
     }
 
     void clear() override{
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrixCUDA::clear()" << std::endl;
     #endif
         // call clear of partial matrices
@@ -90,7 +90,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
     }
 
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "HYBMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
         // Create matrix on host-side

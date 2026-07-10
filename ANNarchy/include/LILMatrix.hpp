@@ -257,7 +257,7 @@ class LILMatrix {
      */
     template<typename VT, bool zero_based=true>
     std::vector<std::vector<VT>> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -335,7 +335,7 @@ class LILMatrix {
      *  @returns    Whether the construction of the pattern was successfull.
      */
     bool all_to_all_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, bool allow_self_connections) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::all_to_all_pattern()" << std::endl;
         std::cout << " #rows: " << post_ranks.size() << std::endl;
         std::cout << " #columns: " << pre_ranks.size() << std::endl;
@@ -370,7 +370,7 @@ class LILMatrix {
      *  @returns    Whether the construction of the pattern was successfull.
      */
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
@@ -405,7 +405,7 @@ class LILMatrix {
      *  @returns    Whether the construction of the pattern was successfull.
      */
     bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
@@ -782,7 +782,7 @@ class LILMatrix {
      *  @returns    size in bytes for stored connectivity
      */
     virtual size_t size_in_bytes() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::size_in_bytes(this=" << this << ")" << std::endl;
     #endif
         size_t size = 2 * sizeof(IT);               // scalar values
@@ -826,7 +826,7 @@ class LILMatrix {
      * @see         CSRCMatrixT
      */
     LILMatrix<IT, ST>* transpose() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::transpose() - origin matrix ( " << num_rows_ << ", " << num_columns_ << " )" << std::endl;
     #endif
         auto transposed_matrix = new LILMatrix<IT, ST>(num_columns_, num_rows_);
@@ -854,7 +854,7 @@ class LILMatrix {
         if (this->nb_synapses() != transposed_matrix->nb_synapses())
             std::cerr << "Something went wrong during transpose: " << this->nb_synapses() << "!=" << transposed_matrix->nb_synapses() << std::endl;
 
-	#ifdef _DEBUG
+	#ifndef NDEBUG
         std::cout << "Original post_rank.size() = " << this->post_rank.size() << std::endl;
         std::cout << "Transposed post_rank.size() = " << transposed_matrix->post_rank.size() << std::endl;
 	#endif

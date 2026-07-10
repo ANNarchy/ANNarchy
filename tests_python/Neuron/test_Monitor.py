@@ -376,7 +376,7 @@ class test_PopulationMonitorND(unittest.TestCase):
 
     def test_r_sim_10(self):
         """
-        Tests the recording of the variable *r* of a *Population* of 3 neurons
+        Tests the recording of the variable *r* of a *Population* of 3x5 neurons
         for 10 time steps.
         """
         self._network.simulate(10)
@@ -389,14 +389,33 @@ class test_PopulationMonitorND(unittest.TestCase):
         data_m = self._m.get()
         numpy.testing.assert_allclose(data_m["r"], target_res)
 
+    def test_r_sim_10_no_reshape(self):
+        """
+        Tests the recording of the variable *r* of a *Population* of 3x5 neurons
+        for 10 time steps.
+
+        Since ANNarchy 5.0, we automatically reshape the flattened data into
+        population geometry. This test covers the storage of the flattened values.
+        """
+        self._network.simulate(10)
+
+        # [time, pop.geometry]
+        target_res = numpy.ndarray((10, 3*5))
+        for i in range(10):
+            target_res[i, :] = i
+
+        data_m = self._m.get(reshape=False)
+        numpy.testing.assert_allclose(data_m["r"], target_res)
+
     def test_r_sim_10_popview(self):
         """
         Tests the recording of the variable *r* of a *Population* of 3 neurons
         for 10 time steps.
+
+        Note that, usage of PopulationView always leed to flattened return.
         """
         self._network.simulate(10)
 
-        # PopulationView leads to flattened return
         target_res = numpy.ndarray((10, 5))
         for i in range(10):
             target_res[i, :] = i

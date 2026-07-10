@@ -59,7 +59,7 @@ protected:
      *  @brief      Decode the column indices for nonzeros in the matrix.
      */
     virtual std::vector<IT> decode_column_indices(IT row_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::decode_column_indices(rk_post = "<< row_idx <<")" << std::endl;
     #endif
         auto indices = std::vector<IT>();
@@ -94,7 +94,7 @@ public:
         // we check if we can encode all possible values
         assert( (static_cast<long long>(num_rows_ * num_columns_) < static_cast<long long>(std::numeric_limits<ST>::max())) );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::DenseMatrixBitmask(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
         std::cout << "  using per row " << this->num_mask_cols_ <<  " mask entries that encodes " << this->mask_size_ << " matrix elements each." << std::endl;
     #endif
@@ -106,7 +106,7 @@ public:
      *              framework should never be destroyed by the base pointer.
      */
     ~DenseMatrixBitmask() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::~DenseMatrixBitmask()" << std::endl;
     #endif
     }
@@ -117,7 +117,7 @@ public:
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -291,7 +291,7 @@ public:
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::init_matrix_variable()" << std::endl;
         std::cout << "  using constant value " << default_value << std::endl;
     #endif
@@ -324,7 +324,7 @@ public:
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
@@ -360,7 +360,7 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixBitmask::update_matrix_variable_all()" << std::endl;
     #endif
         // sanity check: target large enough?

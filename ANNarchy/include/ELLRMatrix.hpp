@@ -89,14 +89,14 @@ public:
      */
     explicit ELLRMatrix(const IT num_rows, const IT num_columns):
         dense_num_rows_(num_rows), dense_num_columns_(num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::ELLRMatrix()" << std::endl;
     #endif
     }
 
     ELLRMatrix(ELLRMatrix<IT, ST, row_major>* other):
         dense_num_rows_(other->dense_num_rows_), dense_num_columns_(other->dense_num_columns_) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::copy constructor"<< std::endl;
     #endif
         this->maxnzr_ = other->maxnzr_;
@@ -110,13 +110,13 @@ public:
      *  @details    responsible to delete the allocated GPU memory.
      */
     ~ELLRMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::~ELLRMatrix()" << std::endl;
     #endif
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -243,7 +243,7 @@ public:
      *  @todo       Currently we ignore post_ranks ...
      */
     bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -304,7 +304,7 @@ public:
                 }
             }
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "created ELLRMatrix:" << std::endl;
         this->print_matrix_statistics();
     #endif
@@ -391,7 +391,7 @@ public:
     //  ANNarchy connectivity patterns
     //
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz_per_row: " << nnz_per_row << std::endl;
@@ -414,7 +414,7 @@ public:
     }
 
     bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
@@ -444,7 +444,7 @@ public:
      */
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
@@ -472,7 +472,7 @@ public:
 
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ")" << std::endl;
     #endif
         check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
@@ -507,7 +507,7 @@ public:
 
     template <typename VT>
     std::vector<VT> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
     #endif
         check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));

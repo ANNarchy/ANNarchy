@@ -318,7 +318,7 @@ __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
     if ( pop%(id)s->_active ) {
         cuda_max_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
         cudaMemcpy(&pop%(id)s->_max_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto glob_%(op)s_pop%(id)s_err = cudaGetLastError();
         if (glob_%(op)s_pop%(id)s_err != cudaSuccess)
             std::cerr << "Global operation '%(op)s' (PopStruct%(id)s): " <<  << std::endl;

@@ -57,7 +57,7 @@ class BSRMatrixBitmask {
 
     // Attention: this function returns the LIL indices, this easier for the following processing
     std::vector<std::vector<IT>> split_row_indices(std::vector<IT>& row_indices, IT nb_block_rows) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::split_row_indices()" << std::endl;
     #endif
         assert( (row_indices.size() <= this->num_rows_) );
@@ -80,7 +80,7 @@ class BSRMatrixBitmask {
      */
     explicit BSRMatrixBitmask(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
         num_rows_(num_rows), num_columns_(num_columns), tile_size_(tile_size), bitmask_size_(sizeof(MT)*8) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::BSRMatrixBitmask(num_rows=" << num_rows << ", num_columns=" << num_columns << ", tile_size=" << tile_size << ", bitmask_=" << bitmask_size_ << ")" << std::endl;
     #endif
             // HD: this limitation is a consequence of the current implementation.
@@ -88,13 +88,13 @@ class BSRMatrixBitmask {
     }
 
     ~BSRMatrixBitmask() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::~BSRMatrixBitmask()" << std::endl;
     #endif
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -151,7 +151,7 @@ class BSRMatrixBitmask {
     //
 
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -165,7 +165,7 @@ class BSRMatrixBitmask {
         IT nb_block_rows = IT(ceil(double(this->num_rows_) / double(this->tile_size_)));
         IT nb_blocks_per_row = IT(ceil(double(this->num_columns_) / double(this->tile_size_)));
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Theoretical max. dimension: " << nb_block_rows << " x " << nb_blocks_per_row << " with tile dimension: " << tile_size_ << " x " << tile_size_ << std::endl;
     #endif
 
@@ -267,7 +267,7 @@ class BSRMatrixBitmask {
             total_blocks += total_blocks_in_row;
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "  Created " << total_blocks << " of " << nb_block_rows * nb_blocks_per_row << " possible." << std::endl;
         std::cout << "  i.e.," << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << " elements allocated." << std::endl;
     #endif
@@ -428,7 +428,7 @@ class BSRMatrixBitmask {
      */
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         if (!check_free_memory(this->num_tile_elems_ * sizeof(VT))) {
@@ -496,7 +496,7 @@ class BSRMatrixBitmask {
 
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::update_matrix_variable_all()" << std::endl;
     #endif
         // Sanity checks
@@ -512,7 +512,7 @@ class BSRMatrixBitmask {
 
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::update_matrix_variable_row(lil_idx = " << lil_idx << ")" << std::endl;
     #endif
         IT b_r_idx = post_ranks_[lil_idx] / tile_size_;
@@ -541,7 +541,7 @@ class BSRMatrixBitmask {
 
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::update_matrix_variable(lil_idx = " << lil_idx << ", column_idx = " << column_idx << ")" << std::endl;
     #endif
         IT row_idx = post_ranks_[lil_idx];
@@ -633,7 +633,7 @@ class BSRMatrixBitmask {
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "BSRMatrixBitmask::get_matrix_variable(lil_idx = " << lil_idx << ", column_idx = " << col_idx << ")" << std::endl;
     #endif
         IT row_idx = post_ranks_[lil_idx];

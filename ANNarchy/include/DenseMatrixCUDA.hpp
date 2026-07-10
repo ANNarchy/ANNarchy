@@ -46,7 +46,7 @@ protected:
     MT* gpu_mask_;
 
     void free_device_memory() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::free_device_memory()" << std::endl;
     #endif
         if (gpu_mask_) {
@@ -60,7 +60,7 @@ protected:
     }
 
     bool host_to_device() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::host_to_device()" << std::endl;
     #endif
         //
@@ -87,7 +87,7 @@ protected:
 public:
 
     explicit DenseMatrixCUDA(const IT num_rows, const IT num_columns): DenseMatrix<IT, ST, MT, row_major>(num_rows, num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::DenseMatrixCUDA()" << std::endl;
     #endif
         gpu_mask_ = nullptr;
@@ -99,7 +99,7 @@ public:
      *              framework should never be destroyed by the base pointer.
      */
     ~DenseMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::~DenseMatrixCUDA()" << std::endl;
     #endif
     }
@@ -114,7 +114,7 @@ public:
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host side
@@ -125,7 +125,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
 
@@ -139,7 +139,7 @@ public:
     }
 
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
@@ -154,7 +154,7 @@ public:
     //
     template <typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
         size_t num_dense_elem = this->num_rows_ * this->num_columns_;
@@ -174,7 +174,7 @@ public:
 
     template <typename VT>
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "DenseMatrixCUDA::init_vector_variable_gpu()" << std::endl;
     #endif
         assert( (this->num_rows_ == host_variable.size()) );

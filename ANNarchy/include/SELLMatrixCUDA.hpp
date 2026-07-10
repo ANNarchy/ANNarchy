@@ -35,7 +35,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      *  Default constructor
      */
     explicit SELLMatrixCUDA<IT,ST>(const IT num_rows, const IT num_columns, const IT block_size) : SELLMatrix<IT,ST, false>(num_rows, num_columns, block_size) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrixCUDA::SELLMatrixCUDA(this=" << this << ")" << std::endl;
     #endif
         d_row_ptr = nullptr;
@@ -46,7 +46,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      *  Initialize host side with other sliced ELLPACK instance (host side)
      */
     /*SELLMatrixCUDA<IT,ST>(SELLMatrix<IT, ST, false>* other) : SELLMatrix<IT,ST, false>(other) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cout << "SELLMatrixCUDA::copy constructor" << std::endl;
     #endif
         host_to_device_transfer();
@@ -56,7 +56,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      *  @brief      Destructor
      */
     ~SELLMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "SELLMatrixCUDA::~SELLMatrixCUDA(this=" << this << ")" << std::endl;
     #endif
     }
@@ -66,7 +66,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
      *  @details    should be called before destructor.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cout << "SELLMatrixCUDA::clear(this=" << this << ")" << std::endl;
     #endif
         // clear host
@@ -96,7 +96,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         assert((post_ranks.size() == pre_ranks.size()));
         assert((post_ranks.size() > 0));
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cout << "SELLMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -108,7 +108,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     }
 
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cout << "SELLMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
     #endif
         // Initialization on host side
@@ -122,7 +122,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
 
     /*
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cout << "SELLMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
@@ -138,7 +138,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
 
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT>& host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
             std::cerr << "SELLMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
@@ -149,7 +149,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         // Allocate
         VT* new_variable;
         cudaMalloc((void**)&new_variable, size_in_bytes);
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto malloc_err = cudaGetLastError();
         if (malloc_err != cudaSuccess)
             std::cerr << "SELLMatrixCUDA::init_matrix_variable_gpu<>() - allocate: " << cudaGetErrorString(malloc_err) << std::endl;
@@ -158,7 +158,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
         // Copy
         cudaMemcpy(new_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto memcpy_err = cudaGetLastError();
         if (memcpy_err != cudaSuccess)
             std::cerr << "SELLMatrixCUDA::init_matrix_variable_gpu<>() - memcpy: " << cudaGetErrorString(memcpy_err) << std::endl;

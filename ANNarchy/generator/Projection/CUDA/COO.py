@@ -13,7 +13,7 @@ launch_config = {
         unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """,
@@ -27,7 +27,7 @@ launch_config = {
             _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """,
@@ -119,12 +119,12 @@ attribute_host_to_device = {
         // %(name)s: local
         if ( %(name)s_host_to_device )
         {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
@@ -135,12 +135,12 @@ attribute_host_to_device = {
         // %(name)s: semiglobal
         if ( %(name)s_host_to_device )
         {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_dendrites() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
@@ -151,12 +151,12 @@ attribute_host_to_device = {
         // %(name)s: global
         if ( %(name)s_host_to_device )
         {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
@@ -169,11 +169,11 @@ attribute_device_to_host = {
     "local": """
         // %(name)s: local
         if ( %(name)s_device_to_host < t ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
@@ -184,11 +184,11 @@ attribute_device_to_host = {
     "semiglobal": """
         // %(name)s: semiglobal
         if ( %(name)s_device_to_host < t ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->nb_dendrites() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
@@ -199,11 +199,11 @@ attribute_device_to_host = {
     "global": """
         // %(name)s: global
         if ( %(name)s_device_to_host < t ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( &%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
@@ -254,7 +254,7 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
             %(target_arg)s
         );
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
             std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;

@@ -555,13 +555,13 @@ class Monitor:
         """Returns the value of a variable with the given name."""
 
         if isinstance(self.object, PopulationView):
-            return self._get_population(self.object, name, keep)
+            return self._get_population(name, keep)
 
         elif isinstance(self.object, Population):
             if not reshape or name == "spike":
-                return self._get_population(self.object, name, keep)
+                return self._get_population(name, keep)
             return np.reshape(
-                self._get_population(self.object, name, keep),
+                self._get_population(name, keep),
                 (-1,) + self.object.geometry,
             )
 
@@ -658,7 +658,7 @@ class Monitor:
                 "Monitor.save: File type not recognized (Must be .hdf5 or .npy)."
             )
 
-    def _get_population(self, pop, name, keep):
+    def _get_population(self, name, keep):
         try:
             data = getattr(self.cyInstance, name)
             if not keep:

@@ -178,7 +178,7 @@ class PartitionedMatrix {
             }
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "PartitionedMatrix: created " << num_partitions << " partitions with partition borders:" << std::endl;
         for (int t = 0; t < num_partitions; t++) {
             std::cout << "  partition " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
@@ -199,7 +199,7 @@ class PartitionedMatrix {
      */
     template<typename VT, typename PART_TYPE, bool zero_based=true>
     std::vector<PART_TYPE> init_matrix_from_csv(const std::string filename, const IT num_partitions, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -268,7 +268,7 @@ class PartitionedMatrix {
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::vector<std::mt19937>& rng, const unsigned int num_partitions) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ParallelLIL::fixed_number_pre_pattern():" << std::endl;
     #endif
         // determine partitions
@@ -298,7 +298,7 @@ class PartitionedMatrix {
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::vector<std::mt19937>& rng, const unsigned int num_partitions) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ParallelLIL::fixed_probability_pattern():" << std::endl;
     #endif
         // determine partitions
@@ -348,7 +348,7 @@ class PartitionedMatrix {
 
     template <typename VT, typename PART_TYPE>
     std::vector< PART_TYPE > init_matrix_variable_uniform(VT a, VT b, std::vector<std::mt19937>& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
 
@@ -371,7 +371,7 @@ class PartitionedMatrix {
 
     template <typename VT, typename PART_TYPE>
     std::vector< PART_TYPE > init_matrix_variable_normal(VT mean, VT sigma, std::vector<std::mt19937>& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
     #endif
 

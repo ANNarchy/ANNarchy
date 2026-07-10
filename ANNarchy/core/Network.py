@@ -526,6 +526,7 @@ class Network(metaclass=NetworkMeta):
         annarchy_json: str = "",
         silent: bool = False,
         debug_build: bool = False,
+        trace_calls: str = None,
         profile_enabled: bool = False,
     ) -> None:
         """
@@ -539,12 +540,17 @@ class Network(metaclass=NetworkMeta):
         :param annarchy_json: compiler flags etc are stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
         :param silent: defines if the "Compiling... OK" should be printed.
 
+        The following arguments are mostly intended for debugging purposes:
+
+        :param debug_build: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
+        :param trace_calls: if set to *init*, *simulate*, or *both* simulation calls inside of the C++ kernel are logged to console (default: None).
         """
         Compiler.compile(
             directory=directory,
             clean=clean,
             silent=silent,
             debug_build=debug_build,
+            trace_calls=trace_calls,
             add_sources=add_sources,
             extra_libs=extra_libs,
             compiler=compiler,

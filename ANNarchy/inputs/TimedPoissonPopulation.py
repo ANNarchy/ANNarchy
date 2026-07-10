@@ -148,7 +148,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         rates: np.ndarray,
         schedule: float = None,
         period: float = None,
-        reset: bool = False,
+        reset: bool = True
     ) -> None:
         """
         Set new parameters for the timed poisson input population.
@@ -157,6 +157,10 @@ class TimedPoissonPopulation(SpecificPopulation):
         :param schedule: list of times (in ms) where the firing rate should change.
         :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
         """
+        Messages.warning(
+            "TimedPoissonPopulation: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."
+        )
+
         # If period or schedule are not provided, use the existing ones
         if schedule is None:
             schedule = self.schedule
@@ -228,6 +232,8 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) {
+        assert(!buffer.empty());
+
         _buffer = buffer;
         if (_schedule[_block] > _t)
             r = _buffer[_block-1];
@@ -613,7 +619,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // Reset old events
     clear_num_events<<< 1, 1, 0, pop%(id)s->stream >>>(pop%(id)s->gpu_spike_count);
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
     if(err_clear_num_events_%(id)s != cudaSuccess)
         std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
@@ -628,7 +634,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         pop%(id)s->gpu_spiked,
         pop%(id)s->gpu_last_spike
     );
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
     if(err_pop_spike_gather_%(id)s != cudaSuccess)
         std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
@@ -636,7 +642,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // transfer back the spike counter (needed by record)
     cudaMemcpyAsync( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
-#ifdef _DEBUG
+#ifndef NDEBUG
     cudaError_t err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
@@ -644,7 +650,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
     // transfer back the spiked array (needed by record)
     cudaMemcpyAsync( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
-#ifdef _DEBUG
+#ifndef NDEBUG
     err = cudaGetLastError();
     if ( err != cudaSuccess )
         std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;

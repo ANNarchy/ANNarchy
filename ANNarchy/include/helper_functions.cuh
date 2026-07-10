@@ -35,7 +35,7 @@ inline bool check_free_memory_cuda(size_t required) {
 
     size_t gpu_free, gpu_total;
     cudaMemGetInfo( &gpu_free, &gpu_total );
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Allocate " << required << " and have " << gpu_free << "( " << (double(required)/double(gpu_total)) * 100.0 << " percent of total memory)" << std::endl;
 #endif
 

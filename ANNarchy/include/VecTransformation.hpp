@@ -47,7 +47,7 @@ std::vector<VT> transform_2d_to_1d(std::vector<std::vector<VT>> data) {
  */
 template<typename VT>
 std::vector<VT> transform_3d_to_1d(std::vector<std::vector<std::vector<VT>>> data) {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Flatting 3-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << ")" << std::endl;
 #endif
     std::vector<VT> result;
@@ -57,7 +57,7 @@ std::vector<VT> transform_3d_to_1d(std::vector<std::vector<std::vector<VT>>> dat
             result.insert(result.end(), it2->begin(), it2->end());
         }
     }
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
 #endif
     result.shrink_to_fit(); // ensure that size == capacity
@@ -73,7 +73,7 @@ std::vector<VT> transform_3d_to_1d(std::vector<std::vector<std::vector<VT>>> dat
  */
 template<typename VT>
 std::vector<VT> transform_4d_to_1d(std::vector<std::vector<std::vector<std::vector<VT>>>> data) {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Flatting 4-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << "," << data[0][0][0].size() << ")" << std::endl;
 #endif
     std::vector<VT> result;
@@ -85,7 +85,7 @@ std::vector<VT> transform_4d_to_1d(std::vector<std::vector<std::vector<std::vect
             }
         }
     }
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
 #endif
     result.shrink_to_fit(); // ensure that size == capacity
@@ -101,7 +101,7 @@ std::vector<VT> transform_4d_to_1d(std::vector<std::vector<std::vector<std::vect
  */
 template<typename VT>
 std::vector<VT> transform_5d_to_1d(std::vector<std::vector<std::vector<std::vector<std::vector<VT>>>>> data) {
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "Flatting 5-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << "," << data[0][0][0].size() << "," << data[0][0][0][0].size() << ")" << std::endl;
 #endif
     std::vector<VT> result;
@@ -115,7 +115,7 @@ std::vector<VT> transform_5d_to_1d(std::vector<std::vector<std::vector<std::vect
             }
         }
     }
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
 #endif
     result.shrink_to_fit(); // ensure that size == capacity

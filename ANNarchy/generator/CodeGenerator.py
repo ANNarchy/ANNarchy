@@ -515,7 +515,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
                     """__device__ __constant__ %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value) {
     cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(float_prec)s), 0, cudaMemcpyHostToDevice);
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "set global constant %(name)s = " << value << std::endl;
     if ( err != cudaSuccess )
         std::cerr << cudaGetErrorString(err) << std::endl;

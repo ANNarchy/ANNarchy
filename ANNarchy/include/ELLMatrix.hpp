@@ -92,7 +92,7 @@ class ELLMatrix {
      */
     explicit ELLMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns), zero_marker_(std::numeric_limits<IT>::max()) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::default constructor"<< std::endl;
     #endif
         // Ensure that the data type can represent all possible indices
@@ -108,7 +108,7 @@ class ELLMatrix {
      */
     ELLMatrix(ELLMatrix<IT, ST, row_major>* other):
         num_rows_(other->num_rows_), num_columns_(other->num_columns_), zero_marker_(std::numeric_limits<IT>::max()) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::copy constructor"<< std::endl;
     #endif
         // Ensure that the data type can represent all possible indices
@@ -125,7 +125,7 @@ class ELLMatrix {
      *  @brief      Destructor.
      */
     ~ELLMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::~ELLMatrix()" << std::endl;
     #endif
     }
@@ -136,7 +136,7 @@ class ELLMatrix {
      *              the STL containers and resets ELLMatrix::maxnzr_
      */
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
@@ -288,7 +288,7 @@ class ELLMatrix {
      *  @todo       Currently we ignore post_ranks ...
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "received " << post_ranks.size() << " rows." << std::endl;
     #endif
@@ -308,7 +308,7 @@ class ELLMatrix {
             }
         }
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Determined maxnzr = " << maxnzr_ << std::endl;
     #endif
 
@@ -347,7 +347,7 @@ class ELLMatrix {
                 }
             }
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "created ELLMatrix:" << std::endl;
         this->print_matrix_statistics();
     #endif
@@ -437,7 +437,7 @@ class ELLMatrix {
      */
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
@@ -473,7 +473,7 @@ class ELLMatrix {
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << nb_synapses() << std::endl;
     #endif
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
@@ -509,7 +509,7 @@ class ELLMatrix {
      */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "ELLMatrix::update_matrix_variable_all()" << std::endl;
     #endif
         assert( (post_ranks_.size() == data.size()) );

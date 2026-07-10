@@ -108,6 +108,11 @@ class TimedArray(SpecificPopulation):
                 "TimedArray: either *rates* or *geometry* argument must be set."
             )
 
+        if geometry is not None:
+            # Convert geometry into tuple for subsequent sanity check
+            if isinstance(geometry, int):
+                geometry = tuple([geometry])
+
         # Geometry of the population
         if rates is not None:
             if geometry is None:
@@ -115,7 +120,7 @@ class TimedArray(SpecificPopulation):
             else:
                 if geometry != rates.shape[1:]:
                     Messages.warning(
-                        "TimedArray: mismatch between *rates* and *geometry* dimensions detected."
+                        f"TimedArray: mismatch between *rates*={rates.shape} and *geometry*={geometry} dimensions detected."
                     )
 
         # Create input neuron type
@@ -156,7 +161,7 @@ class TimedArray(SpecificPopulation):
         rates: np.ndarray,
         schedule: float = None,
         period: float = None,
-        reset: bool = False,
+        reset: bool = True
     ) -> None:
         """
         Set a new array of inputs.
@@ -166,7 +171,7 @@ class TimedArray(SpecificPopulation):
 
         :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
         :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
-        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates. If False, the simulation will continue with values of the provided rates at the position of the current internal timers.  Default: False.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
 
         Example:
 
@@ -201,6 +206,19 @@ class TimedArray(SpecificPopulation):
         ```
 
         """
+        Messages.warning(
+            "TimedArray: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."
+        )
+
+        # Convert list[list|np.array] -> np.array
+        if isinstance(rates, list):
+            rates = np.array(rates)
+
+        # Sanity check: first dimension can not be empty
+        if rates.shape[0] == 0:
+            Messages.error(
+                "TimedArray: the first dimension of the rates array should be larger than 0."
+            )
 
         # If period or schedule not provided, use the existing ones
         if schedule is None:
@@ -221,15 +239,13 @@ class TimedArray(SpecificPopulation):
 
             tmp = [float(schedule * i) for i in range(rates.shape[0])]
             if not np.allclose(tmp, self.schedule):
-                # got a new schedule, we need to reset blocks
-                if self.initialized:
+                if self.initialized and reset:
                     self.reset()
             self.schedule = tmp
 
         else:
             if not np.allclose(schedule, self.schedule):
-                # got a new schedule, we need to reset blocks
-                if self.initialized:
+                if self.initialized and reset:
                     self.reset()
             self.schedule = schedule
 
@@ -331,6 +347,8 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+        assert(!buffer.empty());
+
         _buffer = buffer;
         if (_schedule[_block] > _t)
             r = _buffer[_block-1];
@@ -359,7 +377,7 @@ class TimedArray(SpecificPopulation):
 
         self._specific_template["update_variables"] = """
         if(_active) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
 
@@ -399,7 +417,7 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
@@ -466,7 +484,7 @@ class TimedArray(SpecificPopulation):
         if(_active){
             #pragma omp single
             {
-            #ifdef _DEBUG
+            #ifndef NDEBUG
                 std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
             #endif
 
@@ -549,7 +567,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template["access_additional"] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::string arg_str = "";
         for (auto it = schedule.begin(); it != schedule.end(); it++)
             arg_str += std::to_string(*it) + ' ';
@@ -560,12 +578,12 @@ class TimedArray(SpecificPopulation):
     std::vector<int> get_schedule() { return _schedule; }
 
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_buffer(buffer = " << std::to_string(buffer.size()) << " x " << std::to_string(buffer[0].size()) << " container)" << std::endl;
     #endif
         // clear a previous allocated container.
         if ( !_gpu_buffer.empty() ) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "  clear previously allocated buffers ..." << std::endl;
         #endif
             for (auto it = _gpu_buffer.begin(); it != _gpu_buffer.begin(); it++) {
@@ -620,7 +638,7 @@ class TimedArray(SpecificPopulation):
         cudaMemcpy( r.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);
         r_device_to_host = t;
 
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_buffer() - current r: [ ";
         for(auto it = r.begin(); it != r.end(); it++)
             std::cout << *it << " ";
@@ -640,7 +658,7 @@ class TimedArray(SpecificPopulation):
     }
 
     void set_period(int period) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "TimedArray%(id)s::set_period(period="<<std::to_string(period)<<")" << std::endl;
     #endif
         _period = period;
@@ -671,7 +689,7 @@ class TimedArray(SpecificPopulation):
         # we switch the GPU buffer which is read out in each time step
         self._specific_template["update_variables"] = """
         if(_active) {
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
             // Check if it is time to set the input
@@ -710,7 +728,7 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-        #ifdef _DEBUG
+        #ifndef NDEBUG
             std::cout << "TimedArray%(id)s::update() - current r: [ ";
             auto tmp = std::vector<double>(size);
             cudaMemcpy( tmp.data(), gpu_r, size*sizeof(double), cudaMemcpyDeviceToHost);

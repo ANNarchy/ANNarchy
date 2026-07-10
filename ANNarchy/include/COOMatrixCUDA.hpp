@@ -94,7 +94,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         for (auto it = tmp_segments.begin(); it != tmp_segments.end(); it++) {
             segments_.push_back(segments_.back()+*it);
         }
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Using " << segments_.size()-1 << " segments of size = " << SEGMENT_SIZE << std::endl;
         for (auto i = 0; i < segments_.size()-1; i++) {
             std::cout << "chunk[" << i << "]:" << segments_[i] << "-" << segments_[i+1] << " ( " << segments_[i+1] - segments_[i] << " entries)" << std::endl;
@@ -119,7 +119,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     }
 
     COOMatrixCUDA<IT, ST, SEGMENT_SIZE>( COOMatrix<IT, ST>* other ) : COOMatrix<IT, ST>( other ) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrixCUDA::copy constructor"<< std::endl;
     #endif
         compute_segments();
@@ -131,7 +131,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
      *  @brief      Destructor
      */
     ~COOMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrixCUDA::~COOMatrixCUDA()" << std::endl;
     #endif
     }
@@ -141,7 +141,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
      *  @details    should be called before destructor.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
@@ -176,7 +176,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     }
 
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
@@ -191,7 +191,7 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "COOMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
 

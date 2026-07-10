@@ -32,14 +32,14 @@ protected:
     bool check_free_device_memory(size_t required) {
         size_t free, total;
         cudaMemGetInfo( &free, &total );
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
         return (required < free);
     }
 
     void free_device_memory() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDAT::host_to_device()" << std::endl;
     #endif
         // CSR forward view
@@ -78,7 +78,7 @@ protected:
     }
 
     bool host_to_device_transfer() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDAT::host_to_device()" << std::endl;
     #endif
         //
@@ -151,7 +151,7 @@ public:
      *  @brief      Destructor
      */
     ~CSRCMatrixCUDAT() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDAT::~CSRCMatrixCUDAT()" << std::endl;
     #endif
     }
@@ -161,7 +161,7 @@ public:
      *  @details    should be called before destructor.
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDAT::clear()" << std::endl;
     #endif
         // clear host
@@ -172,7 +172,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrixCUDAT::init_matrix_from_lil() " << std::endl;
     #endif
 

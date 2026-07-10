@@ -83,7 +83,7 @@ inline bool check_free_memory(size_t required) {
 
     fclose(meminfo);
     size_t available = static_cast<size_t>(ram) * 1024;
-#ifdef _DEBUG
+#ifndef NDEBUG
     std::cout << "  we will allocate on CPU " << required << " from " << available << " bytes " << std::endl;
 #endif
 

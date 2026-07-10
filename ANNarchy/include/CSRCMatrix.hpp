@@ -50,7 +50,7 @@ public:
      *  \details    Destroys only components which belongs to backward view.
      */
     ~CSRCMatrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::~CSRCMatrix()" << std::endl;
     #endif
     }
@@ -59,7 +59,7 @@ public:
      * \details     Clear the STL container
      */
     void clear() override {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::clear()" << std::endl;
     #endif
         // clear forward view
@@ -94,7 +94,7 @@ public:
      *  @see        LILMatrix::init_matrix_from_lil(), CSRMatrix::init_matrix_from_lil()
      */
     bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::init_matrix_from_lil():" << std::endl;
     #endif
         // create forward view
@@ -114,7 +114,7 @@ public:
      */
     template<typename VT, bool zero_based=true>
     std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "LILInvMatrix::init_matrix_from_csv()" << std::endl;
     #endif
         // create forward view
@@ -130,7 +130,7 @@ public:
     //  ANNarchy connectivity patterns
     //
     bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
@@ -146,7 +146,7 @@ public:
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::fixed_probability_pattern():" << std::endl;
     #endif
 
@@ -162,7 +162,7 @@ public:
     }
 
     void inverse_connectivity_matrix() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRCMatrix::inverse_connectivity_matrix()" << std::endl;
     #endif
         //
@@ -213,7 +213,7 @@ public:
         } else {
         #if defined(_DEBUG_CONN)
             print_data_representation(2, true);
-        #elif defined(_DEBUG)
+        #elif !defined(NDEBUG)
             print_data_representation(2, false);
         #endif
         }

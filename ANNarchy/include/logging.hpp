@@ -27,10 +27,16 @@
 // Log almost all function calls, this includes in particular the CPP template library.
 #define LOG_LEVEL_TRACE     2
 
+// Check if any trace-related flag has been set
+#if defined(_TRACE_INIT) || \
+    defined(_TRACE_SIMULATION_STEPS)
+    #define TRACE_ENABLED
+#endif
+
 // dependent on the set compiler flags, we set the debug level
-#if defined(_TRACE_INIT) || defined (_TRACE_SIMULATION_STEPS)
+#if defined(TRACE_ENABLED)
     #define CURRENT_LOG_LEVEL LOG_LEVEL_TRACE
-#elif defined(_DEBUG)
+#elif !defined(NDEBUG)
     #define CURRENT_LOG_LEVEL LOG_LEVEL_DEBUG
 #else
     #define CURRENT_LOG_LEVEL LOG_LEVEL_NO_LOG

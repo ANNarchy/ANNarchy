@@ -30,7 +30,7 @@ class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
 protected:
 
     void free_device_memory() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::free_device_memory()" << std::endl;
     #endif
         if (gpu_post_rank) {
@@ -53,7 +53,7 @@ protected:
     }
 
     bool host_to_device() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::host_to_device()" << std::endl;
     #endif
         //
@@ -95,7 +95,7 @@ public:
     IT* gpu_pre_rank;
 
     CSRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::CSRMatrixCUDA()" << std::endl;
     #endif
         gpu_row_ptr = nullptr;
@@ -108,13 +108,13 @@ public:
      *  @details    responsible to delete the allocated GPU memory.
      */
     ~CSRMatrixCUDA() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::~CSRMatrixCUDA()" << std::endl;
     #endif
     }
 
     virtual void clear() {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
@@ -125,7 +125,7 @@ public:
     }
 
     bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
 
@@ -139,7 +139,7 @@ public:
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
     #endif
         // Initialization on host side
@@ -150,7 +150,7 @@ public:
     }
 
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
@@ -165,7 +165,7 @@ public:
     //
     template <typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
         assert( (this->nb_synapses() == host_variable.size()) );
@@ -189,7 +189,7 @@ public:
 
     template <typename VT>
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
-    #ifdef _DEBUG
+    #ifndef NDEBUG
         std::cout << "CSRMatrixCUDA::init_vector_variable_gpu()" << std::endl;
     #endif
         assert( (this->post_ranks_.size() == host_variable.size()) );
