@@ -5,13 +5,13 @@
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
+
 from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.generator.Compiler import extra_libs
 from ANNarchy.intern import Messages
 
 try:
     from PIL import Image
-except:
+except ImportError:
     Messages.warning(
         "The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations."
     )
@@ -184,10 +184,6 @@ class VideoPopulation(ImagePopulation):
 
     def _generate(self):
         "Code generation"
-        # Add corresponding libs to the Makefile
-        extra_libs.append(
-            "`pkg-config opencv" + str(self.opencv_version) + " --cflags --libs`"
-        )
 
         # Include opencv
         self._specific_template["include_additional"] = """#include <opencv2/opencv.hpp>

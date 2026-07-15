@@ -3,14 +3,15 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+import subprocess
+import sys
+import shutil
+
 from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
-
-import re
-import subprocess
-import sys
 
 
 def sort_odes(desc, locality="local"):
@@ -437,10 +438,37 @@ def remove_trailing_spaces(code):
 
     return stripped_code
 
+#####################################################################
+#   Tools & Dependencies
+#####################################################################
+def detect_cython():
+    """
+    Detect cython compiler and return absolute path.
+    """
+    # Check cython version
+    with subprocess.Popen(
+        sys.base_prefix
+        + "/bin/cython%(major)s -V > /dev/null 2> /dev/null"
+        % {"major": str(sys.version_info[0])},
+        shell=True,
+    ) as test:
+        if test.wait() != 0:
+            cython = sys.base_prefix + "/bin/cython"
+        else:
+            cython = sys.base_prefix + "/bin/cython" + str(sys.version_info[0])
+    # If not in the same folder as python, use the default
+    with subprocess.Popen(
+        "%(cython)s -V > /dev/null 2> /dev/null" % {"cython": cython}, shell=True
+    ) as test:
+        if test.wait() != 0:
+            cython = shutil.which("cython" + str(sys.version_info[0]))
+            if cython is None:
+                cython = shutil.which("cython")
+                if cython is None:
+                    Messages.error("Unable to detect the path to cython.")
 
-#####################################################################
-#   Hardware-related
-#####################################################################
+    return cython
+
 def check_cuda_version(nvcc_executable):
     """
     Some features like atomic add for double values and power function are dependent on the CUDA version.
@@ -458,7 +486,37 @@ def check_cuda_version(nvcc_executable):
 
     return version
 
+def detect_cuda_arch():
+    """
+    For best performance, the compute compability should be mentioned to the compiler. CMake > 3.18 also enforces the
+    setting of the compute-compability (see "cmake --help-policy CMP0104" for more details).
+    """
+    # I don't know ...
+    if sys.platform.startswith("darwin"):
+        return ""
 
+    try:
+        # check nvidia-smi for GPU details (only available for CUDA SDK > 11.6)
+        query_result = subprocess.check_output(
+            "nvidia-smi --query-gpu=compute_cap --format=csv", shell=True
+        )
+    except:
+        return ""
+
+    # bytes to string conversion, the result contains compute_cap\nCC for each gpu\n
+    query_result = query_result.decode("utf-8").split("\n")
+
+    # NVIDIA and it's version numbering ...
+    CC = int(float(query_result[1]) * 10)
+    return """
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES {})
+    endif()
+""".format(CC)
+
+#####################################################################
+#   Hardware-related
+#####################################################################
 def check_and_apply_pow_fix(eqs, cuda_version):
     """
     CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
