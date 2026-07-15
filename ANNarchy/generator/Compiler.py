@@ -3,13 +3,16 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import os, sys, importlib
+import os
+import sys
+import importlib
 import subprocess
 import shutil
 import multiprocessing
 import time
 import json
 import numpy as np
+from packaging.version import parse as parse_version
 
 # ANNarchy core informations
 import ANNarchy
@@ -24,17 +27,14 @@ from ANNarchy.intern.ConfigManagement import (
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
+from ANNarchy.extensions.image.ImagePopulation import VideoPopulation
+
 from ANNarchy.generator.Template.CMakeTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure, check_experimental_features
 from ANNarchy.generator.Utils import check_cuda_version
+
 from ANNarchy.parser.report.Report import report
-
-from packaging.version import parse as parse_version
-
-# String containing the extra libs which can be added by extensions
-# e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
-extra_libs = []
 
 
 def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
@@ -737,8 +737,11 @@ class Compiler(object):
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
-        for lib in extra_libs:
-            libs += str(lib) + " "
+        for pop in NetworkManager().get_network(self.net_id).get_populations():
+            if isinstance(pop, VideoPopulation):
+                libs += " `pkg-config opencv" + str(pop.opencv_version) + " --cflags --libs` "
+                # stop searching, don't add multiple times
+                break
 
         if ConfigManager().get("paradigm", self.net_id) == "cuda":
             set_cuda_arch = detect_cuda_arch()
@@ -810,6 +813,7 @@ class Compiler(object):
         with open(
             self.annarchy_dir + "/generate/net" + str(self.net_id) + "/CMakeLists.txt",
             "w",
+            encoding="utf-8"
         ) as wfile:
             wfile.write(makefile_template % makefile_flags)
 
