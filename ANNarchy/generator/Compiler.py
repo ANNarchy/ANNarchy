@@ -32,7 +32,7 @@ from ANNarchy.extensions.image.ImagePopulation import VideoPopulation
 from ANNarchy.generator.Template.CMakeTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure, check_experimental_features
-from ANNarchy.generator.Utils import check_cuda_version
+from ANNarchy.generator.Utils import check_cuda_version, detect_cuda_arch
 
 from ANNarchy.parser.report.Report import report
 
@@ -113,8 +113,11 @@ def compile(
     :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
     :param silent: defines if status message like "Compiling... OK" should be printed.
     """
+    # Get the network to compile
+    network = NetworkManager().get_network(net_id)
+
     # Check if the network has already been compiled
-    if NetworkManager().get_network(net_id).compiled:
+    if network.compiled:
         print(
             "compile(): the network has already been compiled, doing nothing."
         )
@@ -139,7 +142,7 @@ def compile(
 
     # check if profiling enabled due compile() or --profile
     if profile_enabled or options.profile is not None:
-        NetworkManager().get_network(net_id)._profiler = Profiler(
+        network._profiler = Profiler(
             profile_out="." if options.profile_out is None else options.profile_out,
             net_id=net_id,
         )
@@ -223,8 +226,76 @@ def compile(
         net_id=net_id,
     )
 
+    if ConfigManager().get("verbose", net_id):
+        t0 = time.time()
+        net_str = "" if net_id == 0 else str(net_id) + " "
+        print("Code generation " + net_str + "...", end=" ", flush=True)
+
+    # Check that everything is allright in the structure of the network.
+    check_structure(network.get_populations(), network.get_projections())
+
+    # check if the user access some new features, or old ones which changed.
+    check_experimental_features(network.get_populations(), network.get_projections())
+
     # Code Generation
-    compiler.generate()
+    compiler.code_generation()
+
+    # Generate the Makefile
+    compiler.generate_makefile()
+
+    # Copy the files if needed
+    changed = compiler.copy_files()
+
+    # Code generation done
+    if ConfigManager().get("verbose", net_id):
+        t1 = time.time()
+        if not ConfigManager().get("show_time", net_id):
+            print("OK", flush=True)
+        else:
+            print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
+
+    # Shared libraries have os-dependent suffixes
+    if sys.platform.startswith("linux"):
+        lib_path = annarchy_dir + "/ANNarchyWrapper" + str(net_id) + ".so"
+    elif sys.platform.startswith("darwin"):
+        lib_path = annarchy_dir + "/ANNarchyWrapper" + str(net_id) + ".dylib"
+    else:
+        raise NotImplementedError
+
+    # Profile: compilation
+    if network._profiler is not None or ConfigManager().get("show_time", net_id):
+        t0 = time.time()
+        if network._profiler is not None:
+            network._profiler.add_entry(t0, t0, "overall", "compile")
+
+    # Perform compilation if something has changed or no library exists
+    if changed or not os.path.isfile(lib_path):
+        compiler.compilation(lib_path)
+
+    # Set the compilation directory in the networks
+    if ConfigManager().get("debug", net_id) or ConfigManager().get(
+        "disable_shared_library_time_offset", net_id
+    ):
+        # In case of debugging or high-throughput simulations we want to
+        # disable the trick below
+        network.directory = annarchy_dir
+    else:
+        # Store the library in random subfolder
+        # We circumvent with this an issue with reloading of shared libraries
+        # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
+        directory = annarchy_dir + "/run_" + str(time.time())
+        os.mkdir(directory)
+        shutil.copy(lib_path, directory)
+        network.directory = directory
+
+    # Tell the networks they have been compiled
+    network.compiled = True
+
+    if network._profiler is not None:
+        t1 = time.time()
+        network._profiler.update_entry(
+            t0, t1, "overall", "compile"
+        )
 
     if ConfigManager().get("verbose", net_id):
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id) + " "
@@ -246,64 +317,6 @@ def compile(
     # Create a report if requested
     if options.report is not None:
         report(options.report)
-
-
-def detect_cython():
-    """
-    Detect cython compiler and return absolute path.
-    """
-    # Check cython version
-    with subprocess.Popen(
-        sys.base_prefix
-        + "/bin/cython%(major)s -V > /dev/null 2> /dev/null"
-        % {"major": str(sys.version_info[0])},
-        shell=True,
-    ) as test:
-        if test.wait() != 0:
-            cython = sys.base_prefix + "/bin/cython"
-        else:
-            cython = sys.base_prefix + "/bin/cython" + str(sys.version_info[0])
-    # If not in the same folder as python, use the default
-    with subprocess.Popen(
-        "%(cython)s -V > /dev/null 2> /dev/null" % {"cython": cython}, shell=True
-    ) as test:
-        if test.wait() != 0:
-            cython = shutil.which("cython" + str(sys.version_info[0]))
-            if cython is None:
-                cython = shutil.which("cython")
-                if cython is None:
-                    Messages.error("Unable to detect the path to cython.")
-
-    return cython
-
-
-def detect_cuda_arch():
-    """
-    For best performance, the compute compability should be mentioned to the compiler. CMake > 3.18 also enforces the
-    setting of the compute-compability (see "cmake --help-policy CMP0104" for more details).
-    """
-    # I don't know ...
-    if sys.platform.startswith("darwin"):
-        return ""
-
-    try:
-        # check nvidia-smi for GPU details (only available for CUDA SDK > 11.6)
-        query_result = subprocess.check_output(
-            "nvidia-smi --query-gpu=compute_cap --format=csv", shell=True
-        )
-    except:
-        return ""
-
-    # bytes to string conversion, the result contains compute_cap\nCC for each gpu\n
-    query_result = query_result.decode("utf-8").split("\n")
-
-    # NVIDIA and it's version numbering ...
-    CC = int(float(query_result[1]) * 10)
-    return """
-    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-      set(CMAKE_CUDA_ARCHITECTURES {})
-    endif()
-""".format(CC)
 
 
 class Compiler(object):
@@ -339,9 +352,6 @@ class Compiler(object):
         self.profile_enabled = profile_enabled
         self.net_id = net_id
 
-        # Network to compile
-        self.network = NetworkManager().get_network(net_id)
-
         # Aside from arguments provided to compile, some configuration is stored in annarchy.json
         if len(path_to_json) == 0:
             # check home-directory
@@ -376,83 +386,6 @@ class Compiler(object):
 
             self.cuda_config["cuda_version"] = check_cuda_version(
                 self.user_config["cuda"]["compiler"]
-            )
-
-    def generate(self):
-        "Perform the code generation for the C++ code and create the Makefile."
-
-        if NetworkManager().get_network(
-            self.net_id
-        )._profiler is not None or ConfigManager().get("show_time", self.net_id):
-            t0 = time.time()
-            if NetworkManager().get_network(self.net_id)._profiler is not None:
-                NetworkManager().get_network(self.net_id)._profiler.add_entry(
-                    t0, t0, "overall", "compile"
-                )
-
-        if ConfigManager().get("verbose", self.net_id):
-            net_str = "" if self.net_id == 0 else str(self.net_id) + " "
-            print("Code generation " + net_str + "...", end=" ", flush=True)
-
-        # Check that everything is allright in the structure of the network.
-        check_structure(self.network.get_populations(), self.network.get_projections())
-
-        # check if the user access some new features, or old ones which changed.
-        check_experimental_features(
-            self.network.get_populations(), self.network.get_projections()
-        )
-
-        # Generate the code
-        self.code_generation()
-
-        # Generate the Makefile
-        self.generate_makefile()
-
-        # Copy the files if needed
-        changed = self.copy_files()
-
-        # Code generation done
-        if ConfigManager().get("verbose", self.net_id):
-            t1 = time.time()
-            if not ConfigManager().get("show_time", self.net_id):
-                print("OK", flush=True)
-            else:
-                print("OK (took " + str(t1 - t0) + " seconds)", flush=True)
-
-        # Shared libraries have os-dependent suffixes
-        if sys.platform.startswith("linux"):
-            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".so"
-        elif sys.platform.startswith("darwin"):
-            lib_path = self.annarchy_dir + "/ANNarchyWrapper" + str(self.net_id) + ".dylib"
-        else:
-            raise NotImplementedError
-
-        # Perform compilation if something has changed
-        if changed or not os.path.isfile(lib_path):
-            self.compilation()
-
-        # Set the compilation directory in the networks
-        if ConfigManager().get("debug", self.net_id) or ConfigManager().get(
-            "disable_shared_library_time_offset", self.net_id
-        ):
-            # In case of debugging or high-throughput simulations we want to
-            # disable the trick below
-            self.network.directory = self.annarchy_dir
-        else:
-            # Store the library in random subfolder
-            # We circumvent with this an issue with reloading of shared libraries
-            # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
-            directory = self.annarchy_dir + "/run_" + str(time.time())
-            self.network.directory = directory
-            os.mkdir(directory)
-            shutil.copy(lib_path, directory)
-
-        # Tell the networks they have been compiled
-        self.network.compiled = True
-        if NetworkManager().get_network(self.net_id)._profiler is not None:
-            t1 = time.time()
-            NetworkManager().get_network(self.net_id)._profiler.update_entry(
-                t0, t1, "overall", "compile"
             )
 
     def copy_files(self):
@@ -560,7 +493,7 @@ class Compiler(object):
 
         return changed
 
-    def compilation(self):
+    def compilation(self, lib_path):
         """Create ANNarchyWrapper.so and py extensions if something has changed."""
         # STDOUT
         if not self.silent:
