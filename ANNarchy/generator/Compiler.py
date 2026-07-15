@@ -108,6 +108,7 @@ def compile(
     :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
     :param compiler_flags: platform-specific flags to pass to the compiler. Defaults are defined in annarchy.json: "-march=native -O3".
+    :param extra_libs: list of strings containing the extra libs which can be added by extensions, e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
     :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
     :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
     :param silent: defines if status message like "Compiling... OK" should be printed.
@@ -171,7 +172,7 @@ def compile(
 
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     if os.path.isfile(annarchy_dir + "/release"):
-        with open(annarchy_dir + "/release", "r") as rfile:
+        with open(annarchy_dir + "/release", "r", encoding="utf-8") as rfile:
             prev_release = rfile.read().strip()
             prev_paradigm = ""
 
@@ -195,7 +196,7 @@ def compile(
 
     # Check if the last compilation was successful
     if os.path.isfile(annarchy_dir + "/compilation"):
-        with open(annarchy_dir + "/compilation", "r") as rfile:
+        with open(annarchy_dir + "/compilation", "r", encoding="utf-8") as rfile:
             res = rfile.read()
             if res.strip() == "0":  # the last compilation failed
                 clean = True
@@ -346,7 +347,7 @@ class Compiler(object):
             # check home-directory
             if os.path.exists(os.path.expanduser("~/.config/ANNarchy/annarchy.json")):
                 with open(
-                    os.path.expanduser("~/.config/ANNarchy/annarchy.json"), "r"
+                    os.path.expanduser("~/.config/ANNarchy/annarchy.json"), "r", encoding="utf-8"
                 ) as rfile:
                     self.user_config = json.load(rfile)
             else:
@@ -361,7 +362,7 @@ class Compiler(object):
 
         else:
             # Load user-defined annarchy.json
-            with open(path_to_json, "r") as rfile:
+            with open(path_to_json, "r", encoding="utf-8") as rfile:
                 self.user_config = json.load(rfile)
 
         # Sanity check if the NVCC compiler is available
@@ -521,10 +522,6 @@ class Compiler(object):
 
                     if ConfigManager().get("verbose", self.net_id):
                         print(file, "has changed")
-                        # For debugging
-                        # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, 'r') as rfile:
-                        #     text = rfile.read()
-                        #     print(text)
 
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for file in os.listdir(self.annarchy_dir + "/build/net" + str(self.net_id)):
@@ -629,9 +626,9 @@ class Compiler(object):
 
         # Check for errors
         if make_process.wait() != 0:
-            with open("compile_stderr.log", "r") as rfile:
+            with open("compile_stderr.log", "r", encoding="utf-8") as rfile:
                 msg = rfile.read()
-            with open(self.annarchy_dir + "/compilation", "w") as wfile:
+            with open(self.annarchy_dir + "/compilation", "w", encoding="utf-8") as wfile:
                 wfile.write("0")
             print(msg)
             try:
@@ -646,7 +643,7 @@ class Compiler(object):
             Messages.error("Compilation failed.")
 
         else:  # Note that the last compilation was successful
-            with open(self.annarchy_dir + "/compilation", "w") as wfile:
+            with open(self.annarchy_dir + "/compilation", "w", encoding="utf-8") as wfile:
                 wfile.write("1")
 
         # Return to the current directory
