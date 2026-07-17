@@ -22,6 +22,9 @@ class PopulationGenerator(object):
         self._prof_gen = profile_generator
         self._net_id = net_id
 
+        # will be overwritten by child constructor
+        self._templates = {}
+
     def header_struct(self, pop, annarchy_dir):
         """
         Generate the c-style struct definition for a population object.
