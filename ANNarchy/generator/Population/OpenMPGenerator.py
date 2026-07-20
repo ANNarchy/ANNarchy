@@ -25,12 +25,18 @@ from ANNarchy.generator.Population.OpenMPTemplates import openmp_templates
 
 class OpenMPGenerator(PopulationGenerator):
     """
-    Generate the header for a Population object to run either on single core
-    or multi-cores with OpenMP.
+    Generate the header for a Population object to run on multiple cores
+    using OpenMP.
     """
 
     def __init__(self, profile_generator, net_id):
-        super(OpenMPGenerator, self).__init__(profile_generator, net_id)
+        """
+        Constructor.
+        """
+        super().__init__(profile_generator, net_id)
+
+        # Select the correct base templates.
+        self._templates = deepcopy(openmp_templates)
 
     ##################################################
     # Main method
@@ -45,8 +51,6 @@ class OpenMPGenerator(PopulationGenerator):
             * generate the codes for population header
             * fill the dictionary with call codes (return)
         """
-        self._templates = deepcopy(openmp_templates)
-
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables = self._generate_decl_and_acc(pop)
 
@@ -258,6 +262,7 @@ class OpenMPGenerator(PopulationGenerator):
             + str(pop.id)
             + ".hpp",
             "w",
+            encoding="utf-8"
         ) as ofile:
             ofile.write(code)
 

@@ -24,12 +24,18 @@ from ANNarchy.generator.Population.SingleThreadTemplates import single_thread_te
 
 class SingleThreadGenerator(PopulationGenerator):
     """
-    Generate the header for a Population object to run either on single core
-    or multi-cores with OpenMP.
+    Generate the header for a Population object to run on a single core,
+    potentially using SIMD of OpenMP.
     """
 
     def __init__(self, profile_generator, net_id):
-        super(SingleThreadGenerator, self).__init__(profile_generator, net_id)
+        """
+        Constructor.
+        """
+        super().__init__(profile_generator, net_id)
+
+        # Select the correct base templates.
+        self._templates = deepcopy(single_thread_templates)
 
     ##################################################
     # Main method
@@ -44,8 +50,6 @@ class SingleThreadGenerator(PopulationGenerator):
             * generate the codes for population header
             * fill the dictionary with call codes (return)
         """
-        self._templates = deepcopy(single_thread_templates)
-
         # Generate declaration snippets for all parameters and variables
         declaration_parameters_variables = self._generate_decl_and_acc(pop)
 
@@ -257,6 +261,7 @@ class SingleThreadGenerator(PopulationGenerator):
             + str(pop.id)
             + ".hpp",
             "w",
+            encoding="utf-8"
         ) as ofile:
             ofile.write(code)
 

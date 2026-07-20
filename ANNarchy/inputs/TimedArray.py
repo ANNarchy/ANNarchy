@@ -116,8 +116,14 @@ class TimedArray(SpecificPopulation):
         # Geometry of the population
         if rates is not None:
             if geometry is None:
+                # Sanity check
+                if np.any(np.array(rates.shape[1:])==0):
+                    Messages.error(
+                        f"TimedArray: the 2nd to last dimensions are interpreted as geometry, therefore all dimensions must be greater than 0, but you provided {rates.shape}"
+                    )
                 geometry = rates.shape[1:]
             else:
+                # Sanity check
                 if geometry != rates.shape[1:]:
                     Messages.warning(
                         f"TimedArray: mismatch between *rates*={rates.shape} and *geometry*={geometry} dimensions detected."

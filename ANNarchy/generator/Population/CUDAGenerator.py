@@ -30,16 +30,20 @@ class CUDAGenerator(PopulationGenerator):
     """
 
     def __init__(self, cuda_version, profile_generator, net_id):
-        super(CUDAGenerator, self).__init__(profile_generator, net_id)
+        """
+        Constructor.
+        """
+        super().__init__(profile_generator, net_id)
+
         self._cuda_version = cuda_version
+        # Select the correct base templates.
+        self._templates = deepcopy(cuda_templates)
 
     def header_struct(self, pop, annarchy_dir):
         """
         Specialized implementation of PopulationGenerator.header_struct() for
         generation of a CUDA header.
         """
-        self._templates = deepcopy(cuda_templates)
-
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables = self._generate_decl_and_acc(pop)
 
@@ -247,6 +251,7 @@ class CUDAGenerator(PopulationGenerator):
             + str(pop.id)
             + ".hpp",
             "w",
+            encoding="utf-8"
         ) as ofile:
             ofile.write(code)
 
