@@ -109,7 +109,7 @@ class NanoBindGenerator:
             )
 
         # default data type used for floating values.
-        default_float_type = ConfigManager().get("default_dtype", self.net_id)
+        default_float_type = ConfigManager().get("dtype", self.net_id)
 
         # Model attributes
         for attr in pop.neuron_type.description["attributes"]:
