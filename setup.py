@@ -7,7 +7,7 @@ import subprocess
 import numpy
 
 from setuptools import setup, Extension
-from setuptools.command.build import build
+from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
 
 
@@ -211,7 +211,7 @@ extensions = [
 ]
 
 
-class CustomizedBuild(build):
+class CustomizedBuildExt(build_ext):
     """
     Customization of the build process.
     """
@@ -235,8 +235,9 @@ class CustomizedBuild(build):
         create_config()
 
         print("Building Cython Extensions ...")
-        # perform default behavior
-        build.run(self)  # NEVER call super, it breaks everything!
+
+        # continue default processing
+        super().run()
 
 
 # PyExtension stuff remains here while the rest of metadata is contained in
@@ -244,5 +245,5 @@ class CustomizedBuild(build):
 setup(
     ext_modules=cythonize(extensions, language_level=int(sys.version_info[0])),
     package_data={"ANNarchy": package_data},
-    cmdclass={"build": CustomizedBuild},
+    cmdclass={"build_ext": CustomizedBuildExt},
 )
