@@ -248,6 +248,19 @@ class TimedArray(SpecificPopulation):
                     self.reset()
             self.schedule = tmp
 
+        elif len(schedule)==1:
+            # schedule step size must be at least one step
+            if float(schedule[0]) <= 0.0:
+                schedule = ConfigManager().get("dt", self.net_id)
+            else:
+                schedule = schedule[0]
+
+            tmp = [float(schedule * i) for i in range(rates.shape[0])]
+            if not np.allclose(tmp, self.schedule):
+                if self.initialized and reset:
+                    self.reset()
+            self.schedule = tmp
+
         else:
             if not np.allclose(schedule, self.schedule):
                 if self.initialized and reset:

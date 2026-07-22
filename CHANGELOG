@@ -1,3 +1,18 @@
+**5.0.3**
+
+Breaking Changes:
+* new default for update(.., reset=True) of timed containers, such as TimedArray. See #47 for more details, the user is also informed by a warning.
+* new interface to define default float precision: instead of precision="double" it is now dtype=float64 (more details in commit 8b3aafe)
+
+New/Changed features:
+* added sanity checks, e.g., population accessors (commit 1f5d6f9) and TimedArray(commit d414de8, ac23f70)
+* refactored compilation process
+
+Bugfixes:
+* type error occuring during connect from file (commit 451d773)
+* global config file (annarchy.json) stored in ~/.config was not updated anymore (commit 31539af)
+* command line argument --debug was ignored (commit ef6ee37)
+
 **5.0.2**
 
 * added the generalized integrate-and-fire neuron as described in Schwalger et al. (2017) to default models.

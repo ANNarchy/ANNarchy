@@ -22,7 +22,7 @@ default_config = dict(
     visible_cores=[],
     paradigm="openmp",
     # Datatype-related
-    default_dtype=float64,
+    dtype=float64,
     only_int_idx_type=True,
     # Logging
     verbose=False,
@@ -109,7 +109,7 @@ class ConfigManager:
         If the key does not exist, a terminating exception is raised.
         """
         if key == "precision":
-            return self._config[net_id]["default_dtype"].cpp_decl_type
+            return self._config[net_id]["dtype"].cpp_decl_type
 
         if key in self.keys():
             return self._config[net_id][key]
@@ -179,7 +179,7 @@ def setup(**keyValueArgs):
             Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)..."
             )
-        if "default_dtype" in keyValueArgs:
+        if "dtype" in keyValueArgs:
             Messages.warning(
                 "setup(): populations or projections have already been created at the global level. Changing default dtype for attributes now might lead to strange behaviors..."
             )
