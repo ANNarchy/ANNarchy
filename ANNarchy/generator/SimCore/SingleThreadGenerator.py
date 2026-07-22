@@ -56,7 +56,7 @@ class SingleThreadGenerator(SimCoreGenerator):
         custom_constant = self._header_custom_constants()
 
         # data type used for floating values.
-        float_type = ConfigManager().get("default_dtype", self._net_id)
+        float_type = ConfigManager().get("dtype", self._net_id)
 
         header_code = SingleThreadBaseTemplate.header_template % {
             "float_prec": float_type.cpp_decl_type,
@@ -191,7 +191,7 @@ void set_%(name)s(%(float_prec)s value);"""
         custom_constant, _ = self._body_custom_constants()
 
         # data type used for floating values.
-        float_type = ConfigManager().get("default_dtype", self._net_id)
+        float_type = ConfigManager().get("dtype", self._net_id)
 
         # code fields for openMP/single thread template
         base_dict = {
@@ -314,7 +314,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
         _, custom_constant = self._body_custom_constants()
 
         return SingleThreadBaseTemplate.initialize_template % {
-            "cpp_float_prec": ConfigManager().get("default_dtype", self._net_id).cpp_decl_type,
+            "cpp_float_prec": ConfigManager().get("dtype", self._net_id).cpp_decl_type,
             "prof_init": profiling_init,
             "pop_init": population_init,
             "proj_init": projection_init,

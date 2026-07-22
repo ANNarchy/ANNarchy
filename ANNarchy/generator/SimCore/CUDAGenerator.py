@@ -57,7 +57,7 @@ class CUDAGenerator(SimCoreGenerator):
         custom_constant = self._header_custom_constants()
 
         # data type used for floating values.
-        float_type = ConfigManager().get("default_dtype", self._net_id)
+        float_type = ConfigManager().get("dtype", self._net_id)
 
         # kernel declaration
         invoke_kernel_def = ""
@@ -465,7 +465,7 @@ void set_%(name)s(%(float_prec)s value) {
         init_tpl = CUDABaseTemplate.host_initialize_template
 
         return init_tpl % {
-            "cpp_float_prec": ConfigManager().get("default_dtype", self._net_id).cpp_decl_type,
+            "cpp_float_prec": ConfigManager().get("dtype", self._net_id).cpp_decl_type,
             "prof_init": profiling_init,
             "pop_init": population_init,
             "proj_init": projection_init,

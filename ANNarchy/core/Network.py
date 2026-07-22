@@ -1006,7 +1006,7 @@ class Network(metaclass=NetworkMeta):
         * `dt`: simulation step size in milliseconds (default: 1.0).
         * `paradigm`: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
         * `method`: default method to numerize the ODEs. Default is the explicit forward Euler method ('explicit').
-        * `default_dtype`: default data type used for attributes in ANNarchy. Accepted values, available on the top-level of the ANNarchy package: float32 or float64 (default: float64).
+        * `dtype`: default data type used for attributes in ANNarchy. Accepted values, available on the top-level of the ANNarchy package: float32 or float64 (default: float64).
         * `structural_plasticity`: allows synapses to be dynamically added/removed during the simulation (default: False).
         * `seed`: the seed (integer) to be used in the random number generators (default = None is equivalent to time(NULL)).
         * `num_threads`: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
@@ -1027,7 +1027,7 @@ class Network(metaclass=NetworkMeta):
         """
         # ANNarchy 4.x interface
         if 'precision' in kwargs.keys():
-            Messages.error("The precision flag has been replaced by 'default_dtype'. Note that the arguments has changed too!")
+            Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
 
         # RNG-related arguments are treated differently
         rng_changed = False
