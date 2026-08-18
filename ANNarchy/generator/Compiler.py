@@ -316,7 +316,10 @@ def compile(
 
     # Create a report if requested
     if options.report is not None:
-        report(options.report)
+        report(
+            network=NetworkManager().get_network(net_id=compiler.net_id),
+            filename=options.report
+        )
 
 
 class Compiler(object):
