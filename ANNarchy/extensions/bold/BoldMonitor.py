@@ -3,21 +3,20 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Population import Population
-from ANNarchy.core.Monitor import Monitor
-from ANNarchy.core import Global
+import inspect
+
+from ANNarchy.core.PopulationView import PopulationView
+
+from ANNarchy.extensions.bold.BoldModel import BoldModel
+from ANNarchy.extensions.bold.AccProjection import AccProjection
+from ANNarchy.extensions.bold.PredefinedModels import balloon_RN
+
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
-from .BoldModel import BoldModel
-from .PredefinedModels import balloon_RN
-from .AccProjection import AccProjection
 
-import inspect
-
-
-class BoldMonitor(object):
+class BoldMonitor:
     """
     Monitors the BOLD signal for several populations using a computational model.
 
@@ -41,7 +40,7 @@ class BoldMonitor(object):
         self.net_id = net_id
 
         if bold_model is None:
-            bold_model = bold.balloon_RN
+            bold_model = balloon_RN
 
         # instantiate if necessary, please note that population will make a deepcopy on this objects
         if inspect.isclass(bold_model):
@@ -72,6 +71,8 @@ class BoldMonitor(object):
             normalize_input = [normalize_input] * len(populations)
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
+        if any(isinstance(pop, PopulationView) for pop in populations):
+            Messages.error("Using BOLD monitors and PopulationViews as recording target is not allowed.")
 
         if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
