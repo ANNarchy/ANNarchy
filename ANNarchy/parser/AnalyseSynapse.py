@@ -535,7 +535,7 @@ def analyse_synapse(synapse, net_id):
                 print(eq)
                 if variable in description["pre_spike"]:
                     Messages.error("It is forbidden to use ODEs in a pre_spike term.")
-                elif variable in description["posz_spike"]:
+                elif variable in description["post_spike"]:
                     Messages.error("It is forbidden to use ODEs in a post_spike term.")
                 else:
                     Messages.error("It is forbidden to use ODEs here.")
