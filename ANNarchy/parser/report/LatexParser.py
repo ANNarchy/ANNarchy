@@ -77,7 +77,6 @@ def _process_neuron_equations(neuron, net_id):
         "Normal": sp.Function(r"\mathcal{N}"),
         "ite": sp.Function(r"ite", nargs=3),
     }
-
     for att in attributes:
         local_dict[att] = sp.Symbol(_latexify_name(att, variable_names))
 
@@ -410,7 +409,7 @@ class CustomLatexPrinter(LatexPrinter):
         For ite(), pos() and neg() only.
         """
         func = expr.func.__name__
-        args = [str(print(arg)) for arg in expr.args]
+        args = [self._print(arg) for arg in expr.args]
 
         if func == "ite":
             return r"""
