@@ -1,5 +1,6 @@
 from .BoldModel import BoldModel
 from .BoldMonitor import BoldMonitor
+from .BoldMonitorFromSlices import BoldMonitorFromSlices
 from .PredefinedModels import (
     balloon_maith2021,
     balloon_CN,
@@ -13,6 +14,7 @@ from .NormProjection import NormProjection
 
 __all__ = [
     "BoldMonitor",
+    "BoldMonitorFromSlices"
     "BoldModel",
     "balloon_maith2021",
     "balloon_CN",

@@ -466,11 +466,49 @@ class Network(metaclass=NetworkMeta):
         if bold_model is None:
             bold_model = bold.balloon_RN
 
+        if any(isinstance(pop, PopulationView) for pop in populations):
+            Messages.error("Using BOLD monitors and PopulationViews as recording target is not allowed. If this is intended please consider the usage of Network.boldmonitor_from_slices().")
+
         boldmonitor = bold.BoldMonitor(
             populations=populations,
             bold_model=bold_model,
             mapping=mapping,
             scale_factor=scale_factor,
+            normalize_input=normalize_input,
+            recorded_variables=recorded_variables,
+            start=start,
+            net_id=self.id,
+        )
+
+        return boldmonitor
+
+    def boldmonitor_from_slices(
+        self,
+        population: Population = None,
+        slices: list[list[int]]|None = None,
+        bold_model: bold.BoldModel = None,
+        mapping: dict = {"I_CBF": "r"},
+        normalize_input: int = 0,
+        recorded_variables: list[str] = None,
+        start: bool = False,
+    ) -> "bold.BoldMonitor":
+        """
+        Monitors the BOLD signal of one or multiple fractions of a population  using a computational model.
+
+        For more details to some of the arguments, please consider `Network.boldmonitor()`.
+        """            
+
+        if bold_model is None:
+            bold_model = bold.balloon_RN
+
+        if not isinstance(population, Population):
+            Messages.error("Using BOLD monitor from slices supports only one recording target.")
+
+        boldmonitor = bold.BoldMonitorFromSlices(
+            population=population,
+            slices=slices,
+            bold_model=bold_model,
+            mapping=mapping,
             normalize_input=normalize_input,
             recorded_variables=recorded_variables,
             start=start,

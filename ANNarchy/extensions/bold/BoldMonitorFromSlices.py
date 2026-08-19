@@ -5,34 +5,34 @@
 
 import inspect
 
-from ANNarchy.core.PopulationView import PopulationView
-
-from ANNarchy.extensions.bold.BoldModel import BoldModel
+from ANNarchy.core.Population import Population
+from ANNarchy.cython_ext import LILConnectivity
 from ANNarchy.extensions.bold.AccProjection import AccProjection
+from ANNarchy.extensions.bold.BoldModel import BoldModel
 from ANNarchy.extensions.bold.PredefinedModels import balloon_RN
-
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
-class BoldMonitor:
+class BoldMonitorFromSlices:
     """
-    Monitors the BOLD signal for several populations using a computational model.
+    Monitors the BOLD signal from one population using a computational model. Contrary to the default `BoldMonitor`
+    implementation, we here allow the usage of sub-groups within the population.
 
-    Returned by `Network.boldmonitor()`.
+    Returned by `Network.boldmonitor_from_slices()`.
 
     The monitor can be started and stopped with `start()` and `stop()`. The recorded data is retrieved with `get()`.
     """
 
     def __init__(
         self,
-        populations: list = None,
+        population: Population,
+        slices : list[list[int]]|None = None,
         bold_model: BoldModel = None,
         mapping: dict = {"I_CBF": "r"},
-        scale_factor: list[float] = None,
-        normalize_input: list[int] = None,
-        recorded_variables: list[str] = None,
+        normalize_input: int = 0,
+        recorded_variables: list[str]|None = None,
         start: bool = False,
         copied: bool = False,
         net_id: int = 0,
@@ -49,40 +49,20 @@ class BoldMonitor:
         # for reporting
         bold_model._model_instantiated = True
 
-        # The usage of [] as default arguments in the __init__ call lead to strange side effects.
-        # We decided therefore to use None as default and create the lists locally.
-        if populations is None:
-            Messages.error(
-                "Either a population or a list of populations must be provided to the BOLD monitor (populations=...)"
-            )
-        if scale_factor is None:
-            scale_factor = []
         if normalize_input is None:
             normalize_input = []
         if recorded_variables is None:
             recorded_variables = []
 
         # argument check
-        if not (isinstance(populations, list)):
-            populations = [populations]
-        if not (isinstance(scale_factor, list)):
-            scale_factor = [scale_factor] * len(populations)
-        if not (isinstance(normalize_input, list)):
-            normalize_input = [normalize_input] * len(populations)
+        if not (isinstance(population, Population)):
+            Messages.error("A population must be provided as recording target. If you want to record from multiple populations please use Network.boldmonitor()")
+        if (normalize_input is not None) and (not isinstance(normalize_input, (int, float))):
+            Messages.error("The time window for normalization must be one value.")
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
-
-        if len(scale_factor) > 0:
-            if len(populations) != len(scale_factor):
-                Messages.error(
-                    "BoldMonitor: Length of scale_factor must be equal to number of populations"
-                )
-
-        if len(normalize_input) > 0:
-            if len(populations) != len(normalize_input):
-                Messages.error(
-                    "BoldMonitor: Length of normalize_input must be equal to number of populations"
-                )
+        if slices is None:
+            Messages.error("A list of ranks to record from needs to be provided.")
 
         # Check mapping
         for target, input_var in mapping.items():
@@ -116,7 +96,7 @@ class BoldMonitor:
         if not copied:
             # create the population
             self._bold_pop = self._net.create(
-                1, neuron=bold_model, name=bold_model.name
+                len(slices), neuron=bold_model, name=bold_model.name
             )
             self._bold_pop.enabled = start
 
@@ -128,40 +108,38 @@ class BoldMonitor:
             # create the projection(s)
             self._acc_proj = []
 
-            if len(scale_factor) == 0:
-                pop_overall_size = 0
-                for _, pop in enumerate(populations):
-                    pop_overall_size += pop.size
-
-                # the conductance is normalized between [0 .. 1]. This scale factor
-                # should balance different population sizes
-                for _, pop in enumerate(populations):
-                    scale_factor_conductance = float(pop.size) / float(pop_overall_size)
-                    scale_factor.append(scale_factor_conductance)
-
-            if len(normalize_input) == 0:
-                normalize_input = [0] * len(populations)
-                # TODO: can we check if users used NormProjections? If not, this will crash ...
-
             for target, input_var in mapping.items():
-                for pop, scale, normalize in zip(
-                    populations, scale_factor, normalize_input
-                ):
-                    Messages.debug(
-                        "Creating ACCProjection between", pop.name, self._bold_pop.name
-                    )
-                    tmp_proj = AccProjection(
-                        pre=pop,
-                        post=self._bold_pop,
-                        target=target,
-                        variable=input_var,
-                        scale_factor=scale,
-                        normalize_input=normalize,
-                        net_id=net_id,
-                    )
-                    tmp_proj.all_to_all(weights=1.0)
+                Messages.debug(
+                    "Creating ACCProjection between", population.name, self._bold_pop.name
+                )
 
-                    self._acc_proj.append(tmp_proj)
+                # Create the projection
+                tmp_proj = AccProjection(
+                    pre=population,
+                    post=self._bold_pop,
+                    target=target,
+                    variable=input_var,
+                    scale_factor=1.0,
+                    normalize_input=normalize_input,
+                    net_id=net_id,
+                )
+
+                # Instead of 1-to-all as in BoldMonitor, here we generate one neuron for each sub-list
+                lil = LILConnectivity(dt = ConfigManager().get("dt", self.net_id))
+                for idx, slice in enumerate(slices):
+                    # only add the connectivity - weights=1.0, delays=0.0 are ignored anyways
+                    lil.add(idx, slice, [1.0], [0.0])
+
+                # HD (19th August 2026): this is a bit hacky ... I'm not sure, why we don't have a
+                #                        from_lil method in the user interface.
+                tmp_proj.connector_name = "Load from LIL"
+                tmp_proj.connector_description = "Load from LIL"
+                tmp_proj._store_connectivity(
+                    tmp_proj._load_from_lil, (lil,), 0.0, "lil", "post_to_pre"
+                )
+                tmp_proj._single_constant_weight = True
+
+                self._acc_proj.append(tmp_proj)
 
         else:  # TODO check
             # instances are assigned by the copying instance
@@ -172,10 +150,9 @@ class BoldMonitor:
         self.name = "bold_monitor"
 
         # store arguments for copy
-        self._populations = populations
+        self._populations = population
         self._bold_model = bold_model
         self._mapping = mapping
-        self._scale_factor = scale_factor
         self._normalize_input = normalize_input
         self._recorded_variables = recorded_variables
         self._start = start
