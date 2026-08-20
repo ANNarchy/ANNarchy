@@ -491,7 +491,7 @@ class Network(metaclass=NetworkMeta):
         normalize_input: int = 0,
         recorded_variables: list[str] = None,
         start: bool = False,
-    ) -> "bold.BoldMonitor":
+    ) -> "bold.BoldMonitorFromSlices":
         """
         Monitors the BOLD signal of one or multiple fractions of a population  using a computational model.
 
