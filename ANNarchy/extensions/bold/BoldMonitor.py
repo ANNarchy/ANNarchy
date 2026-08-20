@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -46,7 +47,7 @@ class BoldMonitor(object):
         start:bool=False,
         net_id:int=0,
         copied:bool=False):
-        
+
         self.net_id = net_id
 
         # instantiate if necessary, please note
@@ -77,6 +78,9 @@ class BoldMonitor(object):
             normalize_input = [normalize_input]*len(populations)
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
+
+        if any(isinstance(pop, PopulationView) for pop in populations):
+            Messages._error("BoldMonitor: recording from PopulationViews is not allowed. Please consider BoldMonitorFromSlices instead.")
 
         if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
