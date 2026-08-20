@@ -4,7 +4,6 @@
 """
 import hashlib
 
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
