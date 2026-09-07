@@ -166,7 +166,7 @@ class DiagonalProjection(Projection):
     std::vector<int> post_rank;
     std::vector< %(float_prec)s > w;
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Accessors for the connectivity matrix
             "access_connectivity_matrix": """
     // Accessor to connectivity data
@@ -177,7 +177,7 @@ class DiagonalProjection(Projection):
     std::vector< %(float_prec)s > get_w() { return w; }
     void set_w(std::vector< %(float_prec)s > _w) { w=_w; }
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Export the connectivity matrix
             "export_connectivity": """
         # Connectivity
@@ -188,7 +188,7 @@ class DiagonalProjection(Projection):
         vector[%(float_prec)s] get_w()
         void set_w(vector[%(float_prec)s])
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Arguments to the wrapper constructor
             "wrapper_args": "weights",
             # Initialize the wrapper connectivity matrix
@@ -211,7 +211,7 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             "psp_prefix": """
         %(float_prec)s sum=0.0;""",
-        } % {"float_prec": ConfigManager().get("precision", self.net_id)}
+        } % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         # Compute sum
         dim_post_0 = self.post.geometry[0]
@@ -224,7 +224,7 @@ class DiagonalProjection(Projection):
         int _idx_0, _idx_1, _idx_f, _start;
         std::vector<%(float_prec)s> _w = w;
         std::vector<%(float_prec)s> _pre_r = pop%(id_pre)s.r;
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         # OpenMP statement
         if ConfigManager().get("num_threads", self.net_id) > 1:
@@ -300,7 +300,7 @@ class DiagonalProjection(Projection):
     std::vector<int> post_rank;
     std::map<std::pair<int, int>, %(float_prec)s > w ;
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Accessors for the connectivity matrix
             "access_connectivity_matrix": """
     // Accessor to connectivity data
@@ -311,7 +311,7 @@ class DiagonalProjection(Projection):
     std::map<std::pair<int, int>, %(float_prec)s > get_w() { return w; }
     void set_w(std::map<std::pair<int, int>, %(float_prec)s > _w) { w=_w; }
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Export the connectivity matrix
             "export_connectivity": """
         # Connectivity
@@ -322,7 +322,7 @@ class DiagonalProjection(Projection):
         map[pair[int, int], %(float_prec)s] get_w()
         void set_w(map[pair[int, int], %(float_prec)s])
 """
-            % {"float_prec": ConfigManager().get("precision", self.net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)},
             # Arguments to the wrapper constructor
             "wrapper_args": "weights",
             # Initialize the wrapper connectivity matrix
@@ -345,12 +345,12 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             "psp_prefix": """
         %(float_prec)s sum=0.0;""",
-        } % {"float_prec": ConfigManager().get("precision", self.net_id)}
+        } % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         # Compute sum
         wsum = """
         std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {
-            "float_prec": ConfigManager().get("precision", self.net_id)
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
         }
 
         if ConfigManager().get("num_threads", self.net_id) > 1:
@@ -384,7 +384,7 @@ class DiagonalProjection(Projection):
                 pop%(id_post)s._sum_%(target)s[j + i*(%(postdim2)s*%(postdim3)s)] += result[j];
             }
         }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         if self.max_distance != 0.0:
             wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {

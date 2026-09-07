@@ -100,7 +100,7 @@ class DecodingProjection(SpecificProjection):
     std::deque< std::vector< %(float_prec)s > > rates_history ;
 """ % {
             "window": int(self.window / ConfigManager().get("dt", self.net_id)),
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["init_additional"] = """
@@ -108,7 +108,7 @@ class DecodingProjection(SpecificProjection):
 """ % {
             "window": int(self.window / ConfigManager().get("dt", self.net_id)),
             "post_size": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["psp_code"] = """
@@ -147,14 +147,14 @@ class DecodingProjection(SpecificProjection):
             "id_post": self.post.id,
             "target": self.target,
             "post_size": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "weight": "w" if self._has_single_weight() else "w[i][j]",
         }
 
         self._specific_template["psp_prefix"] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         %(float_prec)s sum;
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _generate_omp(self):
         # Generate the code
@@ -164,7 +164,7 @@ class DecodingProjection(SpecificProjection):
     std::deque< std::vector< %(float_prec)s > > rates_history ;
 """ % {
             "window": int(self.window / ConfigManager().get("dt", self.net_id)),
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["init_additional"] = """
@@ -172,7 +172,7 @@ class DecodingProjection(SpecificProjection):
 """ % {
             "window": int(self.window / ConfigManager().get("dt", self.net_id)),
             "post_size": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["psp_code"] = """
@@ -214,14 +214,14 @@ class DecodingProjection(SpecificProjection):
             "id_post": self.post.id,
             "target": self.target,
             "post_size": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "weight": "w" if self._has_single_weight() else "w[i][j]",
         }
 
         self._specific_template["psp_prefix"] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         %(float_prec)s sum;
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _generate_cuda(self):
         raise Global.ANNarchyException(

@@ -132,6 +132,12 @@ class ConfigManager:
         "Returns the list of keys that can be set with setup."
         return list(self._config[0].keys())
 
+    # ------------------------------------------------------------------
+    # Internal API
+    # ------------------------------------------------------------------
+    def _cpp_float_dtype(self, net_id: int = 0):
+        return self._config[net_id]["dtype"].cpp_decl_type
+
 
 #############################################
 # Globally available functions (internal)

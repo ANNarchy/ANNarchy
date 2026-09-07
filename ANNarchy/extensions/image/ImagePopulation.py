@@ -238,7 +238,7 @@ protected:
     // Vector of floats for the returned image
     std::vector<%(float_prec)s> img_;
 };
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["declare_additional"] = """
     // Camera

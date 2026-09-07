@@ -222,7 +222,7 @@ struct PopStruct%(id)s{
             "id_pre": self.population.id,
             "omp_code": omp_code,
             "size": self.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         return code
@@ -346,7 +346,7 @@ struct PopStruct%(id)s{
             "id_pre": self.population.id,
             "omp_code": omp_code,
             "size": self.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         return code
@@ -485,7 +485,7 @@ struct PopStruct%(id)s{
             "id_pre": self.population.id,
             "omp_code": omp_code,
             "size": self.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         return code
@@ -673,7 +673,7 @@ struct PopStruct1{
             "omp_code": omp_code,
             "omp_critical": omp_critical,
             "size": self.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         return code

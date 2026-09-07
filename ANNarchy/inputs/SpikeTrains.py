@@ -318,7 +318,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -334,7 +334,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -349,7 +349,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["update_variables"] = """
         if(_active){
@@ -394,12 +394,12 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
             }
         } // active
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["size_in_bytes"] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         # Nanobind
         self._specific_template["wrapper"] = f"""
@@ -455,7 +455,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -471,7 +471,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -486,7 +486,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         scheduling_block = """
         if(_active){
@@ -535,7 +535,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
                 }
             }
         } // active
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         if self._has_schedule:
             self._specific_template["update_variables"] = (
@@ -547,7 +547,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template["size_in_bytes"] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _generate_cuda(self):
         """
@@ -565,7 +565,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
@@ -579,7 +579,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id), "id": self.id}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id), "id": self.id}
 
         self._specific_template["init_additional"] = """
         // counters
@@ -660,7 +660,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 """ % {
                 "id": self.id,
                 "size": self.size,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
             self._specific_template[

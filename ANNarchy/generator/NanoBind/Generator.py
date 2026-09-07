@@ -284,7 +284,7 @@ class NanoBindGenerator:
             "methods": methods,
             "attributes": attributes,
             "additional": additional_func,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
         wrapper_code += "\n"
         return wrapper_code

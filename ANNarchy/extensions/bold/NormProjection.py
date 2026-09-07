@@ -420,5 +420,5 @@ def _update_num_aff_connections(net_id=0, verbose=False):
             getattr(
                 proj.cyInstance,
                 "set_semiglobal_attribute_all_"
-                + ConfigManager().get("precision", net_id=net_id),
+                + ConfigManager()._cpp_float_dtype(net_id=net_id)
             )("nb_aff_synapse", nb_synapses_per_dend)

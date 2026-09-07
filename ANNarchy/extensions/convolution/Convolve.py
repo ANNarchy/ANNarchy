@@ -730,7 +730,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             "id_proj": self.id,
             "size_post": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "delays": "",
         }
 
@@ -854,7 +854,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             "id_proj": self.id,
             "size_post": self.post.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "delays": "",
         }
 
@@ -887,7 +887,7 @@ class Convolution(SpecificProjection):
                 conv_filter_template["cuda"]["declare"]
                 % {
                     "cpu_side_filter": filter_definition.strip(),
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 }
             )
             self._specific_template["export_parameters_variables"] = ""
@@ -903,7 +903,7 @@ class Convolution(SpecificProjection):
             self._specific_template["host_device_transfer"] += conv_filter_template[
                 "cuda"
             ]["host_device_transfer"] % {
-                "ctype": ConfigManager().get("precision", self.net_id),
+                "ctype": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 "id_proj": self.id,
                 "pre_dim": dim_pre,
             }
@@ -929,7 +929,7 @@ class Convolution(SpecificProjection):
             pre_id_dict = {
                 "id_pre": self.pre.id,
                 "name": pre_dep,
-                "type": ConfigManager().get("precision", self.net_id),
+                "type": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
             pre_variables_header += (
                 ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
@@ -944,7 +944,7 @@ class Convolution(SpecificProjection):
             "id_post": self.post.id,
             "pre_dim": self.dim_pre,
             "convolve_code": convolve_code,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "pre_variables_header": pre_variables_header,
             "pre_variables_invoke": pre_variables_invoke,
             "pre_variables_call": pre_variables_call,
@@ -1065,7 +1065,7 @@ class Convolution(SpecificProjection):
 
     def _filter_definition(self):
         dim = self.dim_kernel
-        cpp = ConfigManager().get("precision", self.net_id)
+        cpp = ConfigManager()._cpp_float_dtype(net_id=self.net_id)
         for d in range(dim):
             cpp = "std::vector< " + cpp + " >"
         cpp += " w;"
@@ -1285,7 +1285,7 @@ class Convolution(SpecificProjection):
                 if(_psp > sum) sum = _psp;"""
                 % {
                     "increment": increment,
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 },
                 dim,
             )
@@ -1296,7 +1296,7 @@ class Convolution(SpecificProjection):
                 if(_psp < sum) sum = _psp;"""
                 % {
                     "increment": increment,
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 },
                 dim,
             )
@@ -1369,7 +1369,7 @@ class Convolution(SpecificProjection):
                 const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
     """
                         % {
-                            "float_prec": ConfigManager().get("precision", self.net_id),
+                            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                             "inner_idx": inner_idx,
                             "dim_pre": self.dim_pre,
                         },
@@ -1529,7 +1529,7 @@ class Convolution(SpecificProjection):
             if(_psp > sum) sum = _psp;"""
                 % {
                     "increment": increment,
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 },
                 1 + dim,
             )
@@ -1540,7 +1540,7 @@ class Convolution(SpecificProjection):
             if(_psp < sum) sum = _psp;"""
                 % {
                     "increment": increment,
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 },
                 1 + dim,
             )

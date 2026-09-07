@@ -322,11 +322,11 @@ class Pooling(SpecificProjection):
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {
-                "float_prec": ConfigManager().get("precision", self.net_id)
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             }
         elif self.synapse_type.operation == "max":
             sum_default = "std::numeric_limits<%(float_prec)s>::lowest()" % {
-                "float_prec": ConfigManager().get("precision", self.net_id)
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             }
 
         code = """
@@ -440,7 +440,7 @@ class Pooling(SpecificProjection):
             "name_post": self.post.name,
             "size_post": self.post.size,
             "psp": psp,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         if operation == "mean":
@@ -465,11 +465,11 @@ class Pooling(SpecificProjection):
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {
-                "float_prec": ConfigManager().get("precision", self.net_id)
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             }
         elif self.synapse_type.operation == "max":
             sum_default = "std::numeric_limits<%(float_prec)s>::lowest()" % {
-                "float_prec": ConfigManager().get("precision", self.net_id)
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             }
 
         # Specific template for generation
@@ -479,7 +479,7 @@ class Pooling(SpecificProjection):
                 "id_proj": self.id,
                 "size_post": self.post.size,
                 "sum_default": sum_default,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
@@ -588,7 +588,7 @@ class Pooling(SpecificProjection):
 
         # operation to perform
         pool_op_code = cuda_op_code[pool_operation] % {
-            "float_prec": ConfigManager().get("precision", self.net_id)
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)
         }
 
         # mean operation requires one additional computation
@@ -608,7 +608,7 @@ class Pooling(SpecificProjection):
             "id_pre": self.pre.id,
             "id_post": self.post.id,
             "target": self.target,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "size_post": self.post.size,  # TODO: population views?
         }
 
@@ -621,7 +621,7 @@ class Pooling(SpecificProjection):
                 pool_op_reduce_code = cuda_pooling_code_2d_small_extent["reduce_code"][
                     pool_operation
                 ] % {
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                     "row_extent": int(self.extent[0]),
                     "col_extent": int(self.extent[1]),
                 }
@@ -657,7 +657,7 @@ class Pooling(SpecificProjection):
                 pool_op_reduce_code = cuda_pooling_code_2d["reduce_code"][
                     pool_operation
                 ] % {
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                     "row_extent": int(self.extent[0]),
                     "col_extent": int(self.extent[1]),
                 }

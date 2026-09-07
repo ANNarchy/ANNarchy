@@ -176,7 +176,7 @@ class Copy(SpecificProjection):
             value = value % {
                 "id_proj": self.id,
                 "id_copy": self.projection.id,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
             copy_proj_dict[key] = value
 
@@ -243,7 +243,7 @@ class Copy(SpecificProjection):
             "id_post": self.post.id,
             "name_post": self.post.name,
             "id": self.projection.id,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "omp_code": omp_code,
             "psp": psp,
         }

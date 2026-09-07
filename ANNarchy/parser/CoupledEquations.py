@@ -137,7 +137,7 @@ class CoupledEquations(Equation):
 
             # Generate the code
             cpp_eq = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _"
                 + new_vars[var]
                 + " = "
@@ -195,7 +195,7 @@ class CoupledEquations(Equation):
         ks = {}
         for name, evaluation in evaluations.items():
             ks[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _k_"
                 + name
                 + " = "
@@ -222,7 +222,7 @@ class CoupledEquations(Equation):
             tmp_analysed = self.parse_expression(expression, local_dict=tmp_dict)
             solved = sp.solve(tmp_analysed, self.local_dict["_grad_var_" + name])
             news[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _"
                 + name
                 + " = "
@@ -288,7 +288,7 @@ class CoupledEquations(Equation):
         k1_dict = {}
         for name, evaluation in evaluations.items():
             k1_dict[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _k1_"
                 + name
                 + " = "
@@ -316,7 +316,7 @@ class CoupledEquations(Equation):
 
             solved = sp.solve(tmp_analysed, self.local_dict["_gradient_" + name])
             k2_dict[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _k2_"
                 + name
                 + " = "
@@ -344,7 +344,7 @@ class CoupledEquations(Equation):
 
             solved = sp.solve(tmp_analysed, self.local_dict["_gradient_" + name])
             k3_dict[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _k3_"
                 + name
                 + " = "
@@ -368,7 +368,7 @@ class CoupledEquations(Equation):
 
             solved = sp.solve(tmp_analysed, self.local_dict["_gradient_" + name])
             k4_dict[name] = (
-                ConfigManager().get("precision", self.net_id)
+                ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 + " _k4_"
                 + name
                 + " = "
@@ -379,7 +379,7 @@ class CoupledEquations(Equation):
         # accumulate _k1 - _k4 within the switch step
         dt_code = (
             "dt/6.0f"
-            if ConfigManager().get("precision", self.net_id) == "float"
+            if ConfigManager()._cpp_float_dtype(net_id=self.net_id) == "float"
             else "dt/6.0"
         )
         switches = {}

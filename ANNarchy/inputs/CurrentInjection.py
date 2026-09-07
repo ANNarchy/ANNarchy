@@ -126,7 +126,7 @@ class CurrentInjection(SpecificProjection):
             "id_post": self.post.id,
             "id_pre": self.pre.id,
             "target": self.target,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["psp_body"] = (

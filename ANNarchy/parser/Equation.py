@@ -168,7 +168,7 @@ class Equation(object):
         except TypeError:
             c_code = sp.ccode(equation, precision=8, user_functions=self.user_functions)
 
-        if ConfigManager().get("precision", self.net_id) == "float":
+        if ConfigManager()._cpp_float_dtype(net_id=self.net_id) == "float":
             #
             # Add the f-suffix to floating value constants
             matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
@@ -289,7 +289,7 @@ class Equation(object):
         equation = sp.simplify(equation, ratio=1.0)
 
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _"
             + self.name
             + " = "
@@ -324,7 +324,7 @@ class Equation(object):
         equation = sp.simplify(equation, ratio=1.0)
 
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _k_"
             + self.name
             + " = dt*("
@@ -341,7 +341,7 @@ class Equation(object):
         tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
         explicit_code += (
             "\n"
-            + ConfigManager().get("precision", self.net_id)
+            + ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _"
             + self.name
             + " = "
@@ -377,7 +377,7 @@ class Equation(object):
         equation = sp.collect(equation, self.local_dict["dt"])
         equation = sp.simplify(equation, ratio=1.0)
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _k1_"
             + self.name
             + " = ("
@@ -395,7 +395,7 @@ class Equation(object):
             0
         ]
         explicit_code += (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _k2_"
             + self.name
             + " = ("
@@ -413,7 +413,7 @@ class Equation(object):
             0
         ]
         explicit_code += (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _k3_"
             + self.name
             + " = ("
@@ -431,7 +431,7 @@ class Equation(object):
             0
         ]
         explicit_code += (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _k4_"
             + self.name
             + " = ("
@@ -510,7 +510,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _"
             + self.name
             + " = "
@@ -540,7 +540,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _"
             + self.name
             + " = ("
@@ -586,7 +586,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
         explicit_code = (
-            ConfigManager().get("precision", self.net_id)
+            ConfigManager()._cpp_float_dtype(net_id=self.net_id)
             + " _"
             + self.name
             + " =  "

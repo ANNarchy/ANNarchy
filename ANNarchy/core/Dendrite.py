@@ -131,7 +131,7 @@ class Dendrite:
                 return getattr(
                     self.proj.cyInstance,
                     "get_global_attribute_"
-                    + ConfigManager().get("precision", self.proj.net_id),
+                    + ConfigManager()._cpp_float_dtype(net_id=self.proj.net_id)
                 )(name)
 
             elif name in self.proj.attributes:

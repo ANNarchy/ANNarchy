@@ -139,7 +139,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
 """ % {
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "id": self.projection.id,
         }
         self._specific_template["export_connector_call"] = ""
@@ -224,7 +224,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
     """ % {
             "id_proj": self.id,
             "id_copy": self.projection.id,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         # The weight index depends on the
@@ -252,7 +252,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
             }
         }
 """ % {
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             "target": self.target,
             "id_pre": self.pre.id,
             "id_post": self.post.id,
@@ -351,7 +351,7 @@ extern ProjStruct%(fwd_id_proj)s *proj%(fwd_id_proj)s;    // Forward projection
     """ % {
             "id_proj": self.id,
             "id_copy": self.projection.id,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         # No attributes

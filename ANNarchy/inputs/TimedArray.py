@@ -358,7 +358,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedArray
@@ -376,7 +376,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -391,7 +391,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["update_variables"] = """
         if(_active) {
@@ -439,7 +439,7 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
-""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["size_in_bytes"] = """
         // schedule
@@ -449,7 +449,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _generate_omp(self):
         """
@@ -462,7 +462,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedArray
@@ -478,7 +478,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -493,7 +493,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         # HD (28th Jun. 24): contrary to the single-thread codes, where we use 'return' to escape the function
         #                    execution, OpenMP does not allow 'return'/'continue' in the execution block. Therefore,
@@ -544,7 +544,7 @@ class TimedArray(SpecificPopulation):
                 _t++;
             }
         }
-""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["size_in_bytes"] = """
         // schedule
@@ -554,7 +554,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _generate_cuda(self):
         """
@@ -565,7 +565,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template["init_parameters_variables"] = """
         r = std::vector<%(float_prec)s>(size, static_cast<%(float_prec)s>(0.0));
         gpu_r = nullptr;    // will be set by update() / set_buffer()
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
         self._specific_template["clear_container"] = ""
 
         # Disable write access to gpu_r
@@ -580,7 +580,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameter timed array
@@ -682,7 +682,7 @@ class TimedArray(SpecificPopulation):
         _period = period;
     }
     int get_period() { return _period; }
-""" % {"id": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id": self.id, "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // counters
@@ -775,7 +775,7 @@ class TimedArray(SpecificPopulation):
         // gpu_buffer
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
     def _instantiate(self, module):
         # Create the Cython instance

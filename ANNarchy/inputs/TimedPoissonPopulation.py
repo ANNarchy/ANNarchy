@@ -222,7 +222,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedPoissonPopulation
@@ -240,7 +240,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_rates() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -255,7 +255,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["update_variables"] = """
         if(_active){
@@ -299,7 +299,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
             }
         } // active
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["size_in_bytes"] = """
         // schedule
@@ -309,7 +309,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["wrapper"] = f"""
     // TimedPoissonPopulation
@@ -356,7 +356,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["access_additional"] = """
     // Custom local parameters of a TimedPoissonPopulation
@@ -366,7 +366,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_rates() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // Initialize counters
@@ -381,7 +381,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["update_variables"] = """
         if(_active){
@@ -428,7 +428,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
             }
         } // active
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["size_in_bytes"] = """
         // schedule
@@ -438,7 +438,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["wrapper"] = f"""
     // TimedPoissonPopulation
@@ -497,7 +497,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
         self._specific_template["access_additional"] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -533,7 +533,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         // counters
@@ -601,7 +601,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 """ % {
             "id": self.id,
             "size": self.size,
-            "float_prec": ConfigManager().get("precision", self.net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
 
         self._specific_template["update_variable_header"] = (

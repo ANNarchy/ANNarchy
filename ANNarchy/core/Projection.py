@@ -1655,19 +1655,19 @@ class Projection:
                 w = getattr(
                     self.cyInstance,
                     "get_local_attribute_row_"
-                    + ConfigManager().get("precision", self.net_id),
+                    + ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 )("w", idx)
             elif "w" in self.synapse_type.description["semiglobal"]:
                 w = getattr(
                     self.cyInstance,
                     "get_semiglobal_attribute_"
-                    + ConfigManager().get("precision", self.net_id),
+                    + ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 )("w", idx) * np.ones(self.cyInstance.dendrite_size(idx))
             else:
                 w = getattr(
                     self.cyInstance,
                     "get_global_attribute_"
-                    + ConfigManager().get("precision", self.net_id),
+                    + ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 )("w") * np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
@@ -1700,7 +1700,7 @@ class Projection:
                 data = getattr(
                     self.cyInstance,
                     "get_local_attribute_row_"
-                    + ConfigManager().get("precision", self.net_id),
+                    + ConfigManager()._cpp_float_dtype(net_id=self.net_id)
                 )(variable, lil_idx)
 
                 if len(res) == len(pre_ranks):

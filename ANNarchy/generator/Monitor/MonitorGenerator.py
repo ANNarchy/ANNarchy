@@ -66,7 +66,7 @@ class MonitorGenerator(object):
                     "pop_id": mon.object.id,
                     "pop_name": mon.object.name,
                     "mon_id": mon.id,
-                    "float_prec": ConfigManager().get("precision", self.net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                     "var_name": mon.variables[0],
                 }
                 code += mon._specific_template["cpp"] % mon_dict
@@ -130,7 +130,7 @@ class MonitorGenerator(object):
             for target in targets:
                 tar_dict = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self.net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                     "name": "_sum_" + target,
                 }
                 struct_code += template["local"]["struct"] % tar_dict
@@ -144,7 +144,7 @@ class MonitorGenerator(object):
             for target in targets:
                 tar_dict = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self.net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                     "name": "g_" + target,
                 }
                 struct_code += template["local"]["struct"] % tar_dict
@@ -304,7 +304,7 @@ class MonitorGenerator(object):
                 "id": proj.id,
                 "type": var["ctype"],
                 "name": var["name"],
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
         final_dict = {

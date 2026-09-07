@@ -119,7 +119,7 @@ class SpikeSourceArray(SpecificPopulation):
                 "eq": "",
                 "bounds": {},
                 "flags": [],
-                "ctype": ConfigManager().get("precision", self.net_id),
+                "ctype": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
                 "init": 0.0,
                 "transformed_eq": "",
                 "pre_loop": {},
@@ -159,7 +159,7 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
     }
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
         self._specific_template["init_additional"] = """
         _t = 0;

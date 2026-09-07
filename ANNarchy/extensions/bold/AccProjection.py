@@ -89,7 +89,7 @@ class AccProjection(SpecificProjection):
                 "var": self._variable,
                 "target": self.target,
                 "scale_factor": self._scale_factor,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
         else:
@@ -107,7 +107,7 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {"id_proj": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id_proj": self.id, "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
             self._specific_template["export_additional"] = """
         void start(int)
 """
@@ -118,7 +118,7 @@ class AccProjection(SpecificProjection):
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
             self._specific_template["clear_additional"] = """
         for(auto it = baseline.begin(); it != baseline.end(); it++) {
@@ -188,7 +188,7 @@ class AccProjection(SpecificProjection):
                 "var": self._variable,
                 "target": self.target,
                 "scale_factor": self._scale_factor,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
             self._specific_template["wrapper"] = f"""
@@ -214,8 +214,8 @@ class AccProjection(SpecificProjection):
         .def("start", &ProjStruct{self.id}::start)
 
         // Attributes
-        .def("get_global_attribute_{ConfigManager().get("precision", self.net_id)}", &ProjStruct{self.id}::get_global_attribute_{ConfigManager().get("precision", self.net_id)})
-        .def("set_global_attribute_{ConfigManager().get("precision", self.net_id)}", &ProjStruct{self.id}::set_global_attribute_{ConfigManager().get("precision", self.net_id)})
+        .def("get_global_attribute_{ConfigManager()._cpp_float_dtype(net_id=self.net_id)}", &ProjStruct{self.id}::get_global_attribute_{ConfigManager()._cpp_float_dtype(net_id=self.net_id)})
+        .def("set_global_attribute_{ConfigManager()._cpp_float_dtype(net_id=self.net_id)}", &ProjStruct{self.id}::set_global_attribute_{ConfigManager()._cpp_float_dtype(net_id=self.net_id)})
 
 
         // Other methods
@@ -256,7 +256,7 @@ class AccProjection(SpecificProjection):
                 "var": self._variable,
                 "target": self.target,
                 "scale_factor": self._scale_factor,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
         else:
@@ -274,7 +274,7 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {"id_proj": self.id, "float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"id_proj": self.id, "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
             self._specific_template["export_additional"] = """
         void start(int)
 """
@@ -285,7 +285,7 @@ class AccProjection(SpecificProjection):
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {"float_prec": ConfigManager().get("precision", self.net_id)}
+""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
             self._specific_template["psp_prefix"] = ""
             self._specific_template["psp_code"] = """
@@ -342,7 +342,7 @@ class AccProjection(SpecificProjection):
                 "var": self._variable,
                 "target": self.target,
                 "scale_factor": self._scale_factor,
-                "float_prec": ConfigManager().get("precision", self.net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
 
     def _generate_cuda(self):
