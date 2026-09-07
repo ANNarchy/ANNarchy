@@ -1,3 +1,11 @@
+**5.1.0**
+
+Breaking Changes:
+* using something like precision='double' to configure simulations now causes an error message. In 5.0.3, we had a fallback implemented which still allowed to use ConfigManager().get/set with the old flag. See also 5.0.3 release notes (related commits: f99dba5, f64cd84, 48043b6, b6dbc6a, and 360459a)
+
+New/Changed features:
+* added FixedType(#integer bits, #fraction bits) data type to represent neural/synaptic states. Please note, that this is an experimental feature, which might be re-evaluated in the future (commt e2691d8)
+
 **5.0.4**
 
 Bugfixes:
