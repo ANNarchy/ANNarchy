@@ -1274,9 +1274,7 @@ class ProjectionGenerator(object):
                         weight_code = tabify(
                             init_code
                             % {
-                                "float_prec": ConfigManager().get(
-                                    "precision", self._net_id
-                                )
+                                "float_prec": ConfigManager()._cpp_float_dtype(net_id=_net_id)
                             },
                             2,
                         )
@@ -1295,16 +1293,12 @@ class ProjectionGenerator(object):
                             "type": var["ctype"],
                             "init": init,
                             "attr_type": attr_type,
-                            "float_prec": ConfigManager().get(
-                                "precision", self._net_id
-                            ),
+                            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                         }
                         weight_code += tabify(
                             "update_matrix_variable_all<%(float_prec)s>(w, values);"
                             % {
-                                "float_prec": ConfigManager().get(
-                                    "precision", self._net_id
-                                )
+                                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             },
                             2,
                         )
