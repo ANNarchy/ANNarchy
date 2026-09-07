@@ -11,7 +11,6 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 
 from ANNarchy.parser.Extraction import extract_functions
 
-from ANNarchy.generator.Utils import tabify
 from ANNarchy.generator import Profile
 from ANNarchy.generator.Template import CUDABaseTemplate
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda
@@ -73,12 +72,12 @@ class CUDAGenerator(SimCoreGenerator):
         invoke_kernel_def += glob_ops_header
 
         device_invoke_header = CUDABaseTemplate.device_invoke_header % {
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "cpp_float_prec": float_type.cpp_decl_type,
             "invoke_kernel_def": invoke_kernel_def,
         }
 
         host_header_code = CUDABaseTemplate.header_template % {
-            "float_prec": float_type.py_decl_type,
+            "cpp_float_prec": float_type.cpp_decl_type,
             "pop_struct": pop_struct,
             "proj_struct": proj_struct,
             "pop_ptr": pop_ptr,
@@ -107,12 +106,12 @@ class CUDAGenerator(SimCoreGenerator):
         for obj in constants:
             obj_str = {
                 "name": obj.name,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "cpp_float_prec": ConfigManager().get("dtype", self._net_id).cpp_decl_type,
             }
 
             code += (
                 """
-void set_%(name)s(%(float_prec)s value);"""
+void set_%(name)s(%(cpp_float_prec)s value);"""
                 % obj_str
             )
 
@@ -304,6 +303,8 @@ void set_%(name)s(%(float_prec)s value);"""
                 annarchy_dir, self._net_id
             ).generate_body_dict()
 
+        float_type = ConfigManager().get("dtype", self._net_id)
+
         device_code = (
             CUDABaseTemplate.device_kernel
             % {  # Target: ANNarchyKernel[net_id].cu
@@ -323,15 +324,15 @@ void set_%(name)s(%(float_prec)s value);"""
                 "custom_constant": device_custom_constant,
                 "built_in": CUDABaseTemplate.built_in_functions
                 + CUDABaseTemplate.integer_power
-                % {"float_prec": ConfigManager().get("precision", self._net_id)},
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                % {"cpp_float_prec": float_type.cpp_decl_type},
+                "cpp_float_prec": float_type.cpp_decl_type
             }
         )
 
         base_dict = {
             # network definitions
             "net_id": self._net_id,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "cpp_float_prec": float_type.cpp_decl_type,
             "pop_ptr": pop_ptr,
             "proj_ptr": proj_ptr,
             "run_until": run_until,
@@ -390,12 +391,12 @@ void set_%(name)s(%(float_prec)s value);"""
             obj_str = {
                 "name": obj.name,
                 "value": obj.value,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "cpp_float_prec": ConfigManager().get("dtype", self._net_id).cpp_decl_type,
             }
             device_decl_code += (
-                    """__device__ __constant__ %(float_prec)s %(name)s;
-void set_%(name)s(%(float_prec)s value) {
-    cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(float_prec)s), 0, cudaMemcpyHostToDevice);
+                    """__device__ __constant__ %(cpp_float_prec)s %(name)s;
+void set_%(name)s(%(cpp_float_prec)s value) {
+    cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(cpp_float_prec)s), 0, cudaMemcpyHostToDevice);
 #ifndef NDEBUG
     std::cout << "set global constant %(name)s = " << value << std::endl;
     if ( err != cudaSuccess )

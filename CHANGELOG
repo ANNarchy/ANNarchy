@@ -1,3 +1,11 @@
+**5.0.4**
+
+Bugfixes:
+
+* BOLD monitors has accepted PopulationViews as target, even though the computed values are not as one expect. For this case, we introduced a new method in Network: `boldmonitor_from_slices`.
+* fixed a bug where LaTeX reports has been generated wrongly (see commit c218aaf)
+* fixed errors when --report is used (commit bc2ad78)
+
 **5.0.3**
 
 Breaking Changes:
