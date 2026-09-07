@@ -65,7 +65,7 @@ class SingleThreadGenerator(PopulationGenerator):
         extern_global_operations = ""
         for op in pop.global_operations:
             extern_global_operations += global_op_extern_dict[op["function"]] % {
-                "type": ConfigManager().get("precision", self._net_id)
+                "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
             }
 
         # Initialize parameters and variables
@@ -214,7 +214,7 @@ class SingleThreadGenerator(PopulationGenerator):
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
             "net_id": self._net_id,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "id": pop.id,
             "name": pop.name,
             "size": pop.size,
@@ -325,7 +325,7 @@ class SingleThreadGenerator(PopulationGenerator):
                 "id": pop.id,
                 "name": pop.name,
                 "target": target,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
 
         return code
@@ -566,12 +566,12 @@ class SingleThreadGenerator(PopulationGenerator):
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
-    };""" % {"float_prec": ConfigManager().get("precision", self._net_id)}
+    };""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
         _mean_fr_window = 0;
-        _mean_fr_rate = %(float_prec)s{1};""" % {"float_prec": ConfigManager().get("precision", self._net_id)}
+        _mean_fr_rate = %(float_prec)s{1};""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
             reset_FR = """
         // Mean Firing Rate
         for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
@@ -601,7 +601,7 @@ class SingleThreadGenerator(PopulationGenerator):
                     }
                     r[i] = _mean_fr_rate * static_cast<%(float_prec)s>(_spike_history[i].size());
                 }
-            } """ % {"float_prec": ConfigManager().get("precision", self._net_id)}
+            } """ % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
 
         return mean_FR_push, mean_FR_update
 
@@ -647,7 +647,7 @@ class SingleThreadGenerator(PopulationGenerator):
                 "rd_init": rd["definition"]
                 % {
                     "id": pop.id,
-                    "float_prec": ConfigManager().get("precision", self._net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "global_index": "",
                 },
             }

@@ -69,7 +69,7 @@ class SingleThreadGenerator(SimCoreGenerator):
             "custom_constant": custom_constant,
             "built_in": SingleThreadBaseTemplate.built_in_functions
             + SingleThreadBaseTemplate.integer_power
-            % {"float_prec": ConfigManager().get("precision", self._net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
         }
 
         # Generate header code for the analysed pops and projs
@@ -91,7 +91,7 @@ class SingleThreadGenerator(SimCoreGenerator):
         for obj in constants:
             obj_str = {
                 "name": obj.name,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
 
             code += (
@@ -248,7 +248,7 @@ void set_%(name)s(%(float_prec)s value);"""
             obj_str = {
                 "name": obj.name,
                 "value": obj.value,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
             decl_code += (
                 """
@@ -283,7 +283,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
         if ops == []:
             return ""
 
-        type_def = {"type": ConfigManager().get("precision", self._net_id)}
+        type_def = {"type": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
 
         code = ""
         for op in sorted(list(set(ops))):

@@ -119,7 +119,7 @@ class CUDAGenerator(ProjectionGenerator):
                 "rng_idx": "[0]" if single_matrix else "",
                 "add_args": "",
                 "num_threads": "",
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "idx_type": determine_idx_type_for_projection(proj)[0],
             }
             declare_connectivity_matrix = ""
@@ -184,7 +184,7 @@ class CUDAGenerator(ProjectionGenerator):
             "name_pre": proj.pre.name,
             "name_post": proj.post.name,
             "target": proj.target,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "sparse_matrix_include": sparse_matrix_include,
             "sparse_format": sparse_matrix_format,
             "sparse_format_args": sparse_matrix_args,
@@ -280,7 +280,7 @@ class CUDAGenerator(ProjectionGenerator):
                 "id_pre": proj.pre.id,
                 "idx_type": idx_type,
                 "size_type": size_type,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "pre_prefix": "pre_",
                 "post_prefix": "post_",
                 "host_pre_prefix": "pop" + str(proj.pre.id) + "->",
@@ -440,7 +440,7 @@ class CUDAGenerator(ProjectionGenerator):
             psp = """%(preprefix)sr%(pre_index)s * w%(local_index)s;"""
             add_args_header += (
                 "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w"
-                % {"float_prec": ConfigManager().get("precision", self._net_id)}
+                % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
             )
             add_args_call = "pop%(id_pre)s->gpu_r, proj%(id_proj)s->gpu_w " % {
                 "id_proj": proj.id,
@@ -513,7 +513,7 @@ class CUDAGenerator(ProjectionGenerator):
                     "add_args": add_args_header,
                     "psp": psp % ids,
                     "thread_init": self._templates["rate_psp"]["thread_init"][
-                        ConfigManager().get("precision", self._net_id)
+                        ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                     ][operation],
                     # call function
                     "conn_args_call": conn_kernel,
@@ -532,7 +532,7 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 invoke_kernel = ""
                 kernel_decl = self._templates["rate_psp"]["kernel_decl"] % {
-                    "float_prec": ConfigManager().get("precision", self._net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "id": proj.id,
                     "conn_args": conn_header,
                     "target_arg": "sum_" + proj.target,
@@ -577,20 +577,20 @@ class CUDAGenerator(ProjectionGenerator):
             }
             body_code = ELL_CUDA.conn_templates["rate_psp"]["body"][operation] % {
                 "idx_type": idx_type,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "id_proj": proj.id,
                 "conn_args": conn_header,
                 "target_arg": "sum_" + proj.target,
                 "add_args": add_args_header,
                 "psp": psp % ell_ids,
                 "thread_init": ELLR_CUDA.conn_templates["rate_psp"]["thread_init"][
-                    ConfigManager().get("precision", self._net_id)
+                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                 ][operation],
                 "post_index": ell_ids["post_index"],
             }
             header_code = ELL_CUDA.conn_templates["rate_psp"]["header"] % {
                 "idx_type": idx_type,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "id": proj.id,
                 "conn_args": conn_header,
                 "target_arg": "sum_" + proj.target,
@@ -611,7 +611,7 @@ class CUDAGenerator(ProjectionGenerator):
                 "post_prefix": "post_",
             }
             body_code += COO_CUDA.conn_templates["rate_psp"]["body"][operation] % {
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "idx_type": idx_type,
                 "size_type": size_type,
                 "id_proj": proj.id,
@@ -620,12 +620,12 @@ class CUDAGenerator(ProjectionGenerator):
                 "add_args": add_args_header,
                 "psp": psp % coo_ids,
                 "thread_init": COO_CUDA.conn_templates["rate_psp"]["thread_init"][
-                    ConfigManager().get("precision", self._net_id)
+                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                 ][operation],
                 "post_index": coo_ids["post_index"],
             }
             header_code += COO_CUDA.conn_templates["rate_psp"]["header"] % {
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "id": proj.id,
                 "conn_args": conn_header,
                 "target_arg": "sum_" + proj.target,
@@ -653,7 +653,7 @@ class CUDAGenerator(ProjectionGenerator):
                 % {"id_post": proj.post.id, "target": proj.target},
                 "add_args_coo": add_args_call_coo,
                 "add_args_ell": add_args_call_ell,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
 
         # Take delays into account if any
@@ -742,7 +742,7 @@ class CUDAGenerator(ProjectionGenerator):
                         "local_index": "[syn_idx]",
                         "semiglobal_index": "[post_rank]",
                         "global_index": "[0]",
-                        "float_prec": ConfigManager().get("precision", self._net_id),
+                        "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "pre_index": "[row_idx[syn_idx]]",
                         "post_index": "[post_rank]",
                     }
@@ -775,7 +775,7 @@ class CUDAGenerator(ProjectionGenerator):
                 # compute psp
                 psp_code += "%(float_prec)s tmp = %(psp)s\n" % {
                     "psp": var["cpp"].split("=")[1] % ids,
-                    "float_prec": ConfigManager().get("precision", self._net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 }
                 # Operation (g_target is replaced by sum in 'cpp')
                 operation = re.search(r"sum (.*?)=", var["cpp"]).group(1).strip() + "="
@@ -964,7 +964,7 @@ if(%(condition)s){
             targets_call += ", pop%(id_post)s->gpu_g_" + target
             targets_invoke += ", g_" + target
             targets_header += (", %(float_prec)s* g_" + target) % {
-                "float_prec": ConfigManager().get("precision", self._net_id)
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
             }
 
         # Construct code for event-driven transmission
@@ -1051,7 +1051,7 @@ if(%(condition)s){
             # Finalize event-driven part
             device_kernel = template["device_kernel"] % {
                 "id_proj": proj.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "conn_args_header": conn_args_header + targets_header,
                 "kernel_args_header": kernel_args_header,
                 "event_driven": tabify(event_driven_code % ids, 2),
@@ -1065,7 +1065,7 @@ if(%(condition)s){
             }
             invoke_kernel = template["invoke_kernel"] % {
                 "id_proj": proj.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "conn_args_header": conn_args_header + targets_header,
                 "conn_args_invoke": conn_args_invoke + targets_invoke,
                 "kernel_args_header": kernel_args_header,
@@ -1079,7 +1079,7 @@ if(%(condition)s){
             }
             kernel_decl = template["kernel_decl"] % {
                 "id_proj": proj.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "conn_args_header": conn_args_header + targets_header,
                 "kernel_args_header": kernel_args_header,
             }
@@ -1141,7 +1141,7 @@ if(%(condition)s){
                 "target_arg": targets_call % {"id_post": proj.post.id},
                 "target": proj.target,
                 "kernel_args": kernel_args_call,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
             device_kernel += template["device_kernel"] % {
                 "id_proj": proj.id,
@@ -1149,7 +1149,7 @@ if(%(condition)s){
                 "kernel_args": kernel_args_header,
                 "psp": psp_code,
                 "pre_code": tabify(pre_spike_code % ids, 3),
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
             invoke_kernel += template["invoke_kernel"] % {
                 "id_proj": proj.id,
@@ -1157,13 +1157,13 @@ if(%(condition)s){
                 "kernel_args_invoke": kernel_args_invoke,
                 "target_arg": targets_header,
                 "target_arg_invoke": targets_invoke,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
             kernel_decl += template["kernel_decl"] % {
                 "id_proj": proj.id,
                 "kernel_args": kernel_args_header,
                 "target_arg": targets_header,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
 
         # Annotate code
@@ -1472,7 +1472,7 @@ if(%(condition)s){
                         % dist_ids
                     )
                     loc_pre += "%(prec)s %(name)s = %(term)s;" % {
-                        "prec": ConfigManager().get("precision", self._net_id),
+                        "prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "name": dist["name"],
                         "term": term,
                     }
@@ -1498,7 +1498,7 @@ if(%(condition)s){
                         % dist_ids
                     )
                     loc_pre += "%(prec)s %(name)s = %(term)s;" % {
-                        "prec": ConfigManager().get("precision", self._net_id),
+                        "prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "name": dist["name"],
                         "term": term,
                     }
@@ -1524,7 +1524,7 @@ if(%(condition)s){
                         % dist_ids
                     )
                     loc_pre += "%(prec)s %(name)s = %(term)s;" % {
-                        "prec": ConfigManager().get("precision", self._net_id),
+                        "prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "name": dist["name"],
                         "term": term,
                     }
@@ -1685,7 +1685,7 @@ _last_event%(local_index)s = t;
             "add_args": add_args_header,
             "event_driven": tabify(event_driven_code % ids, 2),
             "post_code": tabify(post_code % ids, 2),
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
         }
 
         postevent_invoke = templates["invoke_kernel"] % {
@@ -1694,14 +1694,14 @@ _last_event%(local_index)s = t;
             "conn_args_invoke": self._templates["conn_kernel"],
             "add_args": add_args_header,
             "add_args_invoke": add_args_invoke,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
         }
 
         postevent_header = templates["kernel_decl"] % {
             "id_proj": proj.id,
             "conn_args": self._templates["conn_header"] % ids,
             "add_args": add_args_header,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
         }
 
         postevent_call = templates["host_call"] % {
@@ -1846,7 +1846,7 @@ _last_event%(local_index)s = t;
             if var["locality"] == locality:
                 if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
                     pre_loop += (
-                        ConfigManager().get("precision", self._net_id)
+                        ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                         + " "
                         + var["pre_loop"]["name"]
                         + " = "
@@ -1942,7 +1942,7 @@ _last_event%(local_index)s = t;
                 "id_proj": proj.id,
                 "id_pre": proj.pre.id,
                 "id_post": proj.post.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "idx_type": idx_type,
                 "size_type": size_type,
             }
@@ -2146,7 +2146,7 @@ _last_event%(local_index)s = t;
             "global_call": global_call,
             "semiglobal_call": semiglobal_call,
             "local_call": local_call,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
         }
 
         # Profiling

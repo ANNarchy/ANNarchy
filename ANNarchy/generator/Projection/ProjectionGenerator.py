@@ -874,9 +874,9 @@ class ProjectionGenerator(object):
                 declare_rng += self._templates["rng"][rd["locality"]]["decl"] % {
                     "rd_name": rd["name"],
                     "type": rd["ctype"],
-                    "float_prec": ConfigManager().get("precision", self._net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "template": rd["template"]
-                    % {"float_prec": ConfigManager().get("precision", self._net_id)},
+                    % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
                 }
 
         # Structural plasticity
@@ -1328,7 +1328,7 @@ class ProjectionGenerator(object):
                     "type": var["ctype"],
                     "init": init,
                     "attr_type": attr_type,
-                    "float_prec": ConfigManager().get("precision", self._net_id),
+                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 }
                 if _check_paradigm("cuda", self._net_id) and locality == "global":
                     code += attr_init_tpl[locality][attr_type] % var_ids

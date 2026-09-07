@@ -137,7 +137,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 "rng_idx": "[0]" if single_matrix else "",
                 "add_args": "",
                 "num_threads": num_threads_acc,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "idx_type": self._template_ids["idx_type"],
             }
             declare_connectivity_matrix = ""
@@ -248,7 +248,7 @@ class OpenMPGenerator(ProjectionGenerator):
             "clear_container": clear_container,
             "sparse_format": sparse_matrix_format,
             "sparse_format_args": sparse_matrix_args,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "creating": creating,
             "pruning": pruning,
         }
@@ -316,7 +316,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 "target": proj.target,
                 "id_post": proj.post.id,
                 "id_pre": proj.pre.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "pre_prefix": "pop" + str(proj.pre.id) + "->",
                 "post_prefix": "pop" + str(proj.post.id) + "->",
                 "idx_type": idx_type,
@@ -629,7 +629,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         ids.update({"get_r": ids["pre_prefix"] + "r.data()"})
                         psp_code = (
                             template["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                             % ids
                         )
@@ -651,7 +651,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         )
                         psp_code = (
                             template["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                             % ids
                         )
@@ -695,7 +695,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
                             template = unrolled_template[simd_type]["multi_w"]["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                         else:
                             template = unrolled_template["none"]["multi_w"]["sum"]
@@ -886,7 +886,7 @@ class OpenMPGenerator(ProjectionGenerator):
             # Default variables needed in psp_code
             psp_prefix = tabify(
                 "%(float_prec)s sum;"
-                % {"float_prec": ConfigManager().get("precision", self._net_id)},
+                % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
                 2,
             )
         else:
@@ -1312,7 +1312,7 @@ if (%(condition)s) {
 
             psp_prefix = tabify(
                 "%(float_prec)s sum; int nb_pre, nb_post;"
-                % {"float_prec": ConfigManager().get("precision", self._net_id)},
+                % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
                 2,
             )
 
@@ -1433,7 +1433,7 @@ if (%(condition)s) {
 
         # Generate the code
         code += header_tpl["header"] % {
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "extra_args": extra_args,
             "extra_args_acc": extra_args_acc,
             "extra_args_vec_decl": extra_args_vec_decl,

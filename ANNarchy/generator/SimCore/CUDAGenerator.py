@@ -427,7 +427,7 @@ void set_%(name)s(%(cpp_float_prec)s value) {
         if ops == []:
             return "", "", ""
 
-        type_def = {"type": ConfigManager().get("precision", self._net_id)}
+        type_def = {"type": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
 
         # the computation kernel depends on the paradigm
         header = ""

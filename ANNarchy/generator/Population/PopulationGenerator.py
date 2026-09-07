@@ -87,7 +87,7 @@ class PopulationGenerator(object):
                 if attr_name not in already_processed:
                     # we assume here, that targets are local variables
                     id_dict = {
-                        "type": ConfigManager().get("precision", self._net_id),
+                        "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "name": attr_name,
                         "attr_type": "variable",
                     }
@@ -101,7 +101,7 @@ class PopulationGenerator(object):
 """
             for op in pop.global_operations:
                 op_dict = {
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "op": op["function"],
                     "var": op["variable"],
                 }
@@ -132,7 +132,7 @@ class PopulationGenerator(object):
                 "rd_name": rd["name"],
                 "type": rd["ctype"],
                 "template": rd["template"]
-                % {"float_prec": ConfigManager().get("precision", self._net_id)},
+                % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
             }
 
         return declaration
@@ -202,7 +202,7 @@ class PopulationGenerator(object):
             ids = {
                 "op": op["function"],
                 "var": op["variable"],
-                "type": ConfigManager().get("precision", self._net_id),
+                "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             }
 
             if _check_paradigm("openmp", self._net_id):
@@ -328,7 +328,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     "id": pop.id,
                     "name": "_sum_" + target,
                     "attr_type": "psp",
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "init": 0.0,
                 }
                 code += attr_tpl["local"] % ids
@@ -347,7 +347,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 attr_name = "g_" + target
                 if attr_name not in already_processed:
                     id_dict = {
-                        "type": ConfigManager().get("precision", self._net_id),
+                        "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                         "name": attr_name,
                         "attr_type": "variable",
                         "init": 0.0,
@@ -568,7 +568,7 @@ _spike_history.shrink_to_fit();
             for target in sorted(
                 list(set(pop.neuron_type.description["targets"] + pop.targets))
             ):
-                prec_type = ConfigManager().get("precision", self._net_id)
+                prec_type = ConfigManager()._cpp_float_dtype(net_id=self._net_id)
 
                 # add to the processing list
                 code_ids_per_type[prec_type].append(

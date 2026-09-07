@@ -204,7 +204,7 @@ class CUDAGenerator(PopulationGenerator):
             "annarchy_version": ANNarchy.__release__,
             # fill code templates
             "net_id": self._net_id,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "id": pop.id,
             "name": pop.name,
             "size": pop.size,
@@ -555,12 +555,12 @@ class CUDAGenerator(PopulationGenerator):
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
-    };""" % {"float_prec": ConfigManager().get("precision", self._net_id)}
+    };""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
         _mean_fr_window = 0;
-        _mean_fr_rate = %(float_prec)s{1};""" % {"float_prec": ConfigManager().get("precision", self._net_id)}
+        _mean_fr_rate = %(float_prec)s{1};""" % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
             reset_FR = """
         // Mean Firing Rate
         for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
@@ -580,7 +580,7 @@ class CUDAGenerator(PopulationGenerator):
         """
         # Gather all variable names
         add_args_header = "const long int t, const %(type)s dt" % {
-            "type": ConfigManager().get("precision", self._net_id)
+            "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
         }
         add_args_invoke = "t, dt"
         add_args_call = "t, dt"
@@ -657,7 +657,7 @@ class CUDAGenerator(PopulationGenerator):
 
             host_code += cpp_func
             # TODO: improve code
-            if ConfigManager().get("precision", self._net_id) == "float":
+            if ConfigManager()._cpp_float_dtype(net_id=self._net_id) == "float":
                 device_code += cpp_func.replace(
                     "float " + func["name"],
                     "__device__ float pop%(id)s_%(func)s"
@@ -715,7 +715,7 @@ class CUDAGenerator(PopulationGenerator):
         # double precision methods have a postfix
         prec_extension = (
             ""
-            if ConfigManager().get("precision", self._net_id) == "float"
+            if ConfigManager()._cpp_float_dtype(net_id=self._net_id) == "float"
             else "_double"
         )
 
@@ -766,7 +766,7 @@ class CUDAGenerator(PopulationGenerator):
 
                 # add the init
                 loc_pre += "%(prec)s %(name)s = %(term)s;" % {
-                    "prec": ConfigManager().get("precision", self._net_id),
+                    "prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "name": rd["name"],
                     "term": term,
                 }
@@ -820,7 +820,7 @@ class CUDAGenerator(PopulationGenerator):
 
                 # add the init
                 glob_pre += "%(prec)s %(name)s = %(term)s;" % {
-                    "prec": ConfigManager().get("precision", self._net_id),
+                    "prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "name": rd["name"],
                     "term": term,
                 }
@@ -955,7 +955,7 @@ class CUDAGenerator(PopulationGenerator):
         }
 """
         return mean_FR_update % {
-            "float_prec": ConfigManager().get("precision", self._net_id)
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
         }
 
     def _update_globalops(self, pop):
@@ -972,7 +972,7 @@ class CUDAGenerator(PopulationGenerator):
         for op in pop.global_operations:
             code += global_op_template[op["function"]]["call"] % {
                 "id": pop.id,
-                "type": ConfigManager().get("precision", self._net_id),
+                "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "op": op["function"],
                 "var": op["variable"],
             }
@@ -1044,7 +1044,7 @@ class CUDAGenerator(PopulationGenerator):
         for var in pop.neuron_type.description["variables"]:
             if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
                 pre_loop += (
-                    ConfigManager().get("precision", self._net_id)
+                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                     + " "
                     + var["pre_loop"]["name"]
                     + " = "
@@ -1115,7 +1115,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "op": op["function"],
                     "var": op["variable"],
                 }
@@ -1156,7 +1156,7 @@ class CUDAGenerator(PopulationGenerator):
                 list(set(pop.neuron_type.description["targets"] + pop.targets))
             ):
                 add_args_header += """, %(type)s* _sum_%(target)s""" % {
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "target": target,
                 }
                 add_args_invoke += """, _sum_%(target)s""" % {"target": target}
@@ -1169,7 +1169,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "op": op["function"],
                     "var": op["variable"],
                 }
@@ -1275,7 +1275,7 @@ class CUDAGenerator(PopulationGenerator):
         for var in pop.neuron_type.description["variables"]:
             if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
                 pre_code += (
-                    ConfigManager().get("precision", self._net_id)
+                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                     + " "
                     + var["pre_loop"]["name"]
                     + " = "
@@ -1348,7 +1348,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "op": op["function"],
                     "var": op["variable"],
                 }
@@ -1384,7 +1384,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     "id": pop.id,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "op": op["function"],
                     "var": op["variable"],
                 }
@@ -1590,7 +1590,7 @@ class CUDAGenerator(PopulationGenerator):
         device_kernel = CUDATemplates.spike_gather_kernel["device_kernel"] % {
             "id": pop.id,
             "pop_size": str(pop.size),
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "args": header_args,
             "cond": cond,
             "reset": reset,
@@ -1599,7 +1599,7 @@ class CUDAGenerator(PopulationGenerator):
 
         invoke_kernel = CUDATemplates.spike_gather_kernel["invoke_kernel"] % {
             "id": pop.id,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "args": header_args,
             "args_call": header_invoke,
         }
@@ -1607,7 +1607,7 @@ class CUDAGenerator(PopulationGenerator):
         kernel_decl = CUDATemplates.spike_gather_kernel["kernel_decl"] % {
             "id": pop.id,
             "default": "const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike"
-            % {"float_prec": ConfigManager().get("precision", self._net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
             "args": header_args,
         }
 
@@ -1681,7 +1681,7 @@ class CUDAGenerator(PopulationGenerator):
             ):
                 ids = {
                     "attr_name": "_sum_" + target,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "id": pop.id,
                 }
                 host_device_transfer += (
@@ -1729,7 +1729,7 @@ class CUDAGenerator(PopulationGenerator):
             ):
                 ids = {
                     "attr_name": "_sum_" + target,
-                    "type": ConfigManager().get("precision", self._net_id),
+                    "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "id": pop.id,
                 }
                 device_host_transfer += (

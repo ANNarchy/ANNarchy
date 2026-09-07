@@ -132,7 +132,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 "rng_idx": "[0]",
                 "add_args": add_args,
                 "num_threads": "",
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "idx_type": determine_idx_type_for_projection(proj)[0],
             }
             declare_connectivity_matrix = ""
@@ -230,7 +230,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             "access_additional": access_additional,
             "size_in_bytes": size_in_bytes,
             "clear_container": clear_container,
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "creating": creating,
             "pruning": pruning,
         }
@@ -313,7 +313,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 "id_pre": proj.pre.id,
                 "idx_type": idx_type,
                 "size_type": size_type,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "pre_prefix": "pop" + str(proj.pre.id) + "->",
                 "post_prefix": "pop" + str(proj.post.id) + "->",
             }
@@ -632,7 +632,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
                         psp_code = (
                             template["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                             % ids
                         )
@@ -655,7 +655,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
                         psp_code = (
                             template["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                             % ids
                         )
@@ -699,7 +699,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
                             template = unrolled_template[simd_type]["multi_w"]["sum"][
-                                ConfigManager().get("precision", self._net_id)
+                                ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             ]
                         else:
                             template = unrolled_template["none"]["multi_w"]["sum"]
@@ -738,7 +738,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         # Default variables needed in psp_code
         psp_prefix = tabify(
             "%(float_prec)s sum;"
-            % {"float_prec": ConfigManager().get("precision", self._net_id)},
+            % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
             2,
         )
 
@@ -1417,7 +1417,7 @@ if (%(condition)s) {
 
         # Generate the code
         code += header_tpl["header"] % {
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
             "extra_args": extra_args,
             "extra_args_acc": extra_args_acc,
             "extra_args_vec_decl": extra_args_vec_decl,
@@ -1444,7 +1444,7 @@ if (%(condition)s) {
         for rd in proj.synapse_type.description["random_distributions"]:
             ids = {
                 "id": proj.id,
-                "float_prec": ConfigManager().get("precision", self._net_id),
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 "global_index": "",
             }
             rd_init = rd["definition"] % ids
@@ -1580,7 +1580,7 @@ _last_event%(local_index)s = t;
         %(idx_type)s rk_post, rk_pre;
         %(float_prec)s _dt = dt * _update_period;""" % {
             "idx_type": determine_idx_type_for_projection(proj)[0],
-            "float_prec": ConfigManager().get("precision", self._net_id),
+            "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
         }
 
         # Global variables
