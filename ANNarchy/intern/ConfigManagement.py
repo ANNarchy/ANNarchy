@@ -98,6 +98,9 @@ class ConfigManager:
         """
         Updates the configuration flags of network *net_id* using the provided *config*.
         """
+        if "precision" in config.keys():
+            Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
+
         if not net_id in self._config.keys():
             self.register_network(net_id)
         self._config[net_id].update(config)
@@ -109,7 +112,7 @@ class ConfigManager:
         If the key does not exist, a terminating exception is raised.
         """
         if key == "precision":
-            return self._config[net_id]["dtype"].cpp_decl_type
+            Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
 
         if key in self.keys():
             return self._config[net_id][key]
@@ -123,6 +126,9 @@ class ConfigManager:
         Updates the configuration for entry *key* with a new *value*.
         If the key does not exist a terminating exception is raised.
         """
+        if key == "precision":
+            Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
+
         if key in self.keys():
             self._config[net_id][key] = value
         else:
