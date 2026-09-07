@@ -88,15 +88,15 @@ class ConfigManager:
         """
         self._config[net_id] = copy.deepcopy(self._config[0])
 
-    def get_config(self, net_id: int = 0):
+    def get_config(self, net_id: int = 0) -> dict:
         """
-        Returns the config for the given network.
+        Returns all configuration flags for the given network.
         """
         return copy.deepcopy(self._config[net_id])
 
-    def set_config(self, net_id: int, config):
+    def set_config(self, net_id: int, config: dict):
         """
-        Set the config for the given network.
+        Updates the configuration flags of network *net_id* using the provided *config*.
         """
         if not net_id in self._config.keys():
             self.register_network(net_id)
