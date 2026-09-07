@@ -179,7 +179,7 @@ class PopulationGenerator(object):
         ):
             if name == "sum(" + target + ")":
                 return "psp", {
-                    "ctype": ConfigManager().get("precision", pop.net_id),
+                    "ctype": ConfigManager()._cpp_float_dtype(net_id=pop.net_id),
                     "name": "_sum_" + target,
                 }
 

@@ -334,6 +334,6 @@ def _check_precision(precision, net_id=0):
     2. "double"
     """
     try:
-        return precision == ConfigManager().get("precision", net_id)
+        return precision == ConfigManager()._cpp_float_dtype(net_id=net_id)
     except KeyError:
         Messages.error("Unknown precision")

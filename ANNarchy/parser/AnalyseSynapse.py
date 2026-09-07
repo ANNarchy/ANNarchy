@@ -134,7 +134,7 @@ def analyse_synapse(synapse, net_id):
             {
                 "name": "w",
                 "bounds": {},
-                "ctype": ConfigManager().get("precision", net_id),
+                "ctype": ConfigManager()._cpp_float_dtype(net_id=net_id),
                 "init": 0.0,
                 "flags": [],
                 "eq": "w=0.0",

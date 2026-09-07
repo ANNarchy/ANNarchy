@@ -98,7 +98,7 @@ def extract_randomdist(description, net_id):
                     "args": processed_arguments,
                     "template": distributions_equivalents[dist],
                     "locality": variable["locality"],
-                    "ctype": ConfigManager().get("precision", net_id),
+                    "ctype": ConfigManager()._cpp_float_dtype(net_id=net_id),
                     "dependencies": dependencies,
                 }
                 rk_rand += 1
@@ -300,7 +300,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
 
             # ctype
             ctype = (
-                ConfigManager().get("precision", net_id) if ctype == "float" else ctype
+                ConfigManager()._cpp_float_dtype(net_id=net_id) if ctype == "float" else ctype
             )
 
             # Store the result
@@ -471,7 +471,7 @@ def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
     elif "bool" in flags:
         ctype = "bool" if _check_paradigm("openmp", net_id) else "char"
     else:
-        ctype = ConfigManager().get("precision", net_id)
+        ctype = ConfigManager()._cpp_float_dtype(net_id=net_id)
 
     # Detect the random distributions
     random_pattern = r"(" + "|".join(available_distributions) + r")\s*\([^)]*\)"
@@ -568,8 +568,8 @@ def extract_functions(description, net_id, local_global=False):
         # Extract their types
         types = f["constraint"]
         if types == "":
-            return_type = ConfigManager().get("precision", net_id)
-            arg_types = [ConfigManager().get("precision", net_id) for a in arguments]
+            return_type = ConfigManager()._cpp_float_dtype(net_id=net_id)
+            arg_types = [ConfigManager()._cpp_float_dtype(net_id=net_id) for a in arguments]
         else:
             types = types.split(",")
             return_type = types[0].strip()
