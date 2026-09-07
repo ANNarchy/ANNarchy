@@ -92,7 +92,7 @@ void step();
 /*
  *  Initialization
  */
-void initialize(const %(float_prec)s _dt) ;
+void initialize(const %(cpp_float_prec)s _dt) ;
 
 inline void setDevice(const int device_id) {
 #ifndef NDEBUG
@@ -114,8 +114,8 @@ void destroy_cpp_instances();
  */
 long int getTime();
 void setTime(const long int t_);
-%(float_prec)s getDt();
-void setDt(const %(float_prec)s dt_);
+%(cpp_float_prec)s getDt();
+void setDt(const %(cpp_float_prec)s dt_);
 
 /*
  * Seed for the RNG (host-side!)
@@ -159,7 +159,7 @@ struct RunConfig{
 // Pre-defined kernel definitions
 void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
 
-void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum);
+void call_clear_sum(RunConfig cfg, int num_elem, %(cpp_float_prec)s *sum);
 void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
 
 // Model-related kernel definitions
@@ -217,7 +217,7 @@ __global__ void clear_num_events(unsigned int* num_events) {
     *num_events = 0;
 }
 
-__global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
+__global__ void clear_sum(int num_elem, %(cpp_float_prec)s *sum) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
 
     while( j < num_elem ) {
@@ -291,7 +291,7 @@ void init_curand_states( int numBlocks, int numThreads, curandState* states, uns
 #endif
 }
 
-void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum) {
+void call_clear_sum(RunConfig cfg, int num_elem, %(cpp_float_prec)s *sum) {
     clear_sum<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(num_elem, sum);
 }
 
@@ -374,7 +374,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 /*
  * Internal data
  */
-%(float_prec)s dt;
+%(cpp_float_prec)s dt;
 long int t;
 
 // Populations
@@ -389,7 +389,7 @@ long int t;
 %(stream_setup)s
 
 // Initialize the internal data
-void initialize(%(float_prec)s _dt) {
+void initialize(%(cpp_float_prec)s _dt) {
 %(initialize)s
 }
 
@@ -624,8 +624,8 @@ void step() {
  */
 long int getTime() {return t;}
 void setTime(const long int t_) { t=t_; }
-%(float_prec)s getDt() { return dt;}
-void setDt(const %(float_prec)s dt_) { dt=dt_;}
+%(cpp_float_prec)s getDt() { return dt;}
+void setDt(const %(cpp_float_prec)s dt_) { dt=dt_;}
 """
 
 host_initialize_template = """
@@ -727,8 +727,8 @@ built_in_functions = """
 
 integer_power = """
 // power function for integer exponent
-__device__ %(float_prec)s power(%(float_prec)s x, unsigned int a) {
-    %(float_prec)s res=x;
+__device__ %(cpp_float_prec)s power(%(cpp_float_prec)s x, unsigned int a) {
+    %(cpp_float_prec)s res=x;
     for (unsigned int i = 0; i < a-1; i++){
         res *= x;
     }
