@@ -146,7 +146,7 @@ body_template = """
  */
 %(float_prec)s dt;
 long int t;
-std::vector<std::mt19937> rng;
+std::vector<%(rng_engine_type)s> rng;
 
 // number openMP threads
 int global_num_threads = -1;
@@ -387,7 +387,7 @@ void initialize(const %(py_float_prec)s _dt) {
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
 #ifndef NDEBUG
-    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
+    std::cout << "ANNarchyCore::setSeed(seed=" << seed << ", num_threads=" << num_sources << ", use_seed_seq=" << std::string((use_seed_seq) ? "true" : "false") << ") using generator '%(rng_engine_type)s'." << std::endl;
 #endif
     // sanity check
     if (num_sources > 1) {
@@ -400,7 +400,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
     rng.clear();
 
     if (num_sources == 1) {
-        rng.push_back(std::mt19937(seed));
+        rng.push_back(%(rng_engine_type)s(seed));
     } else {
         if (use_seed_seq) {
             std::seed_seq seq{seed};
@@ -408,7 +408,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
             seq.generate(seeds.begin(), seeds.end());
 
             for (auto it = seeds.begin(); it != seeds.end(); it++) {
-                rng.push_back(std::mt19937(*it));
+                rng.push_back(%(rng_engine_type)s(*it));
             }
         } else {
             // Using seed initialization of M.E. O'Neill (randutils)
@@ -417,7 +417,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
             seeder.generate(seeds.begin(), seeds.end());
 
             for (auto it = seeds.begin(); it != seeds.end(); it++) {
-                rng.push_back(std::mt19937(*it));
+                rng.push_back(%(rng_engine_type)s(*it));
             }
         }
     }

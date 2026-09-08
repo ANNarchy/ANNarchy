@@ -877,6 +877,7 @@ class ProjectionGenerator(object):
                     "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                     "template": rd["template"]
                     % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
+                    "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                 }
 
         # Structural plasticity

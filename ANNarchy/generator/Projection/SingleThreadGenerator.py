@@ -6,7 +6,6 @@
 import ANNarchy
 
 # ANNarchy objects
-from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 from ANNarchy.intern.ConfigManagement import ConfigManager
@@ -25,7 +24,7 @@ from ANNarchy.generator.Utils import (
     tabify,
     remove_trailing_spaces,
     get_highest_available_simd_instructions_type,
-    determine_idx_type_for_projection,
+    determine_idx_type_for_projection
 )
 
 import re
@@ -198,6 +197,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             "name_pre": proj.pre.name,
             "name_post": proj.post.name,
             "target": proj.target,
+            "rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
             "sparse_matrix_include": sparse_matrix_include,
             "sparse_format": sparse_matrix_format,
             "sparse_format_args": sparse_matrix_args,
@@ -250,6 +250,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             + str(proj.id)
             + ".hpp",
             "w",
+            encoding='utf-8'
         ) as ofile:
             ofile.write(final_code)
 

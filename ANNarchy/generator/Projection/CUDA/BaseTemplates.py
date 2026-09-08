@@ -13,7 +13,7 @@ projection_header = """/*
 %(include_additional)s
 %(include_profile)s
 
-extern std::vector<std::mt19937> rng;
+extern std::vector<%(host_rng_engine_type)s> rng;
 extern unsigned long long global_seed;
 
 extern PopStruct%(id_pre)s* pop%(id_pre)s;
@@ -117,7 +117,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     void host_to_device() {
     #if defined(_TRACE_INIT) || !defined(NDEBUG)
         std::cout << "  ProjStruct%(id_proj)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
-    #endif    
+    #endif
 %(host_to_device)s
     }
 
@@ -326,10 +326,10 @@ attribute_acc = {
 curand = {
     "local": {
         "decl": """
-    curandState* gpu_%(rd_name)s;
+    %(dev_rng_engine_type)s* gpu_%(rd_name)s;
 """,
         "init": """
-        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(%(dev_rng_engine_type)s));
         init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
     #ifndef NDEBUG
         cudaError_t err = cudaGetLastError();
@@ -341,10 +341,10 @@ curand = {
     },
     "global": {
         "decl": """
-    curandState* gpu_%(rd_name)s;
+    %(dev_rng_engine_type)s* gpu_%(rd_name)s;
 """,
         "init": """
-        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
+        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(%(dev_rng_engine_type)s));
         init_curand_states( size, gpu_%(rd_name)s, global_seed );
     #ifndef NDEBUG
         cudaError_t err = cudaGetLastError();

@@ -194,6 +194,7 @@ void set_%(name)s(%(float_prec)s value);"""
             "net_id": self._net_id,
             "float_prec": float_type.cpp_decl_type,
             "py_float_prec": float_type.py_decl_type,
+            "rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
             "pop_ptr": pop_ptr,
             "proj_ptr": proj_ptr,
             "glops_def": glop_definition,

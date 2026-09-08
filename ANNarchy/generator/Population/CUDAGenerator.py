@@ -210,6 +210,7 @@ class CUDAGenerator(PopulationGenerator):
             "size": pop.size,
             "include_additional": include_additional,
             "include_profile": include_profile,
+            "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id),
             "struct_additional": struct_additional,
             "extern_global_operations": "",  # CPU side global ops
             "declare_spike_arrays": declare_spike,
@@ -609,7 +610,12 @@ class CUDAGenerator(PopulationGenerator):
             if attr_type is None:
                 continue
 
-            ids = {"id": pop.id, "name": attr_dict["name"], "type": attr_dict["ctype"]}
+            ids = {
+                "id": pop.id,
+                "name": attr_dict["name"],
+                "type": attr_dict["ctype"],
+                "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
+            }
 
             if attr_type == "par":
                 if dep in pop.neuron_type.description["global"]:
@@ -625,7 +631,7 @@ class CUDAGenerator(PopulationGenerator):
                 add_args_invoke += ", %(name)s" % ids
                 add_args_call += ", pop%(id)s->gpu_%(name)s" % ids
             elif attr_type == "rand":
-                add_args_header += ", curandState* state_%(name)s" % ids
+                add_args_header += ", %(dev_rng_engine_type)s* state_%(name)s" % ids
                 add_args_invoke += ", state_%(name)s" % ids
                 add_args_call += ", pop%(id)s->gpu_%(name)s" % ids
             else:
@@ -773,7 +779,7 @@ class CUDAGenerator(PopulationGenerator):
 
                 # read-out/write-back of the RNG state
                 pre_loop += (
-                    f"curandState loc_state_{rd['name']} = state_{rd['name']}[tid];"
+                    f"{ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)} loc_state_{rd['name']} = state_{rd['name']}[tid];"
                 )
                 post_loop += f"state_{rd['name']}[tid] = loc_state_{rd['name']};"
 

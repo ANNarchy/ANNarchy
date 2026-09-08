@@ -15,6 +15,7 @@ default_config = dict(
     # Simulation Control
     dt=1.0,
     seed=None,
+    bit_generator = 'default',
     method="explicit",
     structural_plasticity=False,
     # Parallel processing
@@ -136,14 +137,94 @@ class ConfigManager:
 
     def keys(self) -> list:
         "Returns the list of keys that can be set with setup."
-        return list(self._config[0].keys())
+        return list(default_config.keys())
 
     # ------------------------------------------------------------------
     # Internal API
     # ------------------------------------------------------------------
-    def _cpp_float_dtype(self, net_id: int = 0):
+    def _cpp_float_dtype(self, net_id: int = 0) -> str:
+        """
+        Returns the C++ default data type to represent neural-/synaptic state variables.
+        """
         return self._config[net_id]["dtype"].cpp_decl_type
 
+    def _cpp_cpu_rng_engine(self, net_id: int = 0) -> str:
+        """
+        Select the C++ RNG engine type which corresponds to the generator used in Python (if available).
+        """
+        bit_generator = self.get("bit_generator", net_id=net_id)
+
+        if bit_generator == "default":
+            # HD: there is a std::default_random_engine, but in libstdc++ this implements std::minstd_rand
+            #     which is not recommended to use for simulations. Therefore, we use the Merseanne Twister as
+            #     default.
+            cpp_rng_type = "std::mt19937"
+
+        elif bit_generator == "MT19937":
+            cpp_rng_type = "std::mt19937"
+
+        else:
+            Messages.warning(f"Initialize CPU/Host RNG: Invalid value '{bit_generator}' set for bit_generator fall back to MT19937 (default). Note for GPUs this refers only to host side.")
+            cpp_rng_type = "std::mt19937"
+
+        return cpp_rng_type
+
+    def _cpp_gpu_rng_engine(self, net_id: int = 0) -> str:
+        """
+        Select the C++ RNG engine type being used on GPU devices which corresponds to the generator used in Python (if available).
+        """
+        bit_generator = self.get("bit_generator", net_id=net_id)
+
+        if self.get("paradigm") != "cuda":
+            # Don't care, its just called from ProjectionGenerator base class, will be ignored ...
+            cpp_rng_type = ""
+
+        elif bit_generator == "default":
+            # Let the cuRand implementors decide, as far as I know it always defaults to XORWOW
+            cpp_rng_type = "curandState"
+
+        elif bit_generator == "Philox":
+            cpp_rng_type = "curandStatePhilox4_32_10_t"
+
+        else:
+            Messages.warning(f"Initialize Device RNG: Invalid value '{bit_generator}' set for bit_generator fall back to curandState (default) on device side.")
+            cpp_rng_type = "curandState"
+
+        return cpp_rng_type
+
+    def _numpy_rng_engine(self, net_id: int = 0) -> numpy.random.Generator:
+        """
+        Select the C++ RNG engine type being used on GPU devices which corresponds to the generator used in Python (if available).
+
+        Implementation Hint:
+
+        Choosing NumPy default, as of 1.17 this is PCG64. Older NumPy.random.random() calls used MT19937, but this should not be used anymore ...
+        """
+        seed = self.get("seed", net_id=net_id)
+        bit_generator = self.get("bit_generator", net_id=net_id)
+
+        if bit_generator not in ["default", "MT19937", "Philox"]:
+            Messages.warning(f"Initialize NumPy RNG: invalid value '{bit_generator}', set fallback to NumPy.random.default_rng()")
+            bit_generator = 'default'
+
+        #
+        # Initializes the NumPy rng engine. Keep in mind all *bit_generator*
+        # instances need to be wrapped in a *Generator* to be useable afterwards ...
+        if bit_generator == "default":
+            return numpy.random.default_rng(seed=seed)
+
+        elif bit_generator == "MT19937":
+            return numpy.random.Generator(numpy.random.MT19937(seed=seed))
+
+        elif bit_generator == "Philox":
+            # TODO: Philox, as counter-based RNG, has an additional counter, by default initialized with 0.
+            #       --> should we make it configurable?
+            return numpy.random.Generator(numpy.random.Philox(seed=seed))
+
+        else:
+            # Just as sanity check:
+            # when the list gets longer, one could fail to implement all cases ...
+            raise NotImplementedError
 
 #############################################
 # Globally available functions (internal)

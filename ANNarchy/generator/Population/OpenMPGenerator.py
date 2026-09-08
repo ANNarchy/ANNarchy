@@ -221,6 +221,7 @@ class OpenMPGenerator(PopulationGenerator):
             "size": pop.size,
             "include_additional": include_additional,
             "include_profile": include_profile,
+            "rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
             "struct_additional": struct_additional,
             "extern_global_operations": extern_global_operations,
             "declare_spike_arrays": declare_spike,

@@ -912,6 +912,7 @@ def _instantiate(
     # Configure seeds for C++ random number generators
     # Required for state updates and also (in future) construction of connectivity
     seed = ConfigManager().get("seed", net_id)
+
     if seed is None:
         seed = int(time.time())
 

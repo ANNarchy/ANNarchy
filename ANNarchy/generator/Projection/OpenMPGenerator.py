@@ -215,6 +215,7 @@ class OpenMPGenerator(ProjectionGenerator):
             "name_pre": proj.pre.name,
             "name_post": proj.post.name,
             "target": proj.target,
+            "rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
             "sparse_matrix_include": sparse_matrix_include,
             "include_additional": include_additional,
             "include_profile": include_profile,

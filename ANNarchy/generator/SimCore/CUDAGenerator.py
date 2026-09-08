@@ -74,6 +74,7 @@ class CUDAGenerator(SimCoreGenerator):
         device_invoke_header = CUDABaseTemplate.device_invoke_header % {
             "cpp_float_prec": float_type.cpp_decl_type,
             "invoke_kernel_def": invoke_kernel_def,
+            "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
         }
 
         host_header_code = CUDABaseTemplate.header_template % {
@@ -325,7 +326,8 @@ void set_%(name)s(%(cpp_float_prec)s value);"""
                 "built_in": CUDABaseTemplate.built_in_functions
                 + CUDABaseTemplate.integer_power
                 % {"cpp_float_prec": float_type.cpp_decl_type},
-                "cpp_float_prec": float_type.cpp_decl_type
+                "cpp_float_prec": float_type.cpp_decl_type,
+                "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
             }
         )
 
@@ -352,6 +354,8 @@ void set_%(name)s(%(cpp_float_prec)s value);"""
             "device_host_transfer": device_host_transfer,
             "kernel_config": threads_per_kernel,
             "sp_spike_backward_view_update": "",
+            "host_rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
+            "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
         }
         base_dict.update(prof_dict)
         host_code = (

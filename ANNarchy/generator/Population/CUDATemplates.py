@@ -15,7 +15,7 @@ extern long int t;
 
 // RNG - defined in ANNarchy.cu
 extern unsigned long long global_seed;
-extern void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
+extern void init_curand_states( int numBlocks, int numThreads, %(dev_rng_engine_type)s* states, unsigned long long seed );
 
 %(include_additional)s
 %(include_profile)s
@@ -432,10 +432,10 @@ attribute_transfer = {
 curand = {
     "local": {
         "decl": """
-    curandState* gpu_%(rd_name)s;
+    %(dev_rng_engine_type)s* gpu_%(rd_name)s;
 """,
         "init": """
-        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(curandState));
+        cudaMalloc((void**)&gpu_%(rd_name)s, _nb_blocks * _threads_per_block * sizeof(%(dev_rng_engine_type)s));
         init_curand_states( _nb_blocks, _threads_per_block, gpu_%(rd_name)s, global_seed );
 """,
         "clear": """
@@ -444,10 +444,10 @@ cudaFree(gpu_%(rd_name)s);
     },
     "global": {
         "decl": """
-    curandState* gpu_%(rd_name)s;
+    %(dev_rng_engine_type)s* gpu_%(rd_name)s;
 """,
         "init": """
-        cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(curandState));
+        cudaMalloc((void**)&gpu_%(rd_name)s, sizeof(%(dev_rng_engine_type)s));
         init_curand_states(1, 1, gpu_%(rd_name)s, global_seed );
 #ifndef NDEBUG
         cudaError_t err_%(rd_name)s = cudaGetLastError();

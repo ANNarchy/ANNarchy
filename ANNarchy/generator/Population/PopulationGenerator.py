@@ -131,8 +131,8 @@ class PopulationGenerator(object):
             declaration += self._templates["rng"][rd["locality"]]["decl"] % {
                 "rd_name": rd["name"],
                 "type": rd["ctype"],
-                "template": rd["template"]
-                % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
+                "template": rd["template"] % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
+                "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
             }
 
         return declaration
@@ -313,6 +313,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     rng_ids = {
                         "id": pop.id,
                         "rd_name": dist["name"],
+                        "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                     }
                     code += self._templates["rng"][dist["locality"]]["init"] % rng_ids
 
@@ -497,8 +498,9 @@ _spike_history.shrink_to_fit();
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:
             for dist in pop.neuron_type.description["random_distributions"]:
-                code += "size_in_bytes += sizeof(curandState*);\t// gpu_%(name)s\n" % {
-                    "name": dist["name"]
+                code += "size_in_bytes += sizeof(%(dev_rng_engine_type)s*);\t// gpu_%(name)s\n" % {
+                    "name": dist["name"],
+                    "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                 }
 
         code = tabify(code, 2)

@@ -13,7 +13,7 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import (
 from ANNarchy.generator.Utils import (
     generate_equation_code,
     tabify,
-    remove_trailing_spaces,
+    remove_trailing_spaces
 )
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
@@ -220,6 +220,7 @@ class SingleThreadGenerator(PopulationGenerator):
             "size": pop.size,
             "include_additional": include_additional,
             "include_profile": include_profile,
+            "rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id),
             "struct_additional": struct_additional,
             "extern_global_operations": extern_global_operations,
             "declare_spike_arrays": declare_spike,

@@ -23,7 +23,7 @@ population_header = """/*
 extern %(float_prec)s dt;
 extern long int t;
 extern int global_num_threads;
-extern std::vector<std::mt19937> rng;
+extern std::vector<%(rng_engine_type)s> rng;
 %(extern_global_operations)s
 %(struct_additional)s
 ///////////////////////////////////////////////////////////////

@@ -142,7 +142,7 @@ body_template = """
  */
 %(float_prec)s dt;
 long int t;
-std::vector<std::mt19937> rng;
+std::vector<%(rng_engine_type)s> rng;
 
 // Custom constants
 %(custom_constant)s
@@ -370,7 +370,7 @@ void initialize(const %(py_float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
-    std::string msg = "ANNarchyCore::setSeed(): " + std::to_string(seed) + ", " + std::to_string(num_sources) + ", " + std::string((use_seed_seq) ? "true" : "false");
+    std::string msg = "ANNarchyCore::setSeed(seed=" + std::to_string(seed) + ", num_threads=" + std::to_string(num_sources) + ", use_seed_seq=" + std::string((use_seed_seq) ? "true" : "false") + ") using generator '%(rng_engine_type)s'.";
     ANNARCHY_LOG_MSG(msg);
 
     // sanity check
@@ -379,7 +379,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 
     rng.clear();
 
-    rng.push_back(std::mt19937(seed));
+    rng.push_back(%(rng_engine_type)s(seed));
 
     rng.shrink_to_fit();
 }

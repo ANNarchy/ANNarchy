@@ -9,7 +9,7 @@ import inspect
 from typing import List
 from dataclasses import dataclass, field
 
-import numpy as np
+import numpy
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
@@ -37,6 +37,7 @@ class NetworkMeta(type):
     def __call__(cls, *args, **kwargs):
         # Extract the seed and dt from kwargs if provided
         seed = kwargs.pop("seed", None)
+        bit_generator = kwargs.pop("bit_generator", 'default')
         dt = kwargs.pop("dt", None)
 
         # Create an instance without calling __init__
@@ -44,7 +45,7 @@ class NetworkMeta(type):
 
         # Call the parent class's __init__ methods first
         if isinstance(instance, Network):
-            Network.__init__(instance, dt=dt, seed=seed)
+            Network.__init__(instance, dt=dt, bit_generator=bit_generator, seed=seed)
 
         # Call the child's __init__ method
         if hasattr(cls, "__init__"):
@@ -114,7 +115,7 @@ class Network(metaclass=NetworkMeta):
     :param seed: seed for the random number generators.
     """
 
-    def __init__(self, dt: float = None, seed: int = None):
+    def __init__(self, dt: float = None, bit_generator: str = None, seed: int = None):
         # Constructor should only be called once
         if hasattr(self, "_initialized"):
             return
@@ -129,7 +130,7 @@ class Network(metaclass=NetworkMeta):
         # Create the data structure to store populations and projections
         self._data = NetworkData()
 
-        # Get the default config
+        # Initializes from the default config
         ConfigManager().register_network(self.id)
 
         # dt
@@ -140,11 +141,11 @@ class Network(metaclass=NetworkMeta):
         if seed is None:
             seed = secrets.randbits(32)  # Generates a random 32-bit integer
 
-        # Store the seed value
-        self._set_config("seed", seed)
+        # Updates configuration, e.g., for documentation purposes
+        ConfigManager().set_config(config={"seed": seed, "bit_generator": bit_generator}, net_id=self.id)
 
         # initialize one RNG instance
-        self._default_rng = np.random.default_rng(self.seed)
+        self._default_rng = ConfigManager()._numpy_rng_engine(net_id=self.id)
         # Store RNG state for Network.reset(reseed=True)
         self._default_rng_state = self._default_rng.bit_generator.state
 
@@ -947,7 +948,7 @@ class Network(metaclass=NetworkMeta):
         net = classname(dt=dt, seed=seed, **init_args)
 
         # Set the config
-        ConfigManager().set_config(net.id, config)
+        ConfigManager().set_config(net_id=net.id, config=config)
 
         # Transfer compilation state of "parent" network
         net.compiled = NetworkManager().get_network(id).compiled
@@ -1142,7 +1143,7 @@ class Network(metaclass=NetworkMeta):
         Messages.error("The seed argument should not be overwritten.")
 
     @property
-    def default_rng(self) -> np.random.Generator:
+    def default_rng(self) -> numpy.random.Generator:
         """
         Get a pre-seeded RNG instance. During construction of the network object, a numpy.random.Generator
         object has been instantiated. This can be used to initialize random distributions. e.g., instances of
@@ -1151,7 +1152,7 @@ class Network(metaclass=NetworkMeta):
         return self._default_rng
 
     @default_rng.setter
-    def default_rng(self, new_rng: np.random.Generator) -> None:
+    def default_rng(self, new_rng: numpy.random.Generator) -> None:
         "Prevent the setting of RNG instance by hand."
         Messages.error("The default_rng argument should not be overwritten.")
 
@@ -1194,7 +1195,7 @@ class Network(metaclass=NetworkMeta):
         """
         Saves the parameters and variables of the networkin a file.
 
-        * If the extension is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
+        * If the extension is '.npz', the data will be saved and compressed using `numpy.savez_compressed` (recommended).
         * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
         * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
         * Otherwise, the data will be pickled into a simple binary text file using cPickle.

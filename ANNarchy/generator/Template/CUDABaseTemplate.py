@@ -157,7 +157,7 @@ struct RunConfig{
 };
 
 // Pre-defined kernel definitions
-void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed );
+void init_curand_states( int numBlocks, int numThreads, %(dev_rng_engine_type)s* states, unsigned long long seed );
 
 void call_clear_sum(RunConfig cfg, int num_elem, %(cpp_float_prec)s *sum);
 void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
@@ -201,7 +201,7 @@ device_kernel = """#include "ANNarchyKernel%(net_id)s.cuh"
  *  HD (19.7.2019):     we need to be careful, that multiple calls to this method need to generate different state sequences.
  *  HD (17.10.2025):    Note, ANN5.0 switches from per-element RNG state to per-thread RNG state!
  */
-__global__ void rng_setup_kernel( int num_total, long long int sequence_offset, curandState* states, unsigned long long seed )
+__global__ void rng_setup_kernel( int num_total, unsigned long long sequence_offset, %(dev_rng_engine_type)s* states, unsigned long long seed )
 {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < num_total)
@@ -277,9 +277,9 @@ __global__ void clear_sum(int num_elem, %(cpp_float_prec)s *sum) {
 /********************************************************************/
 
 // We need to generate different state sequences per kernel call
-static long long int sequence_offset=0;
+static unsigned long long sequence_offset=0;
 
-void init_curand_states( int numBlocks, int numThreads, curandState* states, unsigned long long seed ) {
+void init_curand_states( int numBlocks, int numThreads, %(dev_rng_engine_type)s* states, unsigned long long seed ) {
 
     rng_setup_kernel<<< numBlocks, numThreads >>>( numBlocks * numThreads, sequence_offset, states, seed);
     sequence_offset += numBlocks * numThreads;
@@ -343,14 +343,20 @@ host_body_template = """// ANNarchy-related header
 // Handling GPU and CPU rng
 //
 
-std::vector<std::mt19937> rng;
+std::vector<%(host_rng_engine_type)s> rng;
 unsigned long long global_seed;
 
-void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
+void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
+#ifndef NDEBUG
+    std::cout << "ANNarchyCore::setSeed():" << std::endl;
+    std::cout << " - For host side, generator '%(host_rng_engine_type)s' is used configured with seed = " << seed << ", num_sources = " << num_sources << ", use_seed_seq=" << std::string((use_seed_seq) ? "true" : "false") << "." << std::endl;
+    std::cout << " - For device side, generator '%(dev_rng_engine_type)s' is used configured with seed = " << seed << "." << std::endl;
+#endif
+
     rng.clear();
 
     if (num_sources == 1) {
-        rng.push_back(std::mt19937(seed));
+        rng.push_back(%(host_rng_engine_type)s(seed));
     }else {
         if ( use_seed_seq ) {
             std::seed_seq seq{seed};
@@ -358,7 +364,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
             seq.generate(seeds.begin(), seeds.end());
 
             for (auto it = seeds.begin(); it != seeds.end(); it++) {
-                rng.push_back(std::mt19937(*it));
+                rng.push_back(%(host_rng_engine_type)s(*it));
             }
         } else {
             std::cerr << "Not implemented. " << std::endl;

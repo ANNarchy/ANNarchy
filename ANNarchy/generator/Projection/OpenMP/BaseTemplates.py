@@ -19,7 +19,7 @@ extern PopStruct%(id_post)s *pop%(id_post)s;
 extern %(float_prec)s dt;
 extern long int t;
 extern int global_num_threads;
-extern std::vector<std::mt19937> rng;
+extern std::vector<%(rng_engine_type)s> rng;
 
 /////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s

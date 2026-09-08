@@ -215,6 +215,7 @@ class CUDAGenerator(ProjectionGenerator):
             "device_to_host": device_host_transfer,
             "size_in_bytes": size_in_bytes,
             "clear_container": clear_container,
+            "host_rng_engine_type": ConfigManager()._cpp_cpu_rng_engine(net_id=self._net_id)
         }
 
         # Store the file in generate ( will be compared with files contained
@@ -1306,7 +1307,7 @@ if(%(condition)s){
                 elif attr_type == "rand":
                     ids = {
                         "id_proj": proj.id,
-                        "type": "curandState",
+                        "type": ConfigManager()._cpp_gpu_rng_engine(net_id=proj.net_id),
                         "name": attr_dict["name"],
                     }
                     kernel_args_decl += ", %(type)s* state_%(name)s" % ids
@@ -1729,6 +1730,7 @@ _last_event%(local_index)s = t;
                 rng_ids = {
                     "id": proj.id,
                     "rd_name": dist["name"],
+                    "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                 }
                 code += self._templates["rng"][dist["locality"]]["init"] % rng_ids
 
