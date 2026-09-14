@@ -40,6 +40,8 @@ single_thread = {
     # test_Monitor
     "test_MonitorRatePSP": ["lil", "auto"],
     "test_MonitorLocalVariable": ["lil", "auto"],
+    "test_MonitorVariablePeriodic": ["lil", "auto"],
+    "test_MonitorVariablePeriodicAndOffset": ["lil", "auto"],
     # SpecificProjections
     "test_Convolution": ["lil", "auto"],
     "test_Pooling": ["lil", "auto"],
@@ -77,6 +79,8 @@ open_mp = {
     # test_Monitor
     "test_MonitorRatePSP": ["lil", "auto"],
     "test_MonitorLocalVariable": ["lil", "auto"],
+    "test_MonitorVariablePeriodic": ["lil", "auto"],
+    "test_MonitorVariablePeriodicAndOffset": ["lil", "auto"],
     # SpecificProjections
     "test_Convolution": ["lil", "auto"],
     "test_Pooling": ["lil", "auto"],
@@ -112,6 +116,8 @@ cuda = {
     # test_Monitor
     "test_MonitorRatePSP": ["csr"],
     "test_MonitorLocalVariable": ["csr"],
+    "test_MonitorVariablePeriodic": ["lil", "auto"],
+    "test_MonitorVariablePeriodicAndOffset": ["lil", "auto"],
     # SpecificProjections
     "test_Convolution": ["csr"],
     "test_Pooling": ["csr"],

@@ -15,7 +15,12 @@ from .test_Projection import (
 )
 
 # Recording
-from .test_Monitor import test_MonitorRatePSP, test_MonitorLocalVariable
+from .test_Monitor import (
+    test_MonitorRatePSP,
+    test_MonitorLocalVariable,
+    test_MonitorVariablePeriodic,
+    test_MonitorVariablePeriodicAndOffset
+)
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
