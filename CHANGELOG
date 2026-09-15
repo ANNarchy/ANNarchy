@@ -1,3 +1,9 @@
+**5.0.4.1**
+
+Mini-release to test the adapted CMake files (commit 20dafc5) -> using GPUs on google's colab platform should work now again.
+
+Further, added unittests related to recording with period/period_offset (commit c594119), and fixed code generation bug related to FP32 on CUDA devices (commit 8b66b2e).
+
 **5.0.4**
 
 Bugfixes:
