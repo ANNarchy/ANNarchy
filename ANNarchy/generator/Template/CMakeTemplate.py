@@ -204,6 +204,27 @@ set_target_properties(${CORE_NAME} PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
+# Find CUDA, more precise the required sub-components
+find_package(CUDAToolkit REQUIRED)
+if(CUDAToolkit_FOUND)
+    if(TARGET CUDA::cudart)
+        target_link_libraries(${CORE_NAME} PRIVATE CUDA::cudart)
+    else()
+        message(FATAL_ERROR "CUDA package 'cudart' not found")
+    endif()
+
+    if(TARGET CUDA::curand)
+        target_link_libraries(${CORE_NAME} PRIVATE CUDA::curand)
+    else()
+        message(FATAL_ERROR "CUDA package 'cuRAND' not found")
+    endif()
+
+    # Add CUDA-paths to g++
+    include_directories(
+        ${CUDAToolkit_INCLUDE_DIRS}
+    )
+endif()
+
 #
 # Nanobind Wrapper
 #
