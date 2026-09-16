@@ -112,10 +112,9 @@ void destroy_cpp_instances();
 /*
  * Time export
  */
-long int getTime();
-void setTime(const long int t_);
+long int get_sim_step();
+void set_sim_step(const long int t_);
 %(cpp_float_prec)s getDt();
-void setDt(const %(cpp_float_prec)s dt_);
 
 /*
  * Seed for the RNG (host-side!)
@@ -622,10 +621,9 @@ void step() {
  * Access to time and dt
  *
  */
-long int getTime() {return t;}
-void setTime(const long int t_) { t=t_; }
+long int get_sim_step() {return t;}
+void set_sim_step(const long int t_) { t=t_; }
 %(cpp_float_prec)s getDt() { return dt;}
-void setDt(const %(cpp_float_prec)s dt_) { dt=dt_;}
 """
 
 host_initialize_template = """

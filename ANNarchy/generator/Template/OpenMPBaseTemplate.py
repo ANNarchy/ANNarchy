@@ -98,7 +98,7 @@ void step();
 /*
  *  Initialization
  */
-void initialize(const %(py_float_prec)s dt_) ;
+void initialize(const %(float_prec)s dt_) ;
 
 /*
  *  Life-time management
@@ -110,10 +110,9 @@ void destroy_cpp_instances();
  * Time export
  *
  */
-long int getTime();
-void setTime(const long int t_);
-%(py_float_prec)s getDt();
-void setDt(const %(py_float_prec)s dt_);
+long int get_sim_step();
+void set_sim_step(const long int t_);
+%(float_prec)s getDt();
 
 /*
  * Number of threads
@@ -377,7 +376,7 @@ int run_until(const int steps, std::vector<int> populations, bool or_and)
  *  Initialization methods
  */
 // Initialize the internal data and the random numbers generator
-void initialize(const %(py_float_prec)s _dt) {
+void initialize(const %(float_prec)s _dt) {
 %(initialize)s
 }
 
@@ -440,10 +439,9 @@ void destroy_cpp_instances() {
 /*
  * Access to time and dt
  */
-long int getTime() {return t;}
-void setTime(const long int t_) { t=t_;}
-%(py_float_prec)s getDt() { return %(py_float_prec)s{dt};}
-void setDt(const %(py_float_prec)s dt_) { dt=%(float_prec)s{dt_};}
+long int get_sim_step() {return t;}
+void set_sim_step(const long int t_) { t=t_;}
+%(float_prec)s getDt() { return dt;}
 
 /*
  * Number of threads

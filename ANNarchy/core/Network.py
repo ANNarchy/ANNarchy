@@ -134,7 +134,7 @@ class Network(metaclass=NetworkMeta):
 
         # dt
         if dt is not None:
-            self.dt = dt
+            self._set_config("dt", dt)
 
         # Draw a value for seed if not provided by user
         if seed is None:
@@ -1158,11 +1158,14 @@ class Network(metaclass=NetworkMeta):
     @property
     def dt(self) -> float:
         "Step size in milliseconds for the integration of the ODEs."
-        return self._get_config("dt")
+        if self.instance is None:
+            return self._get_config("dt")
+        else:
+            return self.instance.get_sim_dt()
 
     @dt.setter
-    def dt(self, dt: float) -> None:
-        self._set_config("dt", dt)
+    def dt(self, dt: float):
+        raise AttributeError("The step width 'dt' must be configured when calling Network().")
 
     ###################################
     # IO

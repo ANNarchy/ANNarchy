@@ -78,8 +78,13 @@ class NanoBindGenerator:
         # Profiling of simulation kernel is optional
         profiling_code = profiler_template if self.network._profiler is not None else ""
 
+        # default data type used for floating values.
+        default_float_type = ConfigManager().get("dtype", self.net_id)
+
         return basetemplate % {
             "net_id": self.net_id,
+            "py_float_prec": default_float_type.py_decl_type,
+            "cpp_float_prec": default_float_type.cpp_decl_type,
             "device_specific": device_specific,
             "functions_wrapper": functions_code,
             "constant_wrapper": constant_code,
