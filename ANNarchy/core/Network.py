@@ -27,6 +27,7 @@ import ANNarchy.extensions.bold as bold
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
+import ANNarchy.core.CTypes as ANNarchyFloatTypes
 import ANNarchy.generator.Compiler as Compiler
 
 from ANNarchy.core.Utils import _rec_size_in_bytes
@@ -1066,6 +1067,18 @@ class Network(metaclass=NetworkMeta):
         # ANNarchy 4.x interface
         if 'precision' in kwargs.keys():
             Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
+
+        if 'dtype' in kwargs:
+            dtype = kwargs.pop("dtype")
+            paradigm = kwargs.pop("paradigm", self._get_config("paradigm"))
+            if dtype == ANNarchyFloatTypes.bfloat16 and paradigm != "cuda":
+                Messages.error("using bfloat16 is only valid for GPU devices.")
+            elif dtype == ANNarchyFloatTypes.float16 and paradigm != "cuda":
+                Messages.error("using float16 is only valid for GPU devices.")
+            else:
+                # store the configuration
+                self._set_config("paradigm", paradigm)
+                self._set_config("dtype", dtype)
 
         # RNG-related arguments are treated differently
         rng_changed = False

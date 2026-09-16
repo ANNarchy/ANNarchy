@@ -23,6 +23,14 @@ header_template = """#ifndef __ANNARCHY_H__
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
+#if __has_include(<cuda_bf16.h>)
+    // __nv_bfloat16, note this requires Ampere and above ...
+    #include <cuda_bf16.h>
+#endif
+#if __has_include(<cuda_fp16.h>)
+    // __half, note this requires Turing and above ...
+    #include <cuda_fp16.h>
+#endif
 
 // Useful functions
 #include "logging.hpp"
@@ -130,6 +138,14 @@ device_invoke_header = """#pragma once
 #include <float.h>
 #include <stdio.h>
 #include <iostream>
+#if __has_include(<cuda_bf16.h>)
+    // __nv_bfloat16, note this requires Ampere and above ...
+    #include <cuda_bf16.h>
+#endif
+#if __has_include(<cuda_fp16.h>)
+    // __half, note this requires Turing and above ...
+    #include <cuda_fp16.h>
+#endif
 
 // Encapsulates the four parameters required for a kernel invocation.
 struct RunConfig{

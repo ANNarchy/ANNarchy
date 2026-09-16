@@ -81,6 +81,7 @@ class NanoBindGenerator:
         # default data type used for floating values.
         default_float_type = ConfigManager().get("dtype", self.net_id)
 
+        # Build final code snippet
         return basetemplate % {
             "net_id": self.net_id,
             "py_float_prec": default_float_type.py_decl_type,
