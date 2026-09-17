@@ -309,7 +309,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         %(idx_type)s rk_post = rank_post[bid];
 
         // thread-local sum store result in shared memory
-        sdata[tid] = %(thread_init)s;
+        sdata[tid] = cuda_type_traits<%(float_prec)s>::zero();
         for (%(size_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= BLOCKSIZE) {
             sdata[tid] += %(psp)s
         }
@@ -346,7 +346,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         %(size_type)s C = row_ptr[rk_post+1];
 
         // Init all threads with max. value
-        %(float_prec)s localMin = %(thread_init)s;
+        %(float_prec)s localMin = cuda_type_traits<%(float_prec)s>::max();
 
         // Iterate with chunks over the array
         while(j < C)
@@ -402,7 +402,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         %(size_type)s C = row_ptr[rk_post+1];
 
         // Init all threads with min. value
-        %(float_prec)s localMax = %(thread_init)s;
+        %(float_prec)s localMax = cuda_type_traits<%(float_prec)s>::lowest();
 
         // Iterate with chunks over the array
         while(j < C)
@@ -459,7 +459,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         %(size_type)s C = row_ptr[rk_post+1];
 
         // thread-local sum store result in shared memory
-        sdata[tid] = %(thread_init)s;
+        sdata[tid] = cuda_type_traits<%(float_prec)s>::zero();
         while(j < C) {
             sdata[tid] += %(psp)s
             j += BLOCKSIZE;
@@ -563,11 +563,7 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
             %(target_arg)s
         );
     }
-""",
-    "thread_init": {
-        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
-        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
-    },
+"""
 }
 
 # Implements the event-driven signal transmission between spiking neurons.

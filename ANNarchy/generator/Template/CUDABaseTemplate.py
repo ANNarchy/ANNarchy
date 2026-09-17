@@ -133,6 +133,7 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 """
 
 device_invoke_header = """#pragma once
+
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
@@ -146,6 +147,9 @@ device_invoke_header = """#pragma once
     // __half, note this requires Turing and above ...
     #include <cuda_fp16.h>
 #endif
+
+// some specialized type traits for floating-point values
+#include "cuda_type_traits.cuh"
 
 // Encapsulates the four parameters required for a kernel invocation.
 struct RunConfig{
