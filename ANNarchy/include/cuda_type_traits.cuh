@@ -22,6 +22,12 @@
 
 #pragma once
 
+/*
+ * Provides a minimal interface for handling numerical values.
+ * In particular, the semantics of min() follow the definition
+ * provided by std::numeric_limits.
+ */
+
 template <typename T>
 struct cuda_type_traits
 {
@@ -92,3 +98,36 @@ struct cuda_type_traits<float>
         return 0.0f;
     }
 };
+
+#if __has_include(<cuda_fp16.h>)
+/*
+ * 16-bit floating point values
+ */
+template <>
+struct cuda_type_traits<__half>
+{
+    __device__ __forceinline__
+    static __half max()
+    {
+        return __float2half(65504.0f);
+    }
+
+    __device__ __forceinline__
+    static __half min()
+    {
+        return __float2half(6.10352e-5f);
+    }
+
+    __device__ __forceinline__
+    static __half lowest()
+    {
+        return __float2half(-65504.0f);
+    }
+
+    __device__ __forceinline__
+    static __half zero()
+    {
+        return __float2half(0.0f);
+    }
+};
+#endif

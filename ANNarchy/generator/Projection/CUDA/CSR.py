@@ -15,6 +15,21 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
     data[tid] += data[tid +  2];
     data[tid] += data[tid +  1];
 }
+
+#if __has_include(<cuda_fp16.h>)
+// specialized template as __half does not support operator+=()
+template<>
+__device__ void half_warp_reduce_sum<__half>(
+    volatile __half* data,
+    unsigned int tid)
+{
+    data[tid] = __hadd(data[tid], data[tid + 16]);
+    data[tid] = __hadd(data[tid], data[tid +  8]);
+    data[tid] = __hadd(data[tid], data[tid +  4]);
+    data[tid] = __hadd(data[tid], data[tid +  2]);
+    data[tid] = __hadd(data[tid], data[tid +  1]);
+}
+#endif
 """
 
 launch_config = {
