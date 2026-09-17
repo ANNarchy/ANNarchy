@@ -131,3 +131,36 @@ struct cuda_type_traits<__half>
     }
 };
 #endif
+
+#if __has_include(<cuda_bf16.h>)
+/*
+ * 16-bit brain-float values
+ */
+template <>
+struct cuda_type_traits<__nv_bfloat16>
+{
+    __device__ __forceinline__
+    static __nv_bfloat16 max()
+    {
+        return __float2bfloat16(3.38953139e38f);
+    }
+
+    __device__ __forceinline__
+    static __nv_bfloat16 min()
+    {
+        return __float2bfloat16(1.17549435e-38f);
+    }
+
+    __device__ __forceinline__
+    static __nv_bfloat16 lowest()
+    {
+        return __float2bfloat16(-3.38953139e38f);
+    }
+
+    __device__ __forceinline__
+    static __nv_bfloat16 zero()
+    {
+        return __float2bfloat16(0.0f);
+    }
+};
+#endif

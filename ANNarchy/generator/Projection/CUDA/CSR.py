@@ -30,6 +30,20 @@ __device__ void half_warp_reduce_sum<__half>(
     data[tid] = __hadd(data[tid], data[tid +  1]);
 }
 #endif
+
+#if __has_include(<cuda_bf16.h>)
+template<>
+__device__ void half_warp_reduce_sum<__nv_bfloat16>(
+    volatile __nv_bfloat16* data,
+    unsigned int tid)
+{
+    data[tid] = __hadd(data[tid], data[tid + 16]);
+    data[tid] = __hadd(data[tid], data[tid +  8]);
+    data[tid] = __hadd(data[tid], data[tid +  4]);
+    data[tid] = __hadd(data[tid], data[tid +  2]);
+    data[tid] = __hadd(data[tid], data[tid +  1]);
+}
+#endif
 """
 
 launch_config = {
