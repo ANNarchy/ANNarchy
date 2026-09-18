@@ -34,6 +34,10 @@ class CTypeBase:
         "Returns number of bits, raises exception if not implemented by child type."
         raise NotImplementedError
 
+    def __str__(self):
+        "Returns a short descriptor string"
+        raise NotImplementedError
+
 #
 #   Floating-point precision type
 #
@@ -65,6 +69,24 @@ class FloatType(CTypeBase):
 
         if (self.exp, self.mantissa) == FloatType.FP64:
             return "double"
+
+        raise ValueError(
+           f"Unsupported float format: exp={self.exp}, mantissa={self.mantissa}"
+        )
+
+    def __str__(self):
+        "Returns a short descriptor string"
+        if (self.exp, self.mantissa) == FloatType.BF16:
+            return "bfloat16"
+
+        if (self.exp, self.mantissa) == FloatType.FP16:
+            return "float16"
+
+        if (self.exp, self.mantissa) == FloatType.FP32:
+            return "float32"
+
+        if (self.exp, self.mantissa) == FloatType.FP64:
+            return "float64"
 
         raise ValueError(
            f"Unsupported float format: exp={self.exp}, mantissa={self.mantissa}"
