@@ -18,6 +18,7 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
 
 #if __has_include(<cuda_fp16.h>)
 // specialized template as __half does not support operator+=()
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 750
 template<>
 __device__ void half_warp_reduce_sum<__half>(
     volatile __half* data,
@@ -30,8 +31,10 @@ __device__ void half_warp_reduce_sum<__half>(
     data[tid] = __hadd(data[tid], data[tid +  1]);
 }
 #endif
+#endif
 
 #if __has_include(<cuda_bf16.h>)
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 800
 template<>
 __device__ void half_warp_reduce_sum<__nv_bfloat16>(
     volatile __nv_bfloat16* data,
@@ -43,6 +46,7 @@ __device__ void half_warp_reduce_sum<__nv_bfloat16>(
     data[tid] = __hadd(data[tid], data[tid +  2]);
     data[tid] = __hadd(data[tid], data[tid +  1]);
 }
+#endif
 #endif
 """
 
