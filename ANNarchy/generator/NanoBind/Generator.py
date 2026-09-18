@@ -191,19 +191,15 @@ class NanoBindGenerator:
         attributes = ""
         additional_func = ""
 
-        # Connectivity as LIL
-        # HD (18th Aug. 2025):  The C++ template library offers in some cases a const- and non-const accessor.
-        #                       To ensure that Python accesses only using the non-const accessor an additional
-        #                       "nanobind::overload_cast<>" is needed. Otherwise, its compiler dependent which
-        #                       version is bound consequently resulting in strange side-effects ...
-        connectivity = f"""
-        .def("init_from_lil", &ProjStruct{proj.id}::init_from_lil)
-        .def("post_rank", nanobind::overload_cast<>(&ProjStruct{proj.id}::get_post_rank))
-        .def("dendrite_size", &ProjStruct{proj.id}::dendrite_size)
-        .def("nb_dendrites", &ProjStruct{proj.id}::nb_dendrites)
-        .def("pre_ranks", &ProjStruct{proj.id}::get_pre_ranks)
-        .def("pre_rank", &ProjStruct{proj.id}::get_dendrite_pre_rank)
-        .def("nb_synapses", &ProjStruct{proj.id}::nb_synapses)"""
+        # default data type used for floating values.
+        default_float_type = ConfigManager().get("dtype", self.net_id)
+
+        # build connectivity code
+        connectivity = proj_lil_connectivity % {
+            "id": proj.id,
+            "py_float_prec": default_float_type.py_decl_type,
+            "cpp_float_prec": default_float_type.cpp_decl_type
+        }
 
         # Special case for spiking projections
         if proj.synapse_type.type == "spike":

@@ -8,6 +8,7 @@ basetemplate = """#include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/bind_vector.h>
+#include <nanobind/ndarray.h>
 
 #include "ANNarchyCore%(net_id)s.hpp"
 
