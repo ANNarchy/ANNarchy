@@ -529,7 +529,7 @@ def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
             init = False
         elif ctype == "int":
             init = 0
-        elif ctype == "double" or ctype == "float":
+        elif ctype in ["double", "float", "__half", "__nv_bfloat16"]:
             init = 0.0
 
     return bounds, flags, ctype, init

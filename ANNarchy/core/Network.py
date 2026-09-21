@@ -27,6 +27,7 @@ import ANNarchy.extensions.bold as bold
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
+import ANNarchy.core.CTypes as ANNarchyFloatTypes
 import ANNarchy.generator.Compiler as Compiler
 
 from ANNarchy.core.Utils import _rec_size_in_bytes
@@ -135,7 +136,7 @@ class Network(metaclass=NetworkMeta):
 
         # dt
         if dt is not None:
-            self.dt = dt
+            self._set_config("dt", dt)
 
         # Draw a value for seed if not provided by user
         if seed is None:
@@ -1068,6 +1069,18 @@ class Network(metaclass=NetworkMeta):
         if 'precision' in kwargs.keys():
             Messages.error("The precision flag has been replaced by 'dtype'. Note that the arguments has changed too!")
 
+        if 'dtype' in kwargs:
+            dtype = kwargs.pop("dtype")
+            paradigm = kwargs.pop("paradigm", self._get_config("paradigm"))
+            if dtype == ANNarchyFloatTypes.bfloat16 and paradigm != "cuda":
+                Messages.error("using bfloat16 is only valid for GPU devices.")
+            elif dtype == ANNarchyFloatTypes.float16 and paradigm != "cuda":
+                Messages.error("using float16 is only valid for GPU devices.")
+            else:
+                # store the configuration
+                self._set_config("paradigm", paradigm)
+                self._set_config("dtype", dtype)
+
         # RNG-related arguments are treated differently
         rng_changed = False
         if "use_seed_seq" in kwargs.keys():
@@ -1159,11 +1172,14 @@ class Network(metaclass=NetworkMeta):
     @property
     def dt(self) -> float:
         "Step size in milliseconds for the integration of the ODEs."
-        return self._get_config("dt")
+        if self.instance is None:
+            return self._get_config("dt")
+        else:
+            return self.instance.get_sim_dt()
 
     @dt.setter
-    def dt(self, dt: float) -> None:
-        self._set_config("dt", dt)
+    def dt(self, dt: float):
+        raise AttributeError("The step width 'dt' must be configured when calling Network().")
 
     ###################################
     # IO

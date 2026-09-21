@@ -79,8 +79,7 @@ conn_templates = {
         },
         'invoke_kernel': str,   [currently optional]
         'kernel_decl': str,
-        'host_call': str,
-        'thread_init': str
+        'host_call': str
     }
     'spike_transmission': {
         'event_driven': {

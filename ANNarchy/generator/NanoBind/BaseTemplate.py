@@ -8,6 +8,7 @@ basetemplate = """#include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/map.h>
 #include <nanobind/stl/bind_vector.h>
+#include <nanobind/ndarray.h>
 
 #include "ANNarchyCore%(net_id)s.hpp"
 
@@ -16,13 +17,19 @@ NB_MODULE(ANNarchyWrapper%(net_id)s, m) {
     // Global functions
     m.def("set_seed", &setSeed);
     m.def("pyx_create", &create_cpp_instances);
-    m.def("pyx_initialize", &initialize);
+    m.def("pyx_initialize", [](%(py_float_prec)s _dt) {
+        %(cpp_float_prec)s _conv_dt = static_cast<%(cpp_float_prec)s>(_dt);
+        initialize(_conv_dt);
+    });
     m.def("estimate_record_size", &estimate_record_size);
     m.def("run", &run);
     m.def("run_until", &run_until);
     m.def("step", &step);
-    m.def("set_time", &setTime);
-    m.def("get_time", &getTime);
+    m.def("set_time", &set_sim_step);
+    m.def("get_time", &get_sim_step);
+    m.def("get_sim_dt", []() -> %(py_float_prec)s {
+        return static_cast<%(py_float_prec)s>(getDt());
+    });
 
     // Target device specific
 %(device_specific)s

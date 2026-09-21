@@ -32,6 +32,56 @@ proj_struct_wrapper = """
         .def("clear", &ProjStruct%(id)s::clear);
 """
 
+proj_lil_connectivity = """
+        .def("init_from_lil", []( const ProjStruct%(id)s& obj,
+                                  nanobind::list nb_row_indices,
+                                  nanobind::list nb_column_indices,
+                                  nanobind::list nb_values,
+                                  nanobind::list nb_delays,
+                                  bool requires_sorting) {
+                /*
+                 *  Transform packed data containers into STL
+                 */
+                auto cpp_row_indices = nanobind::cast<std::vector<int>>(nb_row_indices);
+
+                auto cpp_column_indices = nanobind::cast<std::vector<std::vector<int>>>(nb_column_indices);
+
+                std::vector<std::vector<%(cpp_float_prec)s>> cpp_values;
+                if constexpr (std::is_same_v<%(py_float_prec)s, %(cpp_float_prec)s>) {
+                    // same type can be directly copied/casted
+                    cpp_values = nanobind::cast<std::vector<std::vector<%(cpp_float_prec)s>>>(nb_values);
+                } else {
+                    // direct cast from double to lower precision types like float/fp16/bf16 ends up in
+                    // narrow-down warning or even std::bad_cast. Therefore, we need interim vector which
+                    // implies a conversion call
+                    for (size_t i = 0; i < nb_values.size(); ++i) {
+                        // convert python -> c++ without changing size
+                        auto tmp_arr = nanobind::cast<std::vector<%(py_float_prec)s>>(nb_values[i]);
+                        // convert to low precision type
+                        auto conv_arr = std::vector<%(cpp_float_prec)s>(tmp_arr.begin(), tmp_arr.end());
+                        // store data
+                        cpp_values.emplace_back(conv_arr.data(), conv_arr.data() + conv_arr.size());
+                    }
+                }
+
+                auto cpp_delays = nanobind::cast<std::vector<std::vector<int>>>(nb_delays);
+
+                // perform initialization ...
+                return proj%(id)s->init_from_lil(cpp_row_indices, cpp_column_indices, cpp_values, cpp_delays, requires_sorting);
+            })
+        /* HD (18th Aug. 2025):  The C++ template library offers in some cases a const- and non-const accessor.
+         *                       To ensure that Python accesses only using the non-const accessor an additional
+         *                       "nanobind::overload_cast<>" is needed. Otherwise, its compiler dependent which
+         *                       version is bound consequently resulting in strange side-effects ...
+         */
+        .def("post_rank", nanobind::overload_cast<>(&ProjStruct%(id)s::get_post_rank))
+        .def("dendrite_size", &ProjStruct%(id)s::dendrite_size)
+        .def("nb_dendrites", &ProjStruct%(id)s::nb_dendrites)
+        .def("pre_ranks", &ProjStruct%(id)s::get_pre_ranks)
+        .def("pre_rank", &ProjStruct%(id)s::get_dendrite_pre_rank)
+        .def("nb_synapses", &ProjStruct%(id)s::nb_synapses)
+"""
+
 proj_mon_wrapper = """
     // Monitor for Projection %(id)s
     nanobind::class_<ProjRecorder%(id)s>(m, "ProjRecorder%(id)s_wrapper")

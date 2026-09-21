@@ -23,6 +23,14 @@ header_template = """#ifndef __ANNARCHY_H__
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
+#if __has_include(<cuda_bf16.h>)
+    // __nv_bfloat16, note this requires Ampere and above ...
+    #include <cuda_bf16.h>
+#endif
+#if __has_include(<cuda_fp16.h>)
+    // __half, note this requires Turing and above ...
+    #include <cuda_fp16.h>
+#endif
 
 // Useful functions
 #include "logging.hpp"
@@ -112,10 +120,9 @@ void destroy_cpp_instances();
 /*
  * Time export
  */
-long int getTime();
-void setTime(const long int t_);
+long int get_sim_step();
+void set_sim_step(const long int t_);
 %(cpp_float_prec)s getDt();
-void setDt(const %(cpp_float_prec)s dt_);
 
 /*
  * Seed for the RNG (host-side!)
@@ -126,11 +133,23 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 """
 
 device_invoke_header = """#pragma once
+
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
 #include <stdio.h>
 #include <iostream>
+#if __has_include(<cuda_bf16.h>)
+    // __nv_bfloat16, note this requires Ampere and above ...
+    #include <cuda_bf16.h>
+#endif
+#if __has_include(<cuda_fp16.h>)
+    // __half, note this requires Turing and above ...
+    #include <cuda_fp16.h>
+#endif
+
+// some specialized type traits for floating-point values
+#include "cuda_type_traits.cuh"
 
 // Encapsulates the four parameters required for a kernel invocation.
 struct RunConfig{
@@ -628,10 +647,9 @@ void step() {
  * Access to time and dt
  *
  */
-long int getTime() {return t;}
-void setTime(const long int t_) { t=t_; }
+long int get_sim_step() {return t;}
+void set_sim_step(const long int t_) { t=t_; }
 %(cpp_float_prec)s getDt() { return dt;}
-void setDt(const %(cpp_float_prec)s dt_) { dt=dt_;}
 """
 
 host_initialize_template = """

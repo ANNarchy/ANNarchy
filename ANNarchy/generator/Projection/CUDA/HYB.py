@@ -204,11 +204,7 @@ rate_psp_kernel = {
         }
     }    
 """,
-    "kernel_call": "",
-    "thread_init": {
-        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
-        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
-    },
+    "kernel_call": ""
 }
 
 conn_templates = {

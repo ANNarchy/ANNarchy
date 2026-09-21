@@ -56,7 +56,7 @@ add_library(${CORE_NAME} STATIC
 )
 
 # Set the required C++ standard
-target_compile_features(${CORE_NAME} PUBLIC cxx_std_14)
+target_compile_features(${CORE_NAME} PUBLIC cxx_std_17)
 
 option(USE_PROFILE "Enable profiling" OFF)
 
@@ -175,7 +175,7 @@ add_library(${CORE_NAME} STATIC
 )
 
 # Set the required C++ standard
-target_compile_features(${CORE_NAME} PUBLIC cxx_std_14)
+target_compile_features(${CORE_NAME} PUBLIC cxx_std_17)
 
 option(USE_PROFILE "Enable profiling" OFF)
 
@@ -311,7 +311,7 @@ add_library(${CORE_NAME} STATIC
 )
 
 # Set the required C++ standard
-target_compile_features(${CORE_NAME} PUBLIC cxx_std_14)
+target_compile_features(${CORE_NAME} PUBLIC cxx_std_17)
 
 option(USE_PROFILE "Enable profiling" OFF)
 
@@ -419,7 +419,7 @@ add_library(${CORE_NAME} STATIC
 )
 
 # Set the required C++ standard
-target_compile_features(${CORE_NAME} PUBLIC cxx_std_14)
+target_compile_features(${CORE_NAME} PUBLIC cxx_std_17)
 
 option(USE_PROFILE "Enable profiling" OFF)
 

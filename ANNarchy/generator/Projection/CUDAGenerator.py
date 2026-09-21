@@ -513,13 +513,9 @@ class CUDAGenerator(ProjectionGenerator):
                     "target_arg": "sum_" + proj.target,
                     "add_args": add_args_header,
                     "psp": psp % ids,
-                    "thread_init": self._templates["rate_psp"]["thread_init"][
-                        ConfigManager()._cpp_float_dtype(net_id=self._net_id)
-                    ][operation],
                     # call function
                     "conn_args_call": conn_kernel,
-                    "target_arg_call": ", sum_%(target)s"
-                    % {"id_post": proj.post.id, "target": proj.target},
+                    "target_arg_call": f", sum_{proj.target}",
                     "add_args_call": add_args_kernel,
                 }
             )

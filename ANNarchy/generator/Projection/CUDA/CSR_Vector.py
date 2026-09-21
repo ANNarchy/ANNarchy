@@ -385,11 +385,7 @@ void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int
         }
     #endif
     }
-""",
-    "thread_init": {
-        "float": {"sum": "0.0f", "min": "FLT_MAX", "max": "FLT_MIN", "mean": "0.0f"},
-        "double": {"sum": "0.0", "min": "DBL_MAX", "max": "DBL_MIN", "mean": "0.0"},
-    },
+"""
 }
 
 conn_templates = {
