@@ -10,6 +10,7 @@ from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
+from ANNarchy.core.CTypes import *
 
 # No variable can have these names
 reserved_variables = [
@@ -73,6 +74,15 @@ def check_experimental_features(populations, projections):
     """
     net_id = populations[0].net_id
 
+    #
+    #   Floating-point values being used for simulation
+    #
+    if ConfigManager().get("dtype", net_id) in [float16, bfloat16]:
+        Messages.warning("using low-precision floating point types is an experimental feature, we greatly appreciate bug reports.")
+
+    #
+    #   Check for recently added / specialized sparse matrix formats ...
+    #
     detected_formats = []
     for proj in projections:
         detected_formats.append(
