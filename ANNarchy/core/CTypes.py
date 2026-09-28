@@ -137,5 +137,7 @@ class FixedType(CTypeBase):
     def bits(self) -> int:
         return 1 + self.integer + self.fraction
 
-# List of formats forwarded to ANNarchy.__init__.py
+# List of available floating-point formats forwarded to ANNarchy.__init__.py
+# HD (17th Sep. 2026): The base type is not exported on purpose as the user
+#                      should not define his own types.
 __all__ = ["bfloat16", "float16", "float32", "float64", "FixedType"]
