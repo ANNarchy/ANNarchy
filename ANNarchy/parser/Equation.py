@@ -168,7 +168,12 @@ class Equation(object):
         except TypeError:
             c_code = sp.ccode(equation, precision=8, user_functions=self.user_functions)
 
-        if ConfigManager().get("precision", self.net_id) == "float":
+        # Constants written digit-wise in the code will be interpreted as
+        # double-precision values which likely causes implicit type conversions.
+        # For single-precision, we can add a suffix, for lower-precision types, we
+        # should call the pre-defined conversion methods.
+        ctype = ConfigManager().get("dtype", self.net_id).cpp_decl_type
+        if ctype in ["float", "__half", "__nv_bfloat16"]:
             #
             # Add the f-suffix to floating value constants
             matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
@@ -177,7 +182,16 @@ class Equation(object):
             for m in matches:
                 fval = float(m)
                 fval = round(fval, 8)  # shorten the val to a reasonable length
-                c_code = c_code.replace(m, str(fval) + "f")
+                match ctype:
+                    case "float":
+                        c_code = c_code.replace(m, str(fval) + "f")
+                    case "__half":
+                        c_code = c_code.replace(m, "__float2half("+str(fval) + "f)")
+                    case "__nv_bfloat16":
+                        # Instead of double->bfloat, I do a float->bfloat conversion
+                        c_code = c_code.replace(m, "__float2bfloat16("+str(fval) + "f)")
+                    case _:
+                        raise Messages.CodeGeneratorException(f"No handling of float constants and ctype='{ctype}'.")
 
             # If found constants have an overlap, e.g., 5.0 and 15.0, we create
             # multiple suffixes, e.g., 15.0ff. Therefore, we need to remove them
@@ -188,11 +202,19 @@ class Equation(object):
                 fval = round(fval, 8)  # shorten the val to a reasonable length
                 c_code = c_code.replace(m, str(fval) + "f")
 
-            # Replace the math functions with their single precision
+            # Replace the math functions with their lower-precision counter parts
             # to circumenvent problems induced by implicit type conversion
-            # e. g. pow(double, double) by powf(float, float)
-            for func in ["fabs", "pow", "exp", "sin", "cos", "tan", "round"]:
-                c_code = c_code.replace(func + "(", func + "f(")
+            match ctype:
+                case "float":
+                    # For single-precision aka fp32 this is straight-forward by adding
+                    # suffix, e.g., replace pow(double, double) by powf(float, float)
+                    for func in ["fabs", "pow", "exp", "sin", "cos", "tan", "round"]:
+                        c_code = c_code.replace(func + "(", func + "f(")
+                case _:
+                    # HD (25th Sep. 2026): I need to figure out a good way for this. According to
+                    #                      Codex one could use half-float versions but best pracrices would perform
+                    #                      an interim computation in e.g. fp32 ...
+                    pass
 
         return c_code
 
