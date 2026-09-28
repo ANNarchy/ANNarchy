@@ -296,18 +296,58 @@ class NanoBindGenerator:
         Generate wrapper for the C++ *PopRecorder* structure.
         """
         record_flag = ""
-        record_container = ""
+        read_container = ""
         clear_container = ""
 
+        # default data type used for floating values.
+        default_float_type = ConfigManager().get("dtype", self.net_id)
+
+        # Recordable are only variables
         for attr in pop.neuron_type.description["variables"]:
             record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
                 id=pop.id, name=attr["name"]
             )
 
-            record_container += (
-                """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(
-                    id=pop.id, name=attr["name"]
-                )
+            ids = {
+                "id": pop.id,
+                "name": attr["name"],
+                "target_float_prec": default_float_type.py_decl_type,
+                "source_float_prec": default_float_type.cpp_decl_type
+            }
+
+            if attr['locality'] == "local":
+                conversion_code = """
+                        std::vector<%(target_float_prec)s> result;
+
+                        // convert row-by-row into target
+                        for (const auto& %(name)s_row : obj.%(name)s)
+                            for (%(source_float_prec)s %(name)s_item : %(name)s_row)
+                                result.push_back(static_cast<%(target_float_prec)s>(%(name)s_item));
+                        return result;
+""" % ids
+            else:
+                conversion_code = """
+                        std::vector<%(target_float_prec)s> result;
+
+                        // convert each element of the vector
+                        for (%(source_float_prec)s %(name)s_item : obj.%(name)s)
+                            result.push_back(static_cast<%(target_float_prec)s>(%(name)s_item));
+                        return result;
+""" % ids
+
+            # add generated code snippet
+            ids.update({"conversion_code": conversion_code})
+
+            # finalize read-only accessor
+            read_container += (
+                """\t\t.def_prop_ro("%(name)s", [](const PopRecorder%(id)s& obj) {
+                    if constexpr (std::is_same_v<%(target_float_prec)s, %(source_float_prec)s>) {
+                        // no conversion needed
+                        return obj.%(name)s;
+                    }else{
+                        %(conversion_code)s
+                    }
+                })\n""" % ids
             )
 
             clear_container += (
@@ -325,7 +365,7 @@ class NanoBindGenerator:
                     id=pop.id, name="_sum_" + target
                 )
 
-                record_container += (
+                read_container += (
                     """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(
                         id=pop.id, name="_sum_" + target
                     )
@@ -341,7 +381,7 @@ class NanoBindGenerator:
                 id=pop.id, name="spike"
             )
 
-            record_container += (
+            read_container += (
                 """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(
                     id=pop.id, name="spike"
                 )
@@ -356,7 +396,7 @@ class NanoBindGenerator:
         wrapper_code = pop_mon_wrapper % {
             "id": pop.id,
             "record_flag": record_flag,
-            "record_container": record_container,
+            "read_container": read_container,
             "clear_container": clear_container,
         }
         wrapper_code += "\n"
