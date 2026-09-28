@@ -60,7 +60,7 @@ pop_mon_wrapper = """
 %(record_flag)s
 
         // Target container
-%(record_container)s
+%(read_container)s
 
         // Clear container
 %(clear_container)s
