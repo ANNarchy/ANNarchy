@@ -45,6 +45,22 @@ class Parameter:
     locality: str = "global"
     type: str = "float"
 
+    def _hash_repr(self):
+        """
+        Return the semantic representation of a parameter used for hashing.
+
+        The returned representation should contain all attributes that are
+        relevant to a paremeter description while excluding transient
+        state and object-specific information such as memory addresses.
+
+        The representation is recursively canonicalized before being serialized
+        and used to compute a content-based hash.
+        """
+        return {
+            "value": self.value,
+            "locality": self.locality,
+            "type": self.type
+        }
 
 # Variables are attributes which does change during simulate via equations
 @dataclass
@@ -80,6 +96,27 @@ class Variable:
     method: str = None
     locality: str = "local"
     type: str = "float"
+
+    def _hash_repr(self):
+        """
+        Return the semantic representation of a variable used for hashing.
+
+        The returned representation should contain all attributes that are
+        relevant to a variable description while excluding transient
+        state and object-specific information such as memory addresses.
+
+        The representation is recursively canonicalized before being serialized
+        and used to compute a content-based hash.
+        """
+        return {
+            "equation": self.equation,
+            "init": self.init,
+            "min": self. min,
+            "min": self. max,
+            "method": self.method,
+            "locality": self.locality,
+            "type": self.type
+        }
 
     def _to_string(self, object_type: str) -> str:
         "Returns a one-liner string with the flags. object_type is either 'neuron' or 'synapse'. to decide between population and projection"
