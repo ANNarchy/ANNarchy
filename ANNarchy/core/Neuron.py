@@ -5,6 +5,8 @@
 
 import numpy as np
 import hashlib
+import json
+import copy
 
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
@@ -62,20 +64,49 @@ class Neuron:
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
 
-        if cls.__name__ == "Neuron":
-            # User-defined neurons has no unique class name, we fall back to a hash value
-            key = cls._compute_hash_id(args, kwargs)
+        # compute a hash on arguments, i.e., the model definition
+        hash_key = cls._compute_hash_id(args, kwargs)
 
-        else:
-            key = cls.__name__
+        # Store it on the instance, not on the class.
+        instance._hash_key = hash_key
 
-        if key not in Neuron._instantiated_types and (len(args)>0 or kwargs):
+        # add to a global list if not already done.
+        # HD (Oct. 2nd '26): this list is currently only used by report.
+        if hash_key not in Neuron._instantiated_types:
             # first time instantiated
-            Neuron._instantiated_types.add(key)
+            Neuron._instantiated_types.add(hash_key)
             GlobalObjectManager().add_neuron_type(instance)
-            Neuron._neuron_type_ids[key] = GlobalObjectManager().num_neuron_types()
+            Neuron._neuron_type_ids[hash_key] = GlobalObjectManager().num_neuron_types()
 
         return instance
+
+    def __copy__(self):
+        """
+        Create a shallow copy of this object without re-running initialization.
+
+        The copied object retains the same model hash as the original object.
+        This ensures that copying an instantiated model does not create a new
+        model definition.
+        """
+        result = object.__new__(type(self))
+        result.__dict__.update(self.__dict__)
+        return result
+
+    def __deepcopy__(self, memo):
+        """
+        Create a deep copy of this object without re-running initialization.
+
+        The copied object retains the same model hash as the original object.
+        Nested attributes are recursively deep-copied using the provided `memo`
+        dictionary to correctly handle shared references and circular references.
+        """
+        result = object.__new__(type(self))
+        memo[id(self)] = result
+
+        for key, value in self.__dict__.items():
+            setattr(result, key, copy.deepcopy(value, memo))
+
+        return result
 
     def __init__(
         self,
@@ -129,41 +160,32 @@ class Neuron:
         # Analyse the neuron type
         self.description = None
 
-    @staticmethod
-    def _compute_hash_id(args, kwargs, key_length=24):
+    @classmethod
+    def _compute_hash_id(cls, args, kwargs, key_length=24):
         """
-        Compute a hash value to later (re-)identify an model object.
+        Compute a hash value to later (re-)identify a neuron model definition.
         """
-        # Extract all significant model fields.
-        params = kwargs['parameters'] if 'parameters' in kwargs.keys() else args[0] if len(args)>1 else ""
-        equations = kwargs['equations'] if 'equations' in kwargs.keys() else args[1] if len(args)>2 else ""
-        spike = kwargs['spike'] if 'spike' in kwargs.keys() else args[2] if len(args)>3 else None
-        reset = kwargs['reset'] if 'reset' in kwargs.keys() else args[4] if len(args)>5 else None
+        from ANNarchy.generator.Utils import canonicalize
 
-        # Combine them to one large string. A fixed ordering ensures a correct hash.
-        key_data = (params, equations, spike)
-        key_str = repr(key_data)
+        data = {
+            #"type": f"{cls.__name__}",
+            "args": canonicalize(args),
+            "kwargs": canonicalize(kwargs),
+        }
 
-        # Create hash on them
-        return hashlib.sha256(key_str.encode()).hexdigest()[:key_length]
+        serialized = json.dumps(
+            data,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        return hashlib.sha256(serialized).hexdigest()[:key_length]
 
     @property
     def _rk_neurons_type(self):
         # for reporting
-        if self.__class__.__name__ == "Neuron":
-            key = self._compute_hash_id(
-                args=(),
-                kwargs={
-                    'parameters': self.parameters,
-                    'equations': self.equations,
-                    'spike': self.spike,
-                    'reset': self.reset
-                }
-            )
-        else:
-            key = self.__class__.__name__
-        return self._neuron_type_ids[key]
-
+        return self._neuron_type_ids[self._hash_key]
 
     def _analyse(self, net_id):
         # Analyse the neuron type

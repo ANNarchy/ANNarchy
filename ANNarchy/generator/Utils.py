@@ -13,6 +13,51 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
+def canonicalize(obj):
+    """
+    Convert an object into a deterministic representation suitable for hashing.
+
+    Canonicalization removes differences caused by object identity or
+    container ordering while preserving semantically relevant values and
+    ordering where required. Dictionaries are sorted by key, while ordered
+    containers preserve their order.
+
+    Objects implementing ``_hash_repr`` are represented using their
+    semantic hash representation. The resulting representation is suitable
+    for deterministic serialization and computing a content-based hash.
+    """
+    if hasattr(obj, "_hash_repr"):
+        return canonicalize(obj._hash_repr())
+
+    if obj is None or isinstance(obj, (bool, int, float, str)):
+        return obj
+
+    if isinstance(obj, dict):
+        return {
+            str(key): canonicalize(value)
+            for key, value in sorted(obj.items(), key=lambda item: str(item[0]))
+        }
+
+    if isinstance(obj, (list, tuple)):
+        return [canonicalize(x) for x in obj]
+
+    if isinstance(obj, set):
+        return sorted(canonicalize(x) for x in obj)
+
+    # Allow framework objects to define their semantic representation
+    if hasattr(obj, "__hash_repr__"):
+        return canonicalize(obj.__hash_repr__())
+
+    if hasattr(obj, "__dict__"):
+        return {
+            "__type__": f"{type(obj).__module__}.{type(obj).__qualname__}",
+            "attributes": {
+                key: canonicalize(value)
+                for key, value in sorted(obj.__dict__.items())
+            },
+        }
+
+    raise TypeError(f"Cannot hash object of type {type(obj)!r}")
 
 def sort_odes(desc, locality="local"):
     equations = []
