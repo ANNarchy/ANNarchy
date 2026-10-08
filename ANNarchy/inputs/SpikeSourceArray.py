@@ -250,6 +250,8 @@ class SpikeSourceArray(SpecificPopulation):
         .def_rw("period", &PopStruct{self.id}::period)
         .def_rw("max_delay", &PopStruct{self.id}::max_delay)
         .def_rw("r", &PopStruct{self.id}::r)
+        // needs to be called after changing spike_times
+        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
 
         // Other methods
 		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
@@ -322,6 +324,7 @@ class SpikeSourceArray(SpecificPopulation):
         )
         self.cyInstance.spike_times = self._sort_spikes(self.init["spike_times"])
         self.cyInstance.period = convert_ms_to_steps(self.init["period"], self.net_id)
+        # Note: recompute_spike_times is called automatically in init_population
 
     def __setattr__(self, name, value):
         """
@@ -339,6 +342,7 @@ class SpikeSourceArray(SpecificPopulation):
             self.init["spike_times"] = value  # when reset is called
             if self.initialized:
                 self.cyInstance.spike_times = self._sort_spikes(value)
+                self.cyInstance.recompute_spike_times()
         elif name == "period":
             if self.initialized:
                 self.cyInstance.period = convert_ms_to_steps(value, self.net_id)
