@@ -341,7 +341,7 @@ class SpikeSourceArray(SpecificPopulation):
                 self.cyInstance.spike_times = self._sort_spikes(value)
         elif name == "period":
             if self.initialized:
-                return convert_ms_to_steps(value, self.net_id)
+                self.cyInstance.period = convert_ms_to_steps(value, self.net_id)
             else:
                 self.init["period"] = value
         else:
