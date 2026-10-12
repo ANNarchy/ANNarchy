@@ -9,7 +9,7 @@ from ANNarchy.intern import Messages
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-
+from ANNarchy.core.Utils import convert_steps_to_ms, convert_ms_to_steps
 
 class SpikeSourceArray(SpecificPopulation):
     """
@@ -43,12 +43,30 @@ class SpikeSourceArray(SpecificPopulation):
     net.simulate(50)
     ```
 
+    Such a looping over inputs can be realised using the period argument, where the internal state is automatically reseted after `period` milliseconds:
+
+    ```python
+    inp = net.create(ann.SpikeSourceArray(spike_times=times, period=50))
+
+    net.compile()
+
+    # Spikes at 10/11, 20/21, etc. and
+    # Spikes at 60/61, 70/71, etc.
+    net.simulate(100)
+    ```
+
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+    :param period time when the input will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
     :param name: optional name for the population.
     """
 
     def __init__(
-        self, spike_times: list[float], name: str = None, copied=False, net_id=0
+        self,
+        spike_times: list[list[float]]|list[float]|None=None,
+        period: float=-1,
+        name: str=None,
+        copied: bool=False,
+        net_id: int=0
     ):
         if not isinstance(spike_times, list):
             Messages.error("In a SpikeSourceArray, spike_times must be a Python list.")
@@ -75,12 +93,101 @@ class SpikeSourceArray(SpecificPopulation):
         )
 
         self.init["spike_times"] = spike_times
+        self.init["period"] = period
+
+    #
+    # Special properties
+    #
+
+    @property
+    def period(self):
+        if self.initialized:
+            return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
+        else:
+            return self.init["period"]
+
+    @period.setter
+    def period(self, value):
+        raise Messages.NoDirectAssignment("SpikeSourceArray: `period` can only be set during construction or via update()")
+
+    @property
+    def spike_times(self):
+        if self.initialized:
+            return [
+                [convert_steps_to_ms(step, self.net_id) for step in neur]
+                for neur in self.cyInstance.spike_times
+            ]
+        else:
+            return self.init["spike_times"]
+
+    @spike_times.setter
+    def spike_times(self, value):
+        raise Messages.NoDirectAssignment("SpikeSourceArray: `spike_times` can only be set during construction or via update()")
+
+    #
+    # User-interface
+    #
+
+    def update(
+        self,
+        spike_times: list[list[float]]|None=None,
+        period: float|None=None
+       ) -> None:
+        """
+        Reconfigure `spike_times`, `period` or both after construction of the object. If None is provided as argument nothing will change.
+
+        :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+        :param period time when the input will be reset and start again, allowing cycling over the inputs.
+        """
+        if spike_times is not None:
+            if not isinstance(spike_times[0], list):  # several neurons
+                spike_times = [spike_times]
+
+            if len(spike_times) != self.size:
+                Messages.error(
+                    "SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population. Pad with `[]` if necessary."
+                )
+
+            # Update C++ core
+            if self.initialized:
+               self.cyInstance.spike_times = self._sort_spikes(spike_times=spike_times)
+               self.cyInstance.recompute_spike_times()
+            else:
+                self.init["spike_times"] = spike_times
+
+        if period is not None:
+            # Update C++ core
+            if self.initialized:
+                self.cyInstance.period = period
+            else:
+                self.init["period"] = period
+
+    def reset(self, attributes: list|None = None) -> None:
+        """
+        Resets all parameters and variables of the population to the value they had before the call to `net.compile()`.
+
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+
+        Implementation note:
+
+            Overload `Population.reset` as we need to set spike_times/period from hand.
+        """
+        # reset spike_times to last known state
+        self.cyInstance.spike_times = self._sort_spikes(spike_times=self.init["spike_times"])
+        self.cyInstance.recompute_spike_times()
+
+        # reset period to last known state
+        self.cyInstance.period = convert_ms_to_steps(self.init["period"])
+
+        # reset other properties
+        super().reset(attributes)
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
-            self.init["spike_times"],
-            self.name,
+            spike_times=self.spike_times,
+            period=self.period,
+            name=self.name,
             copied=True,
             net_id=self.net_id if net_id is None else net_id,
         )
@@ -92,7 +199,7 @@ class SpikeSourceArray(SpecificPopulation):
                 list(
                     set(
                         [
-                            round(t / ConfigManager().get("dt", self.net_id))
+                            convert_ms_to_steps(t, self.net_id)
                             for t in neur_times
                         ]
                     )
@@ -134,11 +241,12 @@ class SpikeSourceArray(SpecificPopulation):
 
         self._specific_template["declare_additional"] = """
     // Custom local parameter spike_times
-    // std::vector< %(float_prec)s > r ;
     std::vector< std::vector< long int > > spike_times ;
     std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
     long int _t;
+    // Period cycling of inputs
+    long int period;
 
     // Recompute the spike times
     void recompute_spike_times(){
@@ -188,6 +296,13 @@ class SpikeSourceArray(SpecificPopulation):
                     spiked.push_back(i);
                 }
             }
+
+            if ( (period >= 0) && (_t == period-1) ) {
+                _t = -1;
+                recompute_spike_times();
+            }
+
+            // advance to next time step
             _t++;
         }
 """
@@ -231,8 +346,11 @@ class SpikeSourceArray(SpecificPopulation):
         // Common attributes
         .def_rw("size", &PopStruct{self.id}::size)
         .def_rw("spike_times", &PopStruct{self.id}::spike_times)
+        .def_rw("period", &PopStruct{self.id}::period)
         .def_rw("max_delay", &PopStruct{self.id}::max_delay)
         .def_rw("r", &PopStruct{self.id}::r)
+        // needs to be called after changing spike_times
+        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
 
         // Other methods
 		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
@@ -297,36 +415,12 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template["spike_gather_call"] = ""
 
     def _instantiate(self, module):
-        # Create the Cython instance
+        """
+        Initializes the nanobind wrapper.
+        """
         self.cyInstance = getattr(module, self.class_name + "_wrapper")(
             self.size, self.max_delay
         )
         self.cyInstance.spike_times = self._sort_spikes(self.init["spike_times"])
-
-    def __setattr__(self, name, value):
-        if name == "spike_times":
-            if not isinstance(value[0], list):  # several neurons
-                value = [value]
-
-            if not len(value) == self.size:
-                Messages.error(
-                    "SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population. Pad with `[]` if necessary."
-                )
-
-            self.init["spike_times"] = value  # when reset is called
-            if self.initialized:
-                self.cyInstance.spike_times = self._sort_spikes(value)
-        else:
-            Population.__setattr__(self, name, value)
-
-    def __getattr__(self, name):
-        if name == "spike_times":
-            if self.initialized:
-                return [
-                    [ConfigManager().get("dt", self.net_id) * time for time in neur]
-                    for neur in self.cyInstance.spike_times
-                ]
-            else:
-                return self.init["spike_times"]
-        else:
-            return Population.__getattribute__(self, name)
+        self.cyInstance.period = convert_ms_to_steps(self.init["period"], self.net_id)
+        # Note: recompute_spike_times is called automatically in init_population

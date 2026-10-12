@@ -265,7 +265,10 @@ class Population:
             ):  # The initial value of a variable is a parameter
                 self.__setattr__(name, self.__getattr__(value))
             else:
-                self.__setattr__(name, value)
+                try:
+                    self.__setattr__(name, value)
+                except Messages.NoDirectAssignment as e:
+                    Messages.debug(f"AttributeError on {name} ignored: {e}")
 
         # Activate the population
         self.cyInstance.activate(self.enabled)
@@ -554,7 +557,10 @@ class Population:
         :param values: dictionary of attributes to be updated.
         """
         for name, value in values.items():
-            self.__setattr__(name, value)
+            try:
+                self.__setattr__(name, value)
+            except Messages.NoDirectAssignment as e:
+                Messages.debug(f"AttributeError on {name} ignored: {e}")
 
     def get(self, name: str) -> np.ndarray:
         """
