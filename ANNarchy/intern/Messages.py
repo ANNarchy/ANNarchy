@@ -51,6 +51,21 @@ class InvalidConfiguration(Exception):
         print(msg)
 
 
+class NoDirectAssignment(AttributeError):
+    """
+    Custom exception raised in SpecificPopulation / SpecificProjections
+    when an attribute must be updated via a dedicated function (e.g.,
+    the `update` function for input devices) rather than being modified
+    directly by the user.
+
+    Implementation note:
+
+        Although this exception is raised in SpecificPopulation, it is
+        caught in Population.__setattr__.
+    """
+    pass
+
+
 def debug(*var_text):
     """
     Prints a message to standard out, if verbose mode set True.
