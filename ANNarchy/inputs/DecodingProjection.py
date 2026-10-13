@@ -3,10 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.core.Population import Population
 from ANNarchy.intern import Messages
-from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 
 class DecodingProjection(SpecificProjection):
@@ -48,7 +48,7 @@ class DecodingProjection(SpecificProjection):
         post: "Population",
         target: str,
         window: float = 0.0,
-        name: str = None,
+        name: str|None = None,
         copied: bool = False,
         net_id=0,
     ):
@@ -56,12 +56,12 @@ class DecodingProjection(SpecificProjection):
         SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
 
         # Check populations
-        if not self.pre.neuron_type.type == "spike":
+        if self.pre.neuron_type.type != "spike":
             Messages.error(
                 "The pre-synaptic population of a DecodingProjection must be spiking."
             )
 
-        if not self.post.neuron_type.type == "rate":
+        if self.post.neuron_type.type != "rate":
             Messages.error(
                 "The post-synaptic population of a DecodingProjection must be rate-coded."
             )
@@ -224,6 +224,6 @@ class DecodingProjection(SpecificProjection):
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
     def _generate_cuda(self):
-        raise Global.ANNarchyException(
+        raise Messages.ANNarchyException(
             "The DecodingProjection is not available on CUDA devices.", True
         )
