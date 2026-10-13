@@ -37,8 +37,8 @@ class InputArray(SpecificPopulation):
 
     def __init__(
         self,
-        geometry: int | tuple = None,
-        name: str = None,
+        geometry: int|tuple|None = None,
+        name: str|None = None,
         copied: bool = False,
         net_id=0,
     ):

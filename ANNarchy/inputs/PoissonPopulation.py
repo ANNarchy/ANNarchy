@@ -3,11 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
+import numpy
 
-from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.intern import Messages
+from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 
 
 class PoissonPopulation(SpecificPopulation):
@@ -25,7 +25,7 @@ class PoissonPopulation(SpecificPopulation):
     but it can be modified later as a normal parameter:
 
     ```python
-    pop.rates = np.linspace(10, 150, 100)
+    pop.rates = numpy.linspace(10, 150, 100)
     ```
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
@@ -79,7 +79,7 @@ class PoissonPopulation(SpecificPopulation):
     ```python
     net = ann.Network()
 
-    rates = 10.*np.ones((2, 100))
+    rates = 10.*numpy.ones((2, 100))
     rates[0, :50] = 100.
     rates[1, 50:] = 100.
     inp = net.create(ann.TimedArray(rates = rates, schedule=50.))
@@ -101,11 +101,11 @@ class PoissonPopulation(SpecificPopulation):
     def __init__(
         self,
         geometry: int | tuple[int],
-        name: str = None,
-        rates: float | str = None,
-        target: str = None,
+        name: str|None = None,
+        rates: float|str|None = None,
+        target: str|None = None,
         parameters: dict = {},
-        refractory: float = None,
+        refractory: float|None = None,
         copied: bool = False,
         net_id: int = 0,
     ):
@@ -121,10 +121,10 @@ class PoissonPopulation(SpecificPopulation):
             # Create the neuron
             poisson_neuron = Neuron(
                 parameters=parameters,
-                equations="""
-                    rates = sum(%(target)s)
+                equations=f"""
+                    rates = sum({target})
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
-                    _sum_%(target)s = 0.0
+                    _sum_{target} = 0.0
                 """
                 % {"target": target},
                 spike="""
@@ -153,7 +153,7 @@ class PoissonPopulation(SpecificPopulation):
                 description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
 
-        elif isinstance(rates, np.ndarray):
+        elif isinstance(rates, numpy.ndarray):
             poisson_neuron = Neuron(
                 parameters="""
                 rates = 10.0
@@ -194,7 +194,7 @@ class PoissonPopulation(SpecificPopulation):
             net_id=net_id,
         )
 
-        if isinstance(rates, np.ndarray):
+        if isinstance(rates, numpy.ndarray):
             self.rates = rates
 
     def _copy(self, net_id=None):
