@@ -104,7 +104,7 @@ class PoissonPopulation(SpecificPopulation):
         name: str|None = None,
         rates: float|str|None = None,
         target: str|None = None,
-        parameters: dict = {},
+        parameters: str | dict = "",
         refractory: float|None = None,
         copied: bool = False,
         net_id: int = 0,
@@ -139,12 +139,11 @@ class PoissonPopulation(SpecificPopulation):
             # Create the neuron
             poisson_neuron = Neuron(
                 parameters=parameters,
-                equations="""
-                    rates = %(rates)s
+                equations=f"""
+                    rates = {rates}
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
                     _sum_exc = 0.0
-                """
-                % {"rates": rates},
+                """,
                 spike="""
                     p < rates
                 """,
