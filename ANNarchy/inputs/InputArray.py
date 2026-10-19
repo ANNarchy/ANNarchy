@@ -2,8 +2,10 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import numpy
 
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.intern import Messages
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 
 
@@ -54,6 +56,60 @@ class InputArray(SpecificPopulation):
         super().__init__(
             geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id
         )
+
+    #
+    # Special properties
+    #
+
+    @property
+    def r(self):
+        if self.initialized:
+            return self.cyInstance.r.reshape(self.geometry)
+        else:
+            return self.init["r"]
+
+    @r.setter
+    def r(self, value):
+        raise Messages.NoDirectAssignment("InputArray: `r` can only be set during construction or via update()")
+
+    #
+    # User-interface
+    #
+
+    def update(self, r: numpy.ndarray|list[float]):
+        """
+        Update the input array.
+        """
+        # Sanity check
+        if isinstance(r, list):
+            if len(r) != self.size:
+                Messages.error("InputArray: length of provided `r` does not fit to population size.")
+        elif isinstance(r, numpy.ndarray):
+            if r.shape != self.geometry:
+                Messages.error("InputArray: shape of provided `r` does not fit to population geometry.")
+            r = r.reshape(self.size)
+
+        # Update values
+        if self.initialized:
+            self.cyInstance.r = r
+        else:
+            self.init["r"] = r
+
+    #
+    # Internal API
+    #
+    def _copy(self, net_id=None):
+        "Returns a copy of the population when creating networks."
+        return InputArray(
+            geometry=self.geometry,
+            name=self.name,
+            copied=True,
+            net_id=self.net_id if net_id is None else net_id,
+        )
+
+    #
+    # Code generation
+    #
 
     def _generate_st(self):
         """
