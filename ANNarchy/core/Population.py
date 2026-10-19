@@ -412,6 +412,12 @@ class Population:
             self, "initialized"
         ):  # Before the end of the constructor
             object.__setattr__(self, name, value)
+
+        # check for decorators, e.g., attribute.setter
+        elif isinstance(getattr(type(self), name, None), property):
+            object.__setattr__(self, name, value)
+
+        # check if the name belongs to the list of attributes
         elif hasattr(self, "attributes"):
             if name in self.attributes:
                 if not self.initialized:
@@ -427,6 +433,7 @@ class Population:
                     self._set_cython_attribute(name, value)
             else:
                 object.__setattr__(self, name, value)
+
         else:
             object.__setattr__(self, name, value)
 
