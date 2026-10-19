@@ -3,11 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern import Messages
-
+from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 
 class CurrentInjection(SpecificProjection):
@@ -34,7 +34,6 @@ class CurrentInjection(SpecificProjection):
     :param post: post-synaptic population.
     :param target: type of the connection.
     :param name: optional name.
-
     """
 
     def __init__(
@@ -42,26 +41,25 @@ class CurrentInjection(SpecificProjection):
         pre: "Population",
         post: "Population",
         target: str,
-        name: str = None,
+        name: str|None = None,
         copied=False,
         net_id=0,
     ):
-        """ """
         # Instantiate the projection
-        SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
+        SpecificProjection.__init__(self, pre=pre, post=post, target=target, synapse=None, name=name, copied=copied, net_id=net_id)
 
         # Check populations
-        if not self.pre.neuron_type.type == "rate":
+        if self.pre.neuron_type.type != "rate":
             Messages.error(
                 "The pre-synaptic population of a CurrentInjection must be rate-coded."
             )
 
-        if not self.post.neuron_type.type == "spike":
+        if self.post.neuron_type.type != "spike":
             Messages.error(
                 "The post-synaptic population of a CurrentInjection must be spiking."
             )
 
-        if not self.post.size == self.pre.size:
+        if self.post.size != self.pre.size:
             Messages.error(
                 "CurrentInjection: The pre- and post-synaptic populations must have the same size."
             )
@@ -75,6 +73,12 @@ class CurrentInjection(SpecificProjection):
 
         # Prevent automatic split of matrices
         self._no_split_matrix = True
+
+    def connect_current(self):
+        """
+        Instantiate the connectivity between the pre- and post-synaptic population.
+        """
+        return self.one_to_one(weights=1.0)
 
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
@@ -166,6 +170,3 @@ void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(
 """
             % ids
         )
-
-    def connect_current(self):
-        return self.one_to_one(weights=1.0)

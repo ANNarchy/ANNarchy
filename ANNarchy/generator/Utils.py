@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import shutil
+import numpy
 
 from ANNarchy.core.PopulationView import PopulationView
 
@@ -29,8 +30,20 @@ def canonicalize(obj):
     if hasattr(obj, "_hash_repr"):
         return canonicalize(obj._hash_repr())
 
+    # Trivial types
     if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
+
+    # NumPy arrays
+    if isinstance(obj, numpy.ndarray):
+        return {
+            "__type__": "numpy.ndarray",
+            "dtype": str(obj.dtype),
+            "shape": list(obj.shape)
+            # HD (Oct 15th, 2026): 
+            # don't consider the data. If necessary, add the line below
+            #"data": canonicalize(obj.tolist()),
+        }
 
     if isinstance(obj, dict):
         return {

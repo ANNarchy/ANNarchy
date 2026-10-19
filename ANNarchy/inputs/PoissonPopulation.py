@@ -3,11 +3,12 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
+import numpy
 
-from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern import Messages
+from ANNarchy.core.Attributes import Parameter
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.intern import Messages
+from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 
 
 class PoissonPopulation(SpecificPopulation):
@@ -25,7 +26,7 @@ class PoissonPopulation(SpecificPopulation):
     but it can be modified later as a normal parameter:
 
     ```python
-    pop.rates = np.linspace(10, 150, 100)
+    pop.update(rates = numpy.linspace(10, 150, 100))
     ```
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
@@ -79,7 +80,7 @@ class PoissonPopulation(SpecificPopulation):
     ```python
     net = ann.Network()
 
-    rates = 10.*np.ones((2, 100))
+    rates = 10.*numpy.ones((2, 100))
     rates[0, :50] = 100.
     rates[1, 50:] = 100.
     inp = net.create(ann.TimedArray(rates = rates, schedule=50.))
@@ -101,11 +102,11 @@ class PoissonPopulation(SpecificPopulation):
     def __init__(
         self,
         geometry: int | tuple[int],
-        name: str = None,
-        rates: float | str = None,
-        target: str = None,
-        parameters: dict = {},
-        refractory: float = None,
+        name: str|None = None,
+        rates: float|str|None = None,
+        target: str|None = None,
+        parameters: str | dict = "",
+        refractory: float|None = None,
         copied: bool = False,
         net_id: int = 0,
     ):
@@ -117,16 +118,16 @@ class PoissonPopulation(SpecificPopulation):
         self.refractory_init = refractory
         self.rates_init = rates
 
-        if target is not None:  # hybrid population
-            # Create the neuron
+        if target is not None:
+            # hybrid population: rates depends on the pre-synaptic input
+            #                    projected onto target
             poisson_neuron = Neuron(
                 parameters=parameters,
-                equations="""
-                    rates = sum(%(target)s)
+                equations=f"""
+                    rates = sum({target})
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
-                    _sum_%(target)s = 0.0
-                """
-                % {"target": target},
+                    _sum_{target} = 0.0
+                """,
                 spike="""
                     p < rates
                 """,
@@ -136,15 +137,14 @@ class PoissonPopulation(SpecificPopulation):
             )
 
         elif isinstance(rates, str):
-            # Create the neuron
+            # rates depends on an equation, other dependencies being stored in
+            # the `parameters` dict.
             poisson_neuron = Neuron(
                 parameters=parameters,
-                equations="""
-                    rates = %(rates)s
+                equations=f"""
+                    rates = {rates}
                     p = Uniform(0.0, 1.0) * 1000.0 / dt
-                    _sum_exc = 0.0
-                """
-                % {"rates": rates},
+                """,
                 spike="""
                     p < rates
                 """,
@@ -153,37 +153,29 @@ class PoissonPopulation(SpecificPopulation):
                 description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
 
-        elif isinstance(rates, np.ndarray):
+        elif isinstance(rates, (float, int, numpy.ndarray)):
+            # rates is initialized with a fixed value for all neurons (float/int)
+            # or with a value for each individual neuron (numpy.ndarray)
+            #
+            # HD (Oct. 14, 2026): I use here a local variable on purpose to be flexible for later
+            #                     re-initialization, even though it possibly wastes a bit of memory ...
             poisson_neuron = Neuron(
-                parameters="""
-                rates = 10.0
-                """,
+                parameters={
+                    'rates': Parameter(rates, locality='local')
+                },
                 equations="""
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
+                    p = Uniform(0.0, 1.0) * 1000.0 / dt
                 """,
                 spike="""
-                p < rates
+                    p < rates
                 """,
                 refractory=refractory,
                 name="Poisson",
                 description="Spiking neuron with spikes emitted according to a Poisson distribution.",
             )
+
         else:
-            poisson_neuron = Neuron(
-                parameters="""
-                rates = %(rates)s
-                """
-                % {"rates": rates},
-                equations="""
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                """,
-                spike="""
-                p < rates
-                """,
-                refractory=refractory,
-                name="Poisson",
-                description="Spiking neuron with spikes emitted according to a Poisson distribution.",
-            )
+            raise ValueError("PoissonPopulation: received unexpected type for `rates`:", type(rates))
 
         # Register Population
         super().__init__(
@@ -194,11 +186,65 @@ class PoissonPopulation(SpecificPopulation):
             net_id=net_id,
         )
 
-        if isinstance(rates, np.ndarray):
-            self.rates = rates
+        # Set the rates if necessary
+        if isinstance(rates, (numpy.ndarray, float, int)):
+            self.update(rates=rates)
+
+    #
+    # User-interface
+    #
+
+    def update(
+        self,
+        rates
+    ):
+        """
+        Re-initialize the rates.
+
+        :param rates: mean firing rate of each neuron. It can be a single value for all or a numpy.ndarray storing individual values.
+        """
+        if isinstance(rates, str):
+            raise Messages.error("PoissonPopulation: providing an equation `rates` is only allowed on construction.")
+
+        if isinstance(rates, list):
+            rates = numpy.ndarray(rates)
+
+        if isinstance(rates, numpy.ndarray) and rates.shape != self.geometry:
+            raise Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
+
+        if self.initialized:
+            if isinstance(self.rates_init, str):
+                pass # nothing to do here
+            elif isinstance(self.rates_init, (numpy.ndarray)):
+                self.cyInstance.rates = self.rates_init
+            elif isinstance(self.rates_init, (int, float)):
+                self.cyInstance.rates = numpy.ones(self.geometry) * self.rates_init
+            else:
+                raise TypeError("PoissonPopulation: something went wrong ...")
+
+        else:
+            self.rates_init = rates
+
+    def reset(self, attributes: list|None = None) -> None:
+        """
+        Resets all parameters and variables of the population to the value they had before the call to `net.compile()`.
+
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+        """
+        # Implementation note:
+        # - rates does not change over time -> no reset necessary
+        # - other values provided within *parameters* are reset by parent class.
+
+        super().reset(attributes=attributes)
+
+    #
+    # Internal API - object handling
+    #
 
     def _copy(self, net_id=None):
-        "Returns a copy of the population when creating networks."
+        """
+        Returns a copy of the population when creating networks.
+        """
         return PoissonPopulation(
             self.geometry,
             name=self.name,
@@ -210,6 +256,43 @@ class PoissonPopulation(SpecificPopulation):
             net_id=self.net_id if not net_id else net_id,
         )
 
+    def _init_attributes(self):
+        """
+        Method used after compilation to initialize the attributes.
+        """
+        super()._init_attributes()
+
+        # Set the rates if necessary
+        if isinstance(self.rates_init, (numpy.ndarray, float, int)):
+            self.update(rates=self.rates_init)
+
+    def __getattr__(self, name):
+        """
+        Method called when reading an attribute.
+        """
+        if name == "rates":
+            if self.initialized:
+                return self.cyInstance.rates
+            else:
+                return self.rates_init
+
+        else:
+            return super().__getattr__(name=name)
+
+    def __setattr__(self, name, value):
+        """
+        Method called when setting an attribute.
+        """
+        if name == "rates":
+            raise Messages.NoDirectAssignment("PoissonPopulation: `rates` can only be set during construction or via update()")
+
+        else:
+            super().__setattr__(name=name, value=value)
+
+    #
+    # Internal API - code generation
+    #
+
     def _generate_st(self):
         """
         Generate single thread code.
@@ -217,7 +300,6 @@ class PoissonPopulation(SpecificPopulation):
         We don't need any separate code snippets. All is done during the
         normal code generation path.
         """
-        pass
 
     def _generate_omp(self):
         """
@@ -226,7 +308,6 @@ class PoissonPopulation(SpecificPopulation):
         We don't need any separate code snippets. All is done during the
         normal code generation path.
         """
-        pass
 
     def _generate_cuda(self):
         """
@@ -235,4 +316,3 @@ class PoissonPopulation(SpecificPopulation):
         We don't need any separate code snippets. All is done during the
         normal code generation path.
         """
-        pass
