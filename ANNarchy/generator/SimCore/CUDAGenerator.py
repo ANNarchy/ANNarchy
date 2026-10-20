@@ -438,7 +438,7 @@ void set_%(name)s(%(cpp_float_prec)s value) {
         invoke = ""
         body = ""
 
-        for op in sorted(list(set(ops))):
+        for op in sorted(set(ops)):
             header += global_operation_templates_cuda[op]["header"] % type_def
             invoke += global_operation_templates_cuda[op]["invoke"] % type_def
             body += global_operation_templates_cuda[op]["body"] % type_def

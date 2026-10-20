@@ -288,4 +288,4 @@ class CodeGenerator(object):
                 dict(y)
                 for y in sorted(set(tuple(x.items())) for x in pop.global_operations)
             ]
-            pop.delayed_variables = sorted(list(set(pop.delayed_variables)))
+            pop.delayed_variables = sorted(set(pop.delayed_variables))

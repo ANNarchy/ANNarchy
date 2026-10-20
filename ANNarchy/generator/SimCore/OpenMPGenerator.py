@@ -283,7 +283,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};"""
         type_def = {"type": ConfigManager()._cpp_float_dtype(net_id=self._net_id)}
 
         code = ""
-        for op in sorted(list(set(ops))):
+        for op in sorted(set(ops)):
             code += global_operation_templates_openmp[op] % type_def
 
         return code

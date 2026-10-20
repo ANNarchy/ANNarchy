@@ -602,7 +602,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Remove doublons / sort the attribute names to
         # prevent unnecessary recompiles
-        deps = sorted(list(set(deps)))
+        deps = sorted(set(deps))
 
         # Generate the header and call lines
         for dep in deps:
@@ -1507,7 +1507,7 @@ class CUDAGenerator(PopulationGenerator):
                 kernel_deps.append(var)
 
         # remove doubled entries and sort to prevent unnecessary recompiles
-        kernel_deps = sorted(list(set(kernel_deps)))
+        kernel_deps = sorted(set(kernel_deps))
 
         # generate header, call and body args
         for var in kernel_deps:

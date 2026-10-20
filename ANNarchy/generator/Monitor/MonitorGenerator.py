@@ -124,7 +124,7 @@ class MonitorGenerator(object):
                     targets.append(t2)
             else:
                 targets.append(t)
-        targets = sorted(list(set(targets)))
+        targets = sorted(set(targets))
 
         if pop.neuron_type.type == "rate":
             for target in targets:

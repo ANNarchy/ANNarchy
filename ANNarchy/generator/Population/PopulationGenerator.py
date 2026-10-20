@@ -82,7 +82,7 @@ class PopulationGenerator(object):
                     pop.neuron_type.description["targets"] + pop.targets[0]
                 )
 
-            for target in sorted(list(all_targets)):
+            for target in sorted(all_targets):
                 attr_name = "g_" + target
                 if attr_name not in already_processed:
                     # we assume here, that targets are local variables
@@ -344,7 +344,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     pop.neuron_type.description["targets"] + pop.targets[0]
                 )
 
-            for target in sorted(list(all_targets)):
+            for target in sorted(all_targets):
                 attr_name = "g_" + target
                 if attr_name not in already_processed:
                     id_dict = {

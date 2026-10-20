@@ -662,7 +662,7 @@ class CUDAGenerator(ProjectionGenerator):
                 delayed_variables = proj.pre.delayed_variables
 
             id_pre = str(proj.pre.id)
-            for var in sorted(list(set(delayed_variables))):
+            for var in sorted(set(delayed_variables)):
                 host_call = host_call.replace(
                     "pop" + id_pre + "->gpu_" + var,
                     "pop"
@@ -793,7 +793,7 @@ class CUDAGenerator(ProjectionGenerator):
                 target_list = (
                     proj.target if isinstance(proj.target, list) else [proj.target]
                 )
-                for target in sorted(list(set(target_list))):
+                for target in sorted(set(target_list)):
                     # multiple targets
                     ids["target"] = target
 
@@ -918,7 +918,7 @@ if(%(condition)s){
         kernel_args_call += pre_post_args[2]
 
         # sort out doublings
-        kernel_deps = sorted(list(set(kernel_deps)))
+        kernel_deps = sorted(set(kernel_deps))
 
         # Add synaptic variables to kernel arguments
         for dep in kernel_deps:

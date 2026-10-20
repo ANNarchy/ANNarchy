@@ -177,7 +177,7 @@ class Equation(object):
             #
             # Add the f-suffix to floating value constants
             matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
-            matches = sorted(list(set(matches)))  # remove doublons, e. g. 0.5*dt
+            matches = sorted(set(matches))  # remove doublons, e. g. 0.5*dt
 
             for m in matches:
                 fval = float(m)
