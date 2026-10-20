@@ -1,3 +1,8 @@
+"""
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
+
 import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager

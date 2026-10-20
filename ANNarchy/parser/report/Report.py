@@ -1,3 +1,9 @@
+"""
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
+
+from ANNarchy.core.Network import Network
 from ANNarchy.intern import Messages
 
 ##################################

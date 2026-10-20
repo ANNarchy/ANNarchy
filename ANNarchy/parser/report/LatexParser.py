@@ -1,3 +1,8 @@
+"""
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
+
 import sympy as sp
 from sympy.parsing.sympy_parser import (
     parse_expr,
