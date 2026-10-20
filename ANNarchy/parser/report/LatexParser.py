@@ -3,29 +3,30 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import sympy as sp
-from sympy.parsing.sympy_parser import (
-    parse_expr,
-    standard_transformations,
-    convert_xor,
-    auto_number,
-)
-from sympy.printing.latex import LatexPrinter
 import re
 
-from ANNarchy.intern import Messages
-from ANNarchy.core.Random import RandomDistribution
-from ..Extraction import (
-    extract_parameters,
-    extract_variables,
-    get_attributes,
-    extract_prepost,
-    extract_pre_spike_variable,
-    extract_post_spike_variable,
-    extract_functions,
+import sympy as sp
+from sympy.parsing.sympy_parser import (
+    auto_number,
+    convert_xor,
+    parse_expr,
+    standard_transformations,
 )
+from sympy.printing.latex import LatexPrinter
+
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
+from ..Extraction import (
+    extract_functions,
+    extract_parameters,
+    extract_post_spike_variable,
+    extract_pre_spike_variable,
+    extract_prepost,
+    extract_variables,
+    get_attributes,
+)
 
 ##################################
 ### Process individual equations

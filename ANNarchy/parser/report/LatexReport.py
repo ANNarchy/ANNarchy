@@ -3,18 +3,18 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import ANNarchy.parser.report.LatexParser as LatexParser
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-from ANNarchy.intern import Messages
-from ANNarchy.extensions.bold.BoldModel import BoldModel
-
-from ANNarchy.inputs import input_type_list, input_name_list
-from ANNarchy.core.Synapse import Synapse
-from ANNarchy.core.Neuron import Neuron
+import os
 
 import numpy as np
-import os
+
+import ANNarchy.parser.report.LatexParser as LatexParser
+from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Synapse import Synapse
+from ANNarchy.extensions.bold.BoldModel import BoldModel
+from ANNarchy.inputs import input_name_list, input_type_list
+from ANNarchy.intern import Messages
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 ##################################
 ### Templates

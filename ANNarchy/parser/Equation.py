@@ -8,8 +8,9 @@ from copy import deepcopy
 
 import sympy as sp
 
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+
 from .ParserTemplate import create_local_dict, user_functions
 
 
@@ -225,11 +226,11 @@ class Equation(object):
     def parse_expression(self, expression, local_dict):
         "Parses a string with respect to the vocabulary defined in local_dict."
         from sympy.parsing.sympy_parser import (
-            parse_expr,
-            standard_transformations,
-            convert_xor,
             auto_number,
+            convert_xor,
+            parse_expr,
             rationalize,
+            standard_transformations,
         )
 
         try:

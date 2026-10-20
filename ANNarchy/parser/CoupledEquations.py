@@ -4,10 +4,11 @@
 """
 
 import re
+
 import sympy as sp
 
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 from .Equation import Equation
 from .ParserTemplate import create_local_dict, user_functions

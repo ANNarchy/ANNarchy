@@ -3,10 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from sympy import Symbol, Function
+from sympy import Function, Symbol
 
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 
 # Dictionary of default elements for the C++ generation
 parser_dict = {
