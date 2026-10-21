@@ -558,7 +558,7 @@ class Monitor:
             return self._get_population(name, keep)
 
         elif isinstance(self.object, Population):
-            if not reshape or name == "spike":
+            if not reshape or name in ["spike", "axon_spike"]:
                 return self._get_population(name, keep)
             return np.reshape(
                 self._get_population(name, keep),
@@ -663,7 +663,8 @@ class Monitor:
             data = getattr(self.cyInstance, name)
             if not keep:
                 getattr(self.cyInstance, "clear_" + name)()
-        except:
+        except AttributeError:
+            Messages.debug(f"Monitor (name={self.name}): could not read attribute '{name}'.")
             data = []
 
         if name not in ["spike", "axon_spike"]:
@@ -676,7 +677,8 @@ class Monitor:
             data = getattr(self.cyInstance, name)
             if not keep:
                 getattr(self.cyInstance, "clear_" + name)()
-        except:
+        except AttributeError:
+            Messages.debug(f"Monitor (name={proj.name}): could not read attribute '{name}'.")
             data = []
 
         return np.array(data, dtype=object)
