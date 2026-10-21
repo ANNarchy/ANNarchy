@@ -160,7 +160,7 @@ class TimedArray(SpecificPopulation):
 
     @r.setter
     def r(self, new_r):
-        Messages.error("The value of r is defined through the '*'rates' argument.")
+        Messages.NoDirectAssignment("TimedArray: The value of r is defined through the `rates` argument.")
 
     def update(
         self,

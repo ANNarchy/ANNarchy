@@ -6,6 +6,19 @@ Breaking Changes:
 New/Changed features:
 * added FixedType(#integer bits, #fraction bits) data type to represent neural/synaptic states. Please note, that this is an experimental feature, which might be re-evaluated in the future (commt e2691d8)
 
+**5.0.5**
+
+Breaking Changes:
+* unified the interface of input devices, such as SpikeSourceArray or TimedArray: values should be now defined either on construction or using the update method (issue #51). See also the section (TODO) in the manual.
+
+New/Changed features:
+* on GPUs added reduced floating-point precision types (fp16, bfloat16), see commits 53e51f4, 38a5262, 00cf229, 0d885ee. Note that this is an experimental feature, bug reports are appreciated.
+
+Bugfixes:
+* SpikeSourceArray: setting spike_times after compile was not applied (issue #50)
+* `property` decorators could be ignored for SpecificPopulations (commit 445091b)
+* Monitor: recorded axonal spike events were not readable (commit b2f7485)
+
 **5.0.4.1**
 
 Mini-release to test the adapted CMake files (commit 20dafc5) -> using GPUs on google's colab platform should work now again.

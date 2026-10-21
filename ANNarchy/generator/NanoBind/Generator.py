@@ -393,6 +393,24 @@ class NanoBindGenerator:
                 )
             )
 
+        # Axonal spike events are optional
+        if pop.neuron_type.type == "spike" and pop.neuron_type.description["axon_spike"] is not None:
+            record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
+                id=pop.id, name="axon_spike"
+            )
+
+            read_container += (
+                """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(
+                    id=pop.id, name="axon_spike"
+                )
+            )
+
+            clear_container += (
+                """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(
+                    id=pop.id, name="axon_spike"
+                )
+            )
+
         wrapper_code = pop_mon_wrapper % {
             "id": pop.id,
             "record_flag": record_flag,
