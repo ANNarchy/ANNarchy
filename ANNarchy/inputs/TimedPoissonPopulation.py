@@ -21,7 +21,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     ```python
     inp = net.create(
-        TimedPoissonPopulation(
+        ann.TimedPoissonPopulation(
             geometry = 100,
             rates = [10., 20., 100., 20., 5.],
             schedule = [0., 100., 200., 500., 600.],
@@ -32,7 +32,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     This creates a population of 100 Poisson neurons whose rate will be:
 
     * 10 Hz during the first 100 ms.
-    * 20 HZ during the next 100 ms.
+    * 20 Hz during the next 100 ms.
     * 100 Hz during the next 300 ms.
     * 20 Hz during the next 100 ms.
     * 5 Hz until the end of the simulation.
@@ -42,7 +42,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     ```python
     inp = net.create(
-        TimedPoissonPopulation(
+        ann.TimedPoissonPopulation(
             geometry = 100,
             rates = [10., 20., 100., 20., 5.],
             schedule = [0., 100., 200., 500., 600.],
@@ -67,7 +67,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     ```python
     inp = net.create(
-        TimedPoissonPopulation(
+        ann.TimedPoissonPopulation(
             geometry = 100,
             rates = [
                 [10. + 0.05*i for i in range(100)], # First 100 ms
@@ -80,8 +80,8 @@ class TimedPoissonPopulation(SpecificPopulation):
     ```
 
     :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
-    :param schedule: list of times (in ms) where the firing rate should change.
-    :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
+    :param schedule: list of times (in ms) where the firing rate should change. The list must start with 0.
+    :param period: time (in ms) after which the schedule starts again with its first rate, allowing cycling over the schedule. Default: no cycling (-1).
     :param name: optional name for the population.
     """
 
@@ -154,9 +154,9 @@ class TimedPoissonPopulation(SpecificPopulation):
         Set new parameters for the timed poisson input population.
 
         :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
-        :param schedule: list of times (in ms) where the firing rate should change.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
-        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers.
+        :param schedule: list of times (in ms) where the firing rate should change. The list must start with 0. Default: the current schedule remains.
+        :param period: time (in ms) after which the schedule starts again with its first rate, allowing cycling over the schedule. -1 stops the cycling. Default: the current period remains.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
         """
         Messages.warning(
             "TimedPoissonPopulation: the default behavior of reset has been changed. More details can be found here: https://github.com/ANNarchy/ANNarchy/issues/47."

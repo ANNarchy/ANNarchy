@@ -13,16 +13,21 @@ class InputArray(SpecificPopulation):
     """
     Population holding static inputs for a rate-coded network.
 
-    The input values are stored in the recordable attribute `r`, without any further processing.
+    The input values are stored in the recordable attribute `r`, without any further processing. They are set or changed with the `update()` method:
 
     ```python
     inp = net.create(ann.InputArray(geometry=10))
-    inp.r = np.linspace(1, 10, 10)
 
     pop = net.create(100, ann.LeakyIntegrator)
 
     proj = net.connect(inp, pop, 'exc')
     proj.all_to_all(1.0)
+
+    net.compile()
+
+    inp.update(r=np.linspace(1, 10, 10))
+
+    net.simulate(100.)
     ```
 
     Note that this population is functionally equivalent to:
@@ -31,7 +36,7 @@ class InputArray(SpecificPopulation):
     inp = net.create(geometry, ann.Neuron(parameters="r=0.0"))
     ```
 
-    but `r` is recordable.
+    but `r` is recordable, and it can only be set with `update()`, not by a direct assignment such as `inp.r = 1.0`.
 
     :param geometry: shape of the population, either an integer or a tuple.
     :param name: optional name of the population.
@@ -79,6 +84,8 @@ class InputArray(SpecificPopulation):
     def update(self, r: numpy.ndarray|list[float]):
         """
         Update the input array.
+
+        :param r: new input values, either a single value for all neurons or an array with the shape of the population.
         """
         # Sanity check
         if isinstance(r, list):
