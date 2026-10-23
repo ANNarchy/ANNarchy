@@ -75,7 +75,7 @@ class InputArray(SpecificPopulation):
 
     @r.setter
     def r(self, value):
-        raise Messages.NoDirectAssignment("InputArray: `r` can only be set during construction or via update()")
+        raise Messages.NoDirectAssignment("InputArray: `r` can only be set via update()")
 
     #
     # User-interface
@@ -96,11 +96,35 @@ class InputArray(SpecificPopulation):
                 Messages.error("InputArray: shape of provided `r` does not fit to population geometry.")
             r = r.reshape(self.size)
 
+        # single value -> list
+        if isinstance(r, (int, float)):
+            r = numpy.ones(self.size)*r
+
         # Update values
         if self.initialized:
             self.cyInstance.r = r
         else:
             self.init["r"] = r
+
+    def reset(self, attributes: list|None = None) -> None:
+        """
+        Resets all parameters and variables of the population to the value they had before the call to `net.compile()`.
+
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+
+        Implementation note:
+
+            Overload `Population.reset` as we need to set spike_times/period from hand.
+        """
+        # reset r
+        if isinstance(self.init["r"], (int, float)):
+            r = numpy.ones(self.size)*self.init["r"]
+        else:
+            r = self.init["r"]
+        self.cyInstance.r = r
+
+        # reset other properties
+        super().reset(attributes)
 
     #
     # Internal API
@@ -113,6 +137,25 @@ class InputArray(SpecificPopulation):
             copied=True,
             net_id=self.net_id if net_id is None else net_id,
         )
+
+    def _init_attributes(self):
+        """
+        Method used after compilation to initialize the attributes.
+
+        Implementation note:
+
+            Overload `Population._init_attributes` as we need to initialize r by hand.
+        """
+        super()._init_attributes()
+
+        # initialize r, the parent function would call pop.r = self.init["r"]
+        # which results in a NoDirectAssignment error and skips the initialization
+        if isinstance(self.init["r"], (int, float)):
+            r = numpy.ones(self.size)*self.init["r"]
+        else:
+            r = self.init["r"]
+        self.cyInstance.r = r
+
 
     #
     # Code generation
