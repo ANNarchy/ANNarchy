@@ -306,6 +306,50 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         return mu_list, sigma_list
 
+    def _generate(self):
+        # calls the required _generate_[paradigm]
+        super()._generate()
+
+        # Add the nanobind.wrapper equal for each paradigm
+        self._specific_template["wrapper"] = f"""
+    // TimedArray
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("tau", &PopStruct{self.id}::tau)
+		.def_rw("mu", &PopStruct{self.id}::mu)
+		.def_rw("sigma", &PopStruct{self.id}::sigma)
+		.def_rw("x", &PopStruct{self.id}::x)
+		.def_rw("p", &PopStruct{self.id}::p)
+
+        // Access methods
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_mu_list", &PopStruct{self.id}::set_mu_list)
+        .def("get_mu_list", &PopStruct{self.id}::get_mu_list)
+
+        .def("set_sigma_list", &PopStruct{self.id}::set_sigma_list)
+        .def("get_sigma_list", &PopStruct{self.id}::get_sigma_list)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
+
     def _generate_st(self):
         """
         adjust code templates for the specific population for single thread.
@@ -355,7 +399,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         self._specific_template["update_variables"] = """
         if(_active){
-            // Check if it is time to set the input
+            /*
+             * Check if it is time to set a new configuration
+             */
             if(_t == _schedule[_block]){
                 // Set the data
                 mu = _mu[_block];
@@ -378,10 +424,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-            //std::cout << "t: " << _t << " mu: " << mu << " sigma: " << sigma << std::endl;
-
-            // Generate spikes
-            spiked.clear();
+            /*
+             * Update probabilities for generating a spike (cond: p < x)
+             */
 
             // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
             x += dt*(mu - x)/tau + rand_0*sigma*sqrt(dt/tau);
@@ -402,46 +447,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
-
-        # Nanobind
-        self._specific_template["wrapper"] = f"""
-    // TimedArray
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-
-        // Attributes
-		.def_rw("r", &PopStruct{self.id}::r)
-		.def_rw("tau", &PopStruct{self.id}::tau)
-		.def_rw("mu", &PopStruct{self.id}::mu)
-		.def_rw("sigma", &PopStruct{self.id}::sigma)
-		.def_rw("x", &PopStruct{self.id}::x)
-		.def_rw("p", &PopStruct{self.id}::p)
-
-        // Access methods
-        .def("set_schedule", &PopStruct{self.id}::set_schedule)
-        .def("get_schedule", &PopStruct{self.id}::get_schedule)
-
-        .def("set_mu_list", &PopStruct{self.id}::set_mu_list)
-        .def("get_mu_list", &PopStruct{self.id}::get_mu_list)
-
-        .def("set_sigma_list", &PopStruct{self.id}::set_sigma_list)
-        .def("get_sigma_list", &PopStruct{self.id}::get_sigma_list)
-
-        .def("set_period", &PopStruct{self.id}::set_period)
-        .def("get_period", &PopStruct{self.id}::get_period)
-
-        // Other methods
-		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
-        .def("clear", &PopStruct{self.id}::clear);
-        """
 
     def _generate_omp(self):
         """
@@ -490,61 +495,53 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
 
-        scheduling_block = """
+        self._specific_template["update_variables"] = """
         if(_active){
-            // Check if it is time to set the input
-            if(_t == _schedule[_block]){
-                // Set the data
-                mu = _mu[_block];
-                sigma = _sigma[_block];
-                // Move to the next block
-                _block++;
-                // If was the last block, go back to the first block
-                if (_block == _schedule.size()){
-                    _block = 0;
-                }
-            }
-
-            // If the timedarray is periodic, check if we arrive at that point
-            if(_period > -1 && (_t == _period-1)){
-                // Reset the counters
-                _block=0;
-                _t = -1;
-            }
-
-            // Always increment the internal time
-            _t++;
-        }
-        """
-
-        update_block = """
-        if( _active ) {
+            /*
+             * Check if it is time to set a new configuration
+             */
             #pragma omp single
             {
-                spiked.clear();
+                if(_t == _schedule[_block]){
+                    // Set the data
+                    mu = _mu[_block];
+                    sigma = _sigma[_block];
+                    // Move to the next block
+                    _block++;
+                    // If was the last block, go back to the first block
+                    if (_block == _schedule.size()){
+                        _block = 0;
+                    }
+                }
 
+                // If the timedarray is periodic, check if we arrive at that point
+                if(_period > -1 && (_t == _period-1)){
+                    // Reset the counters
+                    _block=0;
+                    _t = -1;
+                }
+
+                // Always increment the internal time
+                _t++;
+
+                /*
+                 * Update probabilities for generating a spike (cond: p < x)
+                 */
                 // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
                 x += dt*(mu - x)/tau + rand_0*sigma*sqrt(dt/tau);
+            }
 
-                %(float_prec)s _step = 1000.0/dt;
+            %(float_prec)s _step = 1000.0/dt;
 
-                #pragma omp simd
-                for(int i = 0; i < size; i++){
+            #pragma omp for simd
+            for(int i = 0; i < size; i++){
 
-                    // p = Uniform(0.0, 1.0) * 1000.0 / dt
-                    p[i] = _step*rand_1[i];
+                // p = Uniform(0.0, 1.0) * 1000.0 / dt
+                p[i] = _step*rand_1[i];
 
-                }
             }
         } // active
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
-
-        if self._has_schedule:
-            self._specific_template["update_variables"] = (
-                scheduling_block + update_block
-            )
-        else:
-            self._specific_template["update_variables"] = update_block
 
         self._specific_template["size_in_bytes"] = """
         // schedule
