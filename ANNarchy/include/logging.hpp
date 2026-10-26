@@ -44,27 +44,39 @@
 
 // This functions are intended only in the CPP template library
 #if CURRENT_LOG_LEVEL == LOG_LEVEL_TRACE
-    #define ANNARCHY_LOG_ALLOC(class_name, ptr) std::cout << "[ALLOC]   " << class_name << "::" << class_name << "(this=" << ptr << ")" << std::endl
-    #define ANNARCHY_LOG_DEALLOC(class_name, ptr) std::cout << "[DEALLOC] " << class_name << "::~" << class_name << "(this=" << ptr << ")" << std::endl
-    #define ANNARCHY_LOG_CALL(class_name, func_name, ptr) std::cout << "[CALL]    " << class_name << "::" << func_name << "(this=" << ptr << ")" << std::endl
-    #define ANNARCHY_LOG_ARG(arg, printout) std::cout << "[ARGS]    - " << arg << ": " << printout << std::endl
-    #define ANNARCHY_LOG_STATE(attr, printout) std::cout << "[STATE]   - " << attr << ": " << printout << std::endl
-    #define ANNARCHY_LOG_MSG(msg) std::cout << "[DEBUG]   " << msg << std::endl
+    // C++ Simulation core
+    #define SIMCORE_LOG_ALLOC(class_name, ptr) std::cout << "[ALLOC]   " << class_name << "::" << class_name << "(this=" << ptr << ")" << std::endl
+    #define SIMCORE_LOG_DEALLOC(class_name, ptr) std::cout << "[DEALLOC] " << class_name << "::~" << class_name << "(this=" << ptr << ")" << std::endl
+    #define SIMCORE_LOG_CALL(class_name, func_name, ptr) std::cout << "[CALL]    " << class_name << "::" << func_name << "(this=" << ptr << ")" << std::endl
+    #define SIMCORE_LOG_ARG(arg, printout) std::cout << "[ARGS]    - " << arg << ": " << printout << std::endl
+    #define SIMCORE_LOG_STATE(attr, printout) std::cout << "[STATE]   - " << attr << ": " << printout << std::endl
+    #define SIMCORE_LOG_MSG(msg) std::cout << "[DEBUG]   " << msg << std::endl
+
+    // Nanbind wrapper
+    #define WRAPPER_LOG_CALL(class_name, func_name, ptr) std::cout << "[CALL]    " << class_name << "::" << func_name << "(this=" << ptr << ")" << std::endl
+
 #elif CURRENT_LOG_LEVEL == LOG_LEVEL_DEBUG
-    #define ANNARCHY_LOG_ALLOC(class_name, ptr) std::cout << "[ALLOC]   " << class_name << " has been allocated at position " << ptr << std::endl
-    #define ANNARCHY_LOG_DEALLOC(class_name, ptr) std::cout << "[DEALLOC] " << class_name << " has been deallocated from position " << ptr << std::endl
-    #define ANNARCHY_LOG_CALL(class_name, func_name, ptr) void (0)
-    #define ANNARCHY_LOG_ARG(arg, printout) void (0)
-    #define ANNARCHY_LOG_STATE(attr, printout) void (0)
-    #define ANNARCHY_LOG_MSG(msg) std::cout << "[DEBUG]   " << msg << std::endl
+    // C++ Simulation core
+    #define SIMCORE_LOG_ALLOC(class_name, ptr) std::cout << "[ALLOC]   " << class_name << " has been allocated at position " << ptr << std::endl
+    #define SIMCORE_LOG_DEALLOC(class_name, ptr) std::cout << "[DEALLOC] " << class_name << " has been deallocated from position " << ptr << std::endl
+    #define SIMCORE_LOG_CALL(class_name, func_name, ptr) void (0)
+    #define SIMCORE_LOG_ARG(arg, printout) void (0)
+    #define SIMCORE_LOG_STATE(attr, printout) void (0)
+    #define SIMCORE_LOG_MSG(msg) std::cout << "[DEBUG]   " << msg << std::endl
+
+    // Nanbind wrapper
+    #define WRAPPER_LOG_CALL(class_name, func_name, ptr) void (0)
+
 #else
-    // similar to assert()
-    #define ANNARCHY_LOG_ALLOC(class_name, ptr) void (0)
-    #define ANNARCHY_LOG_DEALLOC(class_name, ptr) void (0)
-    #define ANNARCHY_LOG_CALL(class_name, func_name, ptr) void (0)
-    #define ANNARCHY_LOG_ARG(arg, printout) void (0)
-    #define ANNARCHY_LOG_STATE(attr, printout) void (0)
-    #define ANNARCHY_LOG_MSG(msg) void (0)
+    // similar to assert() function calls end in the void
+    #define SIMCORE_LOG_ALLOC(class_name, ptr) void (0)
+    #define SIMCORE_LOG_DEALLOC(class_name, ptr) void (0)
+    #define SIMCORE_LOG_CALL(class_name, func_name, ptr) void (0)
+    #define SIMCORE_LOG_ARG(arg, printout) void (0)
+    #define SIMCORE_LOG_STATE(attr, printout) void (0)
+    #define SIMCORE_LOG_MSG(msg) void (0)
+
+    #define WRAPPER_LOG_CALL(class_name, func_name, ptr) void (0)
 #endif
 
 

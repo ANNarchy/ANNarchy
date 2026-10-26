@@ -97,9 +97,10 @@ nanobind_add_module(
 
 target_compile_options(${WRAPPER_NAME} PRIVATE
     # debug configs
-    $<$<CONFIG:Debug>:-O0 -g>
+    $<$<CONFIG:Debug>:%(cpu_flags)s>
+
     # release configs
-    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:%(cpu_flags)s>
 )
 
 target_compile_definitions(${WRAPPER_NAME} PRIVATE
@@ -238,9 +239,10 @@ nanobind_add_module(
 
 target_compile_options(${WRAPPER_NAME} PRIVATE
     # debug configs
-    $<$<CONFIG:Debug>:-O0 -g>
+    $<$<CONFIG:Debug>:%(cpu_flags)s>
+
     # release configs
-    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:%(cpu_flags)s>
 )
 
 target_compile_definitions(${WRAPPER_NAME} PRIVATE
@@ -346,9 +348,10 @@ nanobind_add_module(
 
 target_compile_options(${WRAPPER_NAME} PRIVATE
     # debug configs
-    $<$<CONFIG:Debug>:-O0 -g>
+    $<$<CONFIG:Debug>:%(cpu_flags)s>
+
     # release configs
-    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:%(cpu_flags)s>
 )
 
 target_compile_definitions(${WRAPPER_NAME} PRIVATE
@@ -460,9 +463,10 @@ nanobind_add_module(
 
 target_compile_options(${WRAPPER_NAME} PRIVATE
     # debug configs
-    $<$<CONFIG:Debug>:-O0 -g>
+    $<$<CONFIG:Debug>:%(cpu_flags)s>
+
     # release configs
-    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:%(cpu_flags)s>
 )
 
 target_compile_definitions(${WRAPPER_NAME} PRIVATE

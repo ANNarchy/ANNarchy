@@ -30,7 +30,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         proj%(id_proj)s = this;
 
-        ANNARCHY_LOG_ALLOC("ProjStruct%(id_proj)s", this);
+        SIMCORE_LOG_ALLOC("ProjStruct%(id_proj)s", this);
     }
 
 %(connector_call)s
@@ -60,9 +60,9 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Method called to initialize the projection
     void init_projection() {
-        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "init_projection", this);
-        ANNARCHY_LOG_STATE("post_size", std::to_string(pop%(id_post)s->size));
-        ANNARCHY_LOG_STATE("pre_size", std::to_string(pop%(id_pre)s->size));
+        SIMCORE_LOG_CALL("ProjStruct%(id_proj)s", "init_projection", this);
+        SIMCORE_LOG_STATE("post_size", std::to_string(pop%(id_post)s->size));
+        SIMCORE_LOG_STATE("pre_size", std::to_string(pop%(id_pre)s->size));
 
         _transmission = true;
         _axon_transmission = true;
@@ -75,7 +75,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
 %(init_additional)s
 %(init_profile)s
-        ANNARCHY_LOG_MSG("ProjStruct%(id_proj)s(this = " << this << ") has been initialized.");
+        SIMCORE_LOG_MSG("ProjStruct%(id_proj)s(this = " << this << ") has been initialized.");
     }
 
     // Spiking networks: reset the ring buffer when non-uniform
@@ -131,7 +131,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(pruning)s
 
     void clear() override final {
-        ANNARCHY_LOG_CALL("ProjStruct%(id_proj)s", "clear", this);
+        SIMCORE_LOG_CALL("ProjStruct%(id_proj)s", "clear", this);
 %(clear_container)s
     }
 };

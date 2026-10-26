@@ -113,9 +113,9 @@ class LILMatrix {
         assert ( (static_cast<unsigned long int>(num_rows) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
         assert ( (static_cast<unsigned long int>(num_columns) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
-        ANNARCHY_LOG_ALLOC("LILMatrix", this);
-        ANNARCHY_LOG_ARG("num_rows", std::to_string(static_cast<IT>(num_rows)));
-        ANNARCHY_LOG_ARG("num_columns", std::to_string(static_cast<IT>(num_columns)));
+        SIMCORE_LOG_ALLOC("LILMatrix", this);
+        SIMCORE_LOG_ARG("num_rows", std::to_string(static_cast<IT>(num_rows)));
+        SIMCORE_LOG_ARG("num_columns", std::to_string(static_cast<IT>(num_columns)));
     }
 
     /**
@@ -124,7 +124,7 @@ class LILMatrix {
      *              framework should never be destroyed by the base pointer.
      */
     ~LILMatrix() {
-        ANNARCHY_LOG_DEALLOC("LILMatrix", this);
+        SIMCORE_LOG_DEALLOC("LILMatrix", this);
     }
 
     /**
@@ -133,7 +133,7 @@ class LILMatrix {
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     virtual void clear() {
-        ANNARCHY_LOG_CALL("LILMatrix", "clear", this);
+        SIMCORE_LOG_CALL("LILMatrix", "clear", this);
 
         post_rank.clear();
         post_rank.shrink_to_fit();
@@ -231,7 +231,7 @@ class LILMatrix {
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_from_lil", this);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_from_lil", this);
 
         // Sanity checks
         assert ( (post_ranks.size() == pre_ranks.size()) );
@@ -448,8 +448,8 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector< std::vector<VT> > init_matrix_variable(VT default_value) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable", this);
-        ANNARCHY_LOG_ARG("constant", default_value);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable", this);
+        SIMCORE_LOG_ARG("constant", default_value);
 
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
 
@@ -470,9 +470,9 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_uniform", this);
-        ANNARCHY_LOG_ARG("min", a);
-        ANNARCHY_LOG_ARG("max", b);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable_uniform", this);
+        SIMCORE_LOG_ARG("min", a);
+        SIMCORE_LOG_ARG("max", b);
 
         std::uniform_real_distribution<VT> dis (a,b);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
@@ -495,9 +495,9 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_discrete_uniform(VT a, VT b, std::mt19937& rng) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_discrete_uniform", this);
-        ANNARCHY_LOG_ARG("min", a);
-        ANNARCHY_LOG_ARG("max", b);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable_discrete_uniform", this);
+        SIMCORE_LOG_ARG("min", a);
+        SIMCORE_LOG_ARG("max", b);
 
         std::uniform_int_distribution<VT> dis (a,b);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
@@ -519,9 +519,9 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_normal", this);
-        ANNARCHY_LOG_ARG("mean", mean);
-        ANNARCHY_LOG_ARG("sigma", sigma);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable_normal", this);
+        SIMCORE_LOG_ARG("mean", mean);
+        SIMCORE_LOG_ARG("sigma", sigma);
 
         std::normal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
@@ -543,9 +543,9 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal(VT mean, VT sigma, std::mt19937& rng) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal", this);
-        ANNARCHY_LOG_ARG("mean", mean);
-        ANNARCHY_LOG_ARG("sigma", sigma);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal", this);
+        SIMCORE_LOG_ARG("mean", mean);
+        SIMCORE_LOG_ARG("sigma", sigma);
 
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
@@ -570,11 +570,11 @@ class LILMatrix {
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal_clip(VT mean, VT sigma, std::mt19937& rng, VT min, VT max) {
-        ANNARCHY_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal_clip", this);
-        ANNARCHY_LOG_ARG("mean", mean);
-        ANNARCHY_LOG_ARG("sigma", sigma);
-        ANNARCHY_LOG_ARG("min", min);
-        ANNARCHY_LOG_ARG("max", max);
+        SIMCORE_LOG_CALL("LILMatrix", "init_matrix_variable_log_normal_clip", this);
+        SIMCORE_LOG_ARG("mean", mean);
+        SIMCORE_LOG_ARG("sigma", sigma);
+        SIMCORE_LOG_ARG("min", min);
+        SIMCORE_LOG_ARG("max", max);
 
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
@@ -609,15 +609,15 @@ class LILMatrix {
      */
     template <typename VT>
     inline void update_matrix_variable(std::vector< std::vector<VT> > &variable, const IT lil_idx, const IT col_idx, const VT value) {
-        ANNARCHY_LOG_CALL("LILMatrix", "update_matrix_variable", this);
-        ANNARCHY_LOG_ARG("lil_idx", lil_idx);
-        ANNARCHY_LOG_ARG("col_idx", col_idx);
-        ANNARCHY_LOG_ARG("value", value);
+        SIMCORE_LOG_CALL("LILMatrix", "update_matrix_variable", this);
+        SIMCORE_LOG_ARG("lil_idx", lil_idx);
+        SIMCORE_LOG_ARG("col_idx", col_idx);
+        SIMCORE_LOG_ARG("value", value);
 
         for (auto idx = 0; idx < pre_rank[lil_idx].size(); idx++) {
             if (pre_rank[lil_idx][idx] == col_idx) {
                 variable[lil_idx][idx] = value;
-                ANNARCHY_LOG_STATE("updated position", idx);
+                SIMCORE_LOG_STATE("updated position", idx);
             }
         }
     }

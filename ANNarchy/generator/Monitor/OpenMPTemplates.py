@@ -19,12 +19,12 @@ public:
         // add monitor to global list
         this->_id = addRecorder(static_cast<Monitor*>(this));
 
-        ANNARCHY_LOG_ALLOC("PopRecorder%(id)s", this);
-        ANNARCHY_LOG_STATE("list id:", this->_id);
+        SIMCORE_LOG_ALLOC("PopRecorder%(id)s", this);
+        SIMCORE_LOG_STATE("list id:", this->_id);
     }
 
     ~PopRecorder%(id)s() {
-        ANNARCHY_LOG_DEALLOC("PopRecorder%(id)s", this);
+        SIMCORE_LOG_DEALLOC("PopRecorder%(id)s", this);
     }
 
     void record() {
@@ -55,7 +55,7 @@ public:
 %(clear_individual_container_code)s
 
     void clear() {
-        ANNARCHY_LOG_CALL("PopRecorder%(id)s", "clear", this);
+        SIMCORE_LOG_CALL("PopRecorder%(id)s", "clear", this);
 %(clear_all_container_code)s
 
         removeRecorder(this);

@@ -17,10 +17,10 @@ class SpikeSourceArray(SpecificPopulation):
 
     Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
 
-    You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
+    The spike times can later be replaced with the `update()` method, but the number of neurons must stay the same. A direct assignment such as `inp.spike_times = ...` is not possible.
 
     The spike times are by default relative to the start of a simulation.
-    If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time.
+    The ``reset()`` method of a ``SpikeSourceArray`` restores the spike times it had directly after `compile()` and restarts its internal clock, so the spike times become relative to the time of that call.
     You can then repeat a stimulation many times.
 
     ```python
@@ -43,7 +43,7 @@ class SpikeSourceArray(SpecificPopulation):
     net.simulate(50)
     ```
 
-    Such a looping over inputs can be realised using the period argument, where the internal state is automatically reseted after `period` milliseconds:
+    Such a looping over inputs can be realised using the `period` argument, which restarts the internal clock every `period` milliseconds while the spike times stay the same:
 
     ```python
     inp = net.create(ann.SpikeSourceArray(spike_times=times, period=50))
@@ -56,7 +56,7 @@ class SpikeSourceArray(SpecificPopulation):
     ```
 
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
-    :param period: time when the input will be reset and start again, allowing cycling over the inputs. By default, no cycling is used (-1.).
+    :param period: time (in ms) after which the spike times are repeated, allowing cycling over the inputs. By default, no cycling is used (-1.).
     :param name: optional name for the population.
     """
 
@@ -134,10 +134,10 @@ class SpikeSourceArray(SpecificPopulation):
         period: float|None=None
        ) -> None:
         """
-        Reconfigure `spike_times`, `period` or both after construction of the object. If None is provided as argument nothing will change.
+        Reconfigure `spike_times`, `period` or both after construction of the object. Arguments that are not provided (None) keep their current value.
 
-        :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
-        :param period: time when the input will be reset and start again, allowing cycling over the inputs.
+        :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt. The number of neurons must stay the same.
+        :param period: time (in ms) after which the spike times are repeated, allowing cycling over the inputs. -1 stops the repetition.
         """
         if spike_times is not None:
             if not isinstance(spike_times[0], list):  # several neurons

@@ -23,10 +23,10 @@ class PoissonPopulation(SpecificPopulation):
     pop = net.create(ann.PoissonPopulation(geometry=100, rates=100.0))
     ```
 
-    but it can be modified later as a normal parameter:
+    or an array with the shape of the population. Both can be changed later with the `update()` method (a direct assignment such as `pop.rates = ...` is not possible):
 
     ```python
-    pop.update(rates = numpy.linspace(10, 150, 100))
+    pop.update(rates=numpy.linspace(10, 150, 100))
     ```
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
@@ -91,9 +91,11 @@ class PoissonPopulation(SpecificPopulation):
     proj.one_to_one(1.0)
     ```
 
+    An equation or a target can only be defined in the constructor; `update()` cannot change them.
+
     :param geometry: population geometry as tuple.
     :param name: unique name of the population (optional).
-    :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
+    :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0), an array with the shape of the population, or an equation (as string).
     :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
     :param parameters: additional parameters which can be used in the `rates` equation.
     :param refractory: refractory period in ms.
@@ -200,6 +202,8 @@ class PoissonPopulation(SpecificPopulation):
     ):
         """
         Re-initialize the rates.
+
+        Rates defined by an equation or a target in the constructor cannot be changed with this method.
 
         :param rates: mean firing rate of each neuron. It can be a single value for all or a numpy.ndarray storing individual values.
         """

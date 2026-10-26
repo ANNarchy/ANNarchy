@@ -67,28 +67,28 @@ class TimedArray(SpecificPopulation):
 
     The input [1, 0, 0,...] will stay for 10 ms, then [0, 1, 0, ...] for the next 10 ms, etc...
 
-    If you need a less regular schedule, you can specify it as a list of times:
+    If you need a less regular schedule, you can specify it as a list of times, with one time point per input. The list must start with 0:
 
     ```python
-    inp = ann.TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
+    inp = net.create(ann.TimedArray(rates=inputs, schedule=[0., 10., 20., 50., 60., 100., 110., 150., 160., 200.]))
     ```
 
-    The first input is set at t = 10 ms (r = 0.0 in the first 10 ms), the second at t = 20 ms, the third at t = 50 ms, etc.
+    The first input is set at t = 0 ms, the second at t = 10 ms, the third at t = 20 ms, the fourth at t = 50 ms, etc. If the input should be silent at the beginning, add a row of zeros as first input.
 
-    If you specify less times than in the array of rates, the last ones will be ignored.
-
-    Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
+    Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray to its state after `compile()`, times becoming relative to that call:
 
     ```python
-    ann.simulate(100.) # ten inputs are shown with a schedule of 10 ms
+    net.simulate(100.) # ten inputs are shown with a schedule of 10 ms
     inp.reset()
-    ann.simulate(100.) # the same ten inputs are presented again.
+    net.simulate(100.) # the same ten inputs are presented again.
     ```
+
+    The inputs, the schedule and the period can be changed later with the `update()` method.
 
     :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
     :param geometry: desired dimensions of the population. This argument will be considered if *rates* is None.
-    :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
-    :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+    :param schedule: either a single value or a list of time points where inputs should be set. A list must start with 0 and contain one time point per input. Default: every timestep.
+    :param period: time (in ms) after which the sequence of inputs starts again from its beginning, allowing cycling over the inputs. Default: no cycling (-1.).
 
     """
 
@@ -180,36 +180,37 @@ class TimedArray(SpecificPopulation):
         Set an input for the next 10 time steps:
 
         ```python
-        inp = ann.TimedArray(rates=inputs_a) # inputs_a shape = (10, N)
+        inp = net.create(ann.TimedArray(rates=inputs_a)) # inputs_a shape = (10, N)
         ```
 
         Simulate for 5 ms (dt = 1 ms, using inputs_a[0] to inputs_a[4]):
 
         ```python
-        ann.simulate(5.)
+        net.simulate(5.)
         ```
 
-        Now either update the TimedArray with new inputs for 10 time steps, without resetting the internal timers (the next input will be inputs_b[5]):
+        Now either update the TimedArray with new inputs for **the next** 10 time steps and reset the internal timers, which is the default (the next input will be inputs_b[0]):
 
         ```python
         inp.update(rates=inputs_b) # inputs_b shape = (10, N)
         ```
 
-        Or update the TimedArray with new inputs for **the next** 10 time steps, and reset the internal timers (the next input will be inputs_b[0]):
+        Or update the TimedArray with new inputs for 10 time steps, without resetting the internal timers (the next input will be inputs_b[5]):
 
         ```python
-        inp.update(rates=inputs_b, reset=True) # inputs_b shape = (10, N)
+        inp.update(rates=inputs_b, reset=False) # inputs_b shape = (10, N)
         ```
 
-        If the internalt timers are reset, one can also redefine the schedule and period parameters, e.g. providing input for the next 20 ms with a schedule of 2 ms and afterwards cycling over this input:
+        The schedule and period parameters can be redefined at the same time, e.g. providing input for the next 20 ms with a schedule of 2 ms and afterwards cycling over this input:
 
         ```python
-        inp.update(rates=inputs_b, schedule=2., period=20., reset=True) # inputs_b shape = (10, N)
+        inp.update(rates=inputs_b, schedule=2., period=20.) # inputs_b shape = (10, N)
         ```
 
-        :param schedule: either a single value or a list of time points where inputs should be set. Note that this will set reset=True automatically. Default: the initial schedule remains.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: the initial period remains.
-        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers.
+        :param rates: array of firing rates. The first axis corresponds to time, the others to the dimensions of the population.
+        :param schedule: either a single value or a list of time points where inputs should be set. A list must start with 0 and contain one time point per input. Default: the current schedule remains.
+        :param period: time (in ms) after which the sequence of inputs starts again from its beginning, allowing cycling over the inputs. -1 stops the cycling. Default: the current period remains.
+        :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
         """
         # Convert list[list|np.array] -> np.array
         if isinstance(rates, list):
