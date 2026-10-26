@@ -40,7 +40,7 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-        ANNARCHY_LOG_ALLOC("PopStruct%(id)s", this);
+        SIMCORE_LOG_ALLOC("PopStruct%(id)s", this);
     }
 
     int size; // Number of neurons
@@ -68,9 +68,9 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
-        ANNARCHY_LOG_CALL("PopStruct%(id)s", "init_population", this);
-        ANNARCHY_LOG_STATE("size", std::to_string(this->size));
-        ANNARCHY_LOG_STATE("max_delay", std::to_string(this->max_delay));
+        SIMCORE_LOG_CALL("PopStruct%(id)s", "init_population", this);
+        SIMCORE_LOG_STATE("size", std::to_string(this->size));
+        SIMCORE_LOG_STATE("max_delay", std::to_string(this->max_delay));
 
         _active = true;
 %(init_parameters_variables)s
@@ -107,8 +107,8 @@ struct PopStruct%(id)s{
 
     // Method to dynamically change the size of the queue for delayed variables
     void update_max_delay(int value) {
-        ANNARCHY_LOG_CALL("PopStruct%(id)s", "update_max_delay", this);
-        ANNARCHY_LOG_ARG("new max_delay", value);
+        SIMCORE_LOG_CALL("PopStruct%(id)s", "update_max_delay", this);
+        SIMCORE_LOG_ARG("new max_delay", value);
 %(update_max_delay)s
     }
 
@@ -134,7 +134,7 @@ struct PopStruct%(id)s{
 
     // Memory management: destroy all the C++ data
     void clear() {
-        ANNARCHY_LOG_CALL("PopStruct%(id)s", "clear", this);
+        SIMCORE_LOG_CALL("PopStruct%(id)s", "clear", this);
 %(clear_container)s
     }
 };

@@ -367,7 +367,7 @@ void initialize(const %(float_prec)s _dt) {
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
     std::string msg = "ANNarchyCore::setSeed(): " + std::to_string(seed) + ", " + std::to_string(num_sources) + ", " + std::string((use_seed_seq) ? "true" : "false");
-    ANNARCHY_LOG_MSG(msg);
+    SIMCORE_LOG_MSG(msg);
 
     // sanity check
     if (num_sources > 1)

@@ -155,7 +155,7 @@ class PartitionedMatrix {
      *  @param[in]  num_partitions  The provided LIL presentation is divided into *num_partitions* partitions.
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
-        ANNARCHY_LOG_CALL("PartitionedMatrix", "init_matrix_from_lil", this);
+        SIMCORE_LOG_CALL("PartitionedMatrix", "init_matrix_from_lil", this);
 
         // Sanity check
         assert ( (post_ranks.size() == pre_ranks.size()) );
@@ -605,9 +605,9 @@ class PartitionedMatrix {
      *  @details    Sets the chunk_size_ as well as the slices_ attribute.
      */
     void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
-        ANNARCHY_LOG_CALL("PartitionedMatrix", "divide_post_ranks", this);
-        ANNARCHY_LOG_ARG("row_indices.size()", row_indices.size());
-        ANNARCHY_LOG_ARG("num_partitions", num_partitions);
+        SIMCORE_LOG_CALL("PartitionedMatrix", "divide_post_ranks", this);
+        SIMCORE_LOG_ARG("row_indices.size()", row_indices.size());
+        SIMCORE_LOG_ARG("num_partitions", num_partitions);
 
         num_partitions_ = num_partitions;
         chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));

@@ -39,6 +39,7 @@ pop_attr_accessor_local = """
 .def_prop_rw(
     "%(name)s",
     [](const PopStruct%(id)s& obj) {
+        WRAPPER_LOG_CALL("PopStruct%(id)s_wrapper", "read %(name)s", &obj);
         std::vector<%(py_float_prec)s> res;
         res.reserve(obj.%(name)s.size());
         for (%(cpp_float_prec)s tmp : obj.%(name)s)
@@ -46,6 +47,7 @@ pop_attr_accessor_local = """
         return res;
     },
     [](PopStruct%(id)s& obj, std::vector<%(py_float_prec)s> values) {
+        WRAPPER_LOG_CALL("PopStruct%(id)s_wrapper", "write %(name)s", &obj);
         assert(obj.%(name)s.size() == values.size());
 
         for (size_t i = 0; i < obj.%(name)s.size(); ++i)
