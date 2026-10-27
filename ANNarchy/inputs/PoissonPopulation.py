@@ -211,7 +211,7 @@ class PoissonPopulation(SpecificPopulation):
             raise Messages.error("PoissonPopulation: providing an equation `rates` is only allowed on construction.")
 
         if isinstance(rates, list):
-            rates = numpy.ndarray(rates)
+            rates = numpy.asarray(rates)
 
         if isinstance(rates, numpy.ndarray) and rates.shape != self.geometry:
             raise Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
@@ -220,9 +220,9 @@ class PoissonPopulation(SpecificPopulation):
             if isinstance(self.rates_init, str):
                 pass # nothing to do here
             elif isinstance(self.rates_init, (numpy.ndarray)):
-                self.cyInstance.rates = self.rates_init
+                self.cyInstance.rates = rates
             elif isinstance(self.rates_init, (int, float)):
-                self.cyInstance.rates = numpy.ones(self.geometry) * self.rates_init
+                self.cyInstance.rates = numpy.ones(self.geometry) * rates
             else:
                 raise TypeError("PoissonPopulation: something went wrong ...")
 
@@ -240,6 +240,9 @@ class PoissonPopulation(SpecificPopulation):
         # - other values provided within *parameters* are reset by parent class.
 
         super().reset(attributes=attributes)
+
+        # rates is not part of the attribute list, need to set it by hand
+        self.update(rates=self.rates_init)
 
     #
     # Internal API - object handling

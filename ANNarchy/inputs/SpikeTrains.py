@@ -304,6 +304,79 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         return mu_list, sigma_list
 
+    def _generate(self):
+        # calls the required _generate_[paradigm]
+        super()._generate()
+
+        # CUDA requires extra accessors for HtoD / DtoH - transfers
+        used_cuda = ConfigManager().get("paradigm", self.net_id) == "cuda"
+        cuda_acc = (
+            f'.def_rw("r_host_to_device", &PopStruct{self.id}::r_host_to_device)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'.def_rw("x_host_to_device", &PopStruct{self.id}::x_host_to_device)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'.def_rw("p_host_to_device", &PopStruct{self.id}::p_host_to_device)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'\t\t.def("host_to_device", &PopStruct{self.id}::device_to_host)\n'
+            if used_cuda
+            else ""
+        )
+        cuda_acc += (
+            f'\t\t.def("device_to_host", &PopStruct{self.id}::device_to_host)\n'
+            if used_cuda
+            else ""
+        )
+
+        # Add the nanobind.wrapper equal for each paradigm
+        self._specific_template["wrapper"] = f"""
+    // HomogeneousCorrelatedSpikeTrains
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("tau", &PopStruct{self.id}::tau)
+		.def_rw("mu", &PopStruct{self.id}::mu)
+		.def_rw("sigma", &PopStruct{self.id}::sigma)
+		.def_rw("x", &PopStruct{self.id}::x)
+		.def_rw("p", &PopStruct{self.id}::p)
+        {cuda_acc}
+
+        // Access buffer attributes
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_mu_list", &PopStruct{self.id}::set_mu_list)
+        .def("get_mu_list", &PopStruct{self.id}::get_mu_list)
+
+        .def("set_sigma_list", &PopStruct{self.id}::set_sigma_list)
+        .def("get_sigma_list", &PopStruct{self.id}::get_sigma_list)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
+
     def _generate_st(self):
         """
         adjust code templates for the specific population for single thread.
@@ -353,7 +426,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         self._specific_template["update_variables"] = """
         if(_active){
-            // Check if it is time to set the input
+            /*
+             * Check if it is time to set a new configuration
+             */
             if(_t == _schedule[_block]){
                 // Set the data
                 mu = _mu[_block];
@@ -376,10 +451,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             // Always increment the internal time
             _t++;
 
-            //std::cout << "t: " << _t << " mu: " << mu << " sigma: " << sigma << std::endl;
-
-            // Generate spikes
-            spiked.clear();
+            /*
+             * Update probabilities for generating a spike (cond: p < x)
+             */
 
             // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
             x += dt*(mu - x)/tau + rand_0*sigma*sqrt(dt/tau);
@@ -400,46 +474,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 """ % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
-
-        # Nanobind
-        self._specific_template["wrapper"] = f"""
-    // TimedArray
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-
-        // Attributes
-		.def_rw("r", &PopStruct{self.id}::r)
-		.def_rw("tau", &PopStruct{self.id}::tau)
-		.def_rw("mu", &PopStruct{self.id}::mu)
-		.def_rw("sigma", &PopStruct{self.id}::sigma)
-		.def_rw("x", &PopStruct{self.id}::x)
-		.def_rw("p", &PopStruct{self.id}::p)
-
-        // Access methods
-        .def("set_schedule", &PopStruct{self.id}::set_schedule)
-        .def("get_schedule", &PopStruct{self.id}::get_schedule)
-
-        .def("set_mu_list", &PopStruct{self.id}::set_mu_list)
-        .def("get_mu_list", &PopStruct{self.id}::get_mu_list)
-
-        .def("set_sigma_list", &PopStruct{self.id}::set_sigma_list)
-        .def("get_sigma_list", &PopStruct{self.id}::get_sigma_list)
-
-        .def("set_period", &PopStruct{self.id}::set_period)
-        .def("get_period", &PopStruct{self.id}::get_period)
-
-        // Other methods
-		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
-        .def("clear", &PopStruct{self.id}::clear);
-        """
 
     def _generate_omp(self):
         """
@@ -488,61 +522,53 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
 
-        scheduling_block = """
+        self._specific_template["update_variables"] = """
         if(_active){
-            // Check if it is time to set the input
-            if(_t == _schedule[_block]){
-                // Set the data
-                mu = _mu[_block];
-                sigma = _sigma[_block];
-                // Move to the next block
-                _block++;
-                // If was the last block, go back to the first block
-                if (_block == _schedule.size()){
-                    _block = 0;
-                }
-            }
-
-            // If the timedarray is periodic, check if we arrive at that point
-            if(_period > -1 && (_t == _period-1)){
-                // Reset the counters
-                _block=0;
-                _t = -1;
-            }
-
-            // Always increment the internal time
-            _t++;
-        }
-        """
-
-        update_block = """
-        if( _active ) {
+            /*
+             * Check if it is time to set a new configuration
+             */
             #pragma omp single
             {
-                spiked.clear();
+                if(_t == _schedule[_block]){
+                    // Set the data
+                    mu = _mu[_block];
+                    sigma = _sigma[_block];
+                    // Move to the next block
+                    _block++;
+                    // If was the last block, go back to the first block
+                    if (_block == _schedule.size()){
+                        _block = 0;
+                    }
+                }
 
+                // If the timedarray is periodic, check if we arrive at that point
+                if(_period > -1 && (_t == _period-1)){
+                    // Reset the counters
+                    _block=0;
+                    _t = -1;
+                }
+
+                // Always increment the internal time
+                _t++;
+
+                /*
+                 * Update probabilities for generating a spike (cond: p < x)
+                 */
                 // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
                 x += dt*(mu - x)/tau + rand_0*sigma*sqrt(dt/tau);
+            }
 
-                %(float_prec)s _step = 1000.0/dt;
+            %(float_prec)s _step = 1000.0/dt;
 
-                #pragma omp simd
-                for(int i = 0; i < size; i++){
+            #pragma omp for simd
+            for(int i = 0; i < size; i++){
 
-                    // p = Uniform(0.0, 1.0) * 1000.0 / dt
-                    p[i] = _step*rand_1[i];
+                // p = Uniform(0.0, 1.0) * 1000.0 / dt
+                p[i] = _step*rand_1[i];
 
-                }
             }
         } // active
 """ % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id)}
-
-        if self._has_schedule:
-            self._specific_template["update_variables"] = (
-                scheduling_block + update_block
-            )
-        else:
-            self._specific_template["update_variables"] = update_block
 
         self._specific_template["size_in_bytes"] = """
         // schedule
@@ -594,12 +620,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         _block = 0;
 """
 
-        if not self._has_schedule:
-            # we can use the normal code generation for GPU kernels
-            pass
-
-        else:
-            self._specific_template["update_variables"] = """
+        self._specific_template["update_variables"] = """
         if(_active) {
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
@@ -626,7 +647,58 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         }
 """
 
-            self._specific_template["update_variable_body"] = """
+        # Please notice, that the GPU kernels can be launched only with one block. Otherwise, the
+        # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
+        self._specific_template["update_variable_call"] = """
+    if (pop%(id)s->_active) {
+        // Update the scheduling (host side)
+        pop%(id)s->update();
+
+        // Reset old events
+        call_clear_num_events(RunConfig(1, 1, 0, pop%(id)s->stream), pop%(id)s->gpu_spike_count);
+    #ifndef NDEBUG
+        cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
+        if (err_clear_num_events_%(id)s != cudaSuccess)
+            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
+    #endif
+
+        // compute the value of x based on mu/sigma
+        pop%(id)s_global_step(RunConfig(1, 1, 0, pop%(id)s->stream), t, dt, pop%(id)s->tau, pop%(id)s->mu, pop%(id)s->gpu_x, pop%(id)s->gpu_rand_0, pop%(id)s->sigma);
+    #ifndef NDEBUG
+        cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
+        if( err_pop%(id)s_global_step != cudaSuccess)
+            std::cout << "pop%(id)s_global_step: " << cudaGetErrorString(err_pop%(id)s_global_step) << std::endl;
+    #endif
+
+        // re-compute probability p used for cond (p < x)
+        pop%(id)s_local_step(RunConfig(1, pop%(id)s->_threads_per_block, 0, pop%(id)s->stream), t, dt, pop%(id)s->gpu_rand_1, pop%(id)s->gpu_p);
+    #ifndef NDEBUG
+        cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
+        if(err_pop_spike_gather_%(id)s != cudaSuccess)
+            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
+    #endif
+    }
+""" % {"id": self.id}
+
+        self._specific_template[
+            "update_variable_header"
+        ] = """void pop%(id)s_global_step(RunConfig cfg, const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma );
+void pop%(id)s_local_step(RunConfig cfg, const long int t, const double dt, curandState* rand_1, double* p);
+""" % {"id": self.id}
+
+        self._specific_template["update_variable_invoke"] = """
+void pop%(id)s_global_step(RunConfig cfg, const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma ) {
+    // compute the value of x based on mu/sigma
+    cuPop%(id)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(t, dt, tau, mu, x, rand_0, sigma);
+}
+
+void pop%(id)s_local_step(RunConfig cfg, const long int t, const double dt, curandState* rand_1, double* p) {
+    // re-compute probability p used for cond (p < x)
+    cuPop%(id)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(t, dt, rand_1, p);
+}
+"""% {"id": self.id}
+
+        self._specific_template["update_variable_body"] = """
 // Updating global variables of population %(id)s
 __global__ void cuPop%(id)s_global_step( const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma )
 {
@@ -635,7 +707,7 @@ __global__ void cuPop%(id)s_global_step( const long int t, const double dt, cons
 }
 
 // Updating local variables of population %(id)s
-__global__ void cuPop%(id)s_local_step( const long int t, const double dt, curandState* rand_1, double* x, unsigned int* num_events, int* spiked, long int* last_spike )
+__global__ void cuPop%(id)s_local_step( const long int t, const double dt, curandState* rand_1, double* p)
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -644,103 +716,16 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     while ( i < %(size)s )
     {
         // p = Uniform(0.0, 1.0) * 1000.0 / dt
-        %(float_prec)s p = curand_uniform_double( &rand_1[i] ) * step;
-
-        if (p < x[0]) {
-            int pos = atomicAdd ( num_events, 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
-        }
+        p[i] = curand_uniform_double( &rand_1[i] ) * step;
 
         i += blockDim.x;
     }
-
-    __syncthreads();
 }
 """ % {
                 "id": self.id,
                 "size": self.size,
                 "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
             }
-
-            self._specific_template[
-                "update_variable_header"
-            ] = """__global__ void cuPop%(id)s_global_step( const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma );
-__global__ void cuPop%(id)s_local_step( const long int t, const double dt, curandState* rand_1, double* x, unsigned int* num_events, int* spiked, long int* last_spike );
-""" % {"id": self.id}
-
-            # Please notice, that the GPU kernels can be launched only with one block. Otherwise, the
-            # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
-            self._specific_template["update_variable_call"] = """
-    if (pop%(id)s->_active) {
-        // Update the scheduling
-        pop%(id)s->update();
-
-        // Reset old events
-        clear_num_events<<< 1, 1, 0, pop%(id)s->stream >>>(pop%(id)s->gpu_spike_count);
-    #ifndef NDEBUG
-        cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
-        if (err_clear_num_events_%(id)s != cudaSuccess)
-            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
-    #endif
-
-        // compute the value of x based on mu/sigma
-        cuPop%(id)s_global_step<<< 1, 1, 0, pop%(id)s->stream >>>(
-            t, dt,
-            pop%(id)s->tau,
-            pop%(id)s->mu,
-            pop%(id)s->gpu_x,
-            pop%(id)s->gpu_rand_0,
-            pop%(id)s->sigma
-        );
-        #ifndef NDEBUG
-            cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
-            if( err_pop%(id)s_global_step != cudaSuccess) {
-                std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop%(id)s_global_step) << std::endl;
-                exit(0);
-            }
-        #endif
-
-        // Generate new spike events
-        cuPop%(id)s_local_step<<< 1, pop%(id)s->_threads_per_block, 0, pop%(id)s->stream >>>(
-            t, dt,
-            pop%(id)s->gpu_rand_1,
-            pop%(id)s->gpu_x,
-            pop%(id)s->gpu_spike_count,
-            pop%(id)s->gpu_spiked,
-            pop%(id)s->gpu_last_spike
-        );
-    #ifndef NDEBUG
-        cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
-        if(err_pop_spike_gather_%(id)s != cudaSuccess) {
-            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
-            exit(0);
-        }
-    #endif
-
-        // transfer back the spike counter (needed by record)
-        cudaMemcpy( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-    #ifndef NDEBUG
-        cudaError_t err_pop%(id)s_async_copy = cudaGetLastError();
-        if ( err_pop%(id)s_async_copy != cudaSuccess ) {
-            std::cout << "record_spike_count: " << cudaGetErrorString(err_pop%(id)s_async_copy) << std::endl;
-            exit(0);
-        }
-    #endif
-
-        // transfer back the spiked array (needed by record)
-        if (pop%(id)s->spike_count > 0) {
-            cudaMemcpy( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost);
-        #ifndef NDEBUG
-            cudaError_t err_pop%(id)s_async_copy2 = cudaGetLastError();
-            if ( err_pop%(id)s_async_copy2 != cudaSuccess ) {
-                std::cout << "record_spike: " << cudaGetErrorString(err_pop%(id)s_async_copy2) << std::endl;
-                exit(0);
-            }
-        #endif
-        }
-    }
-""" % {"id": self.id}
 
         self._specific_template["size_in_bytes"] = "//TODO: "
 

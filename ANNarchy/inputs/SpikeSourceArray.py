@@ -7,7 +7,6 @@ from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
-from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Utils import convert_steps_to_ms, convert_ms_to_steps
 
@@ -158,7 +157,7 @@ class SpikeSourceArray(SpecificPopulation):
         if period is not None:
             # Update C++ core
             if self.initialized:
-                self.cyInstance.period = period
+                self.cyInstance.period = convert_ms_to_steps(period, net_id=self.net_id)
             else:
                 self.init["period"] = period
 
@@ -177,7 +176,7 @@ class SpikeSourceArray(SpecificPopulation):
         self.cyInstance.recompute_spike_times()
 
         # reset period to last known state
-        self.cyInstance.period = convert_ms_to_steps(self.init["period"])
+        self.cyInstance.period = convert_ms_to_steps(self.init["period"], net_id=self.net_id)
 
         # reset other properties
         super().reset(attributes)
@@ -331,6 +330,12 @@ class SpikeSourceArray(SpecificPopulation):
 
             #pragma omp single
             {
+                if ( (period >= 0) && (_t == period-1) ) {
+                    _t = -1;
+                    recompute_spike_times();
+                }
+
+                // advance to next time step
                 _t++;
             }
         }
