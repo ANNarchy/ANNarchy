@@ -176,7 +176,7 @@ class SpikeSourceArray(SpecificPopulation):
         self.cyInstance.recompute_spike_times()
 
         # reset period to last known state
-        self.cyInstance.period = convert_ms_to_steps(self.init["period"])
+        self.cyInstance.period = convert_ms_to_steps(self.init["period"], net_id=self.net_id)
 
         # reset other properties
         super().reset(attributes)
