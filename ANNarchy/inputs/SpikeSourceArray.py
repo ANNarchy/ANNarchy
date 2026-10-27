@@ -330,6 +330,12 @@ class SpikeSourceArray(SpecificPopulation):
 
             #pragma omp single
             {
+                if ( (period >= 0) && (_t == period-1) ) {
+                    _t = -1;
+                    recompute_spike_times();
+                }
+
+                // advance to next time step
                 _t++;
             }
         }
