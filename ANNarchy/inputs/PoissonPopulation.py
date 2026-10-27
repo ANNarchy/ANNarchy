@@ -211,7 +211,7 @@ class PoissonPopulation(SpecificPopulation):
             raise Messages.error("PoissonPopulation: providing an equation `rates` is only allowed on construction.")
 
         if isinstance(rates, list):
-            rates = numpy.ndarray(rates)
+            rates = numpy.asarray(rates)
 
         if isinstance(rates, numpy.ndarray) and rates.shape != self.geometry:
             raise Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
