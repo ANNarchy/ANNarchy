@@ -7,7 +7,6 @@ from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
-from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Utils import convert_steps_to_ms, convert_ms_to_steps
 
@@ -158,7 +157,7 @@ class SpikeSourceArray(SpecificPopulation):
         if period is not None:
             # Update C++ core
             if self.initialized:
-                self.cyInstance.period = period
+                self.cyInstance.period = convert_ms_to_steps(period, net_id=self.net_id)
             else:
                 self.init["period"] = period
 
