@@ -151,6 +151,10 @@ class TimedArray(SpecificPopulation):
         if rates is not None:
             self.update(rates=rates, period=period, schedule=schedule)
 
+    #
+    # Special properties
+    #
+
     @property
     def r(self):
         if self.initialized:
@@ -160,7 +164,79 @@ class TimedArray(SpecificPopulation):
 
     @r.setter
     def r(self, new_r):
-        Messages.NoDirectAssignment("TimedArray: The value of r is defined through the `rates` argument.")
+        raise Messages.NoDirectAssignment("TimedArray: The value of r is defined through the `rates` argument.")
+
+    @property
+    def schedule(self):
+        if self.initialized:
+            return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
+        else:
+            return self.init["schedule"]
+
+    @schedule.setter
+    def schedule(self, value):
+        if self.initialized:
+            val_int = convert_ms_to_steps(np.atleast_1d(value), self.net_id)
+            self.cyInstance.set_schedule(val_int)
+        else:
+            self.init["schedule"] = value
+
+    @property
+    def rates(self):
+        if self.initialized:
+            if len(self.geometry) > 1:
+                # unflatten the data
+                flat_values = self.cyInstance.get_rates()
+                values = np.zeros(tuple([len(self.schedule)] + list(self.geometry)))
+                for x in range(len(self.schedule)):
+                    values[x] = np.reshape(flat_values[x], self.geometry)
+                return values
+            else:
+                return self.cyInstance.get_rates()
+        else:
+            return self.init["rates"]
+
+    @rates.setter
+    def rates(self, value):
+        if self.initialized:
+            if value is None:
+                return  # nothing to do
+
+            if len(value.shape) > 2:
+                if value.shape[1:] != self.geometry:
+                    Messages.error(
+                        "TimedArray: mismatch between *rates* argument (",
+                        value.shape[1:],
+                        ") and stored geometry (",
+                        self.geometry,
+                        ").",
+                    )
+
+                # we need to flatten the provided data
+                flat_values = value.reshape((value.shape[0], self.size))
+                self.cyInstance.set_rates(flat_values)
+            else:
+                self.cyInstance.set_rates(value)
+        else:
+            self.init["rates"] = value
+
+    @property
+    def period(self):
+        if self.initialized:
+            return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
+        else:
+            return self.init["period"]
+
+    @period.setter
+    def period(self, value):
+        if self.initialized:
+            self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
+        else:
+            self.init["period"] = value
+
+    #
+    # User-interface
+    #
 
     def update(
         self,
@@ -285,6 +361,10 @@ class TimedArray(SpecificPopulation):
         self.rates = np.array(rates)
         self.period = period
 
+    #
+    # Internal API
+    #
+
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return TimedArray(
@@ -296,6 +376,16 @@ class TimedArray(SpecificPopulation):
             copied=True,
             net_id=self.net_id if net_id is None else net_id,
         )
+
+    def _instantiate(self, module):
+        # Create the Cython instance
+        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
+            self.size, self.max_delay
+        )
+
+    #
+    # Code generation
+    #
 
     def _generate(self):
         # calls the required _generate_[paradigm]
@@ -781,73 +871,3 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
 """ % {"float_prec": ConfigManager().get("precision", self.net_id)}
-
-    def _instantiate(self, module):
-        # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
-            self.size, self.max_delay
-        )
-
-    def __setattr__(self, name, value):
-        if name == "schedule":
-            if self.initialized:
-                val_int = convert_ms_to_steps(np.atleast_1d(value), self.net_id)
-                self.cyInstance.set_schedule(val_int)
-            else:
-                self.init["schedule"] = value
-        elif name == "rates":
-            if self.initialized:
-                if value is None:
-                    return  # nothing to do
-
-                if len(value.shape) > 2:
-                    if value.shape[1:] != self.geometry:
-                        Messages.error(
-                            "TimedArray: mismatch between *rates* argument (",
-                            value.shape[1:],
-                            ") and stored geometry (",
-                            self.geometry,
-                            ").",
-                        )
-
-                    # we need to flatten the provided data
-                    flat_values = value.reshape((value.shape[0], self.size))
-                    self.cyInstance.set_rates(flat_values)
-                else:
-                    self.cyInstance.set_rates(value)
-            else:
-                self.init["rates"] = value
-        elif name == "period":
-            if self.initialized:
-                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
-            else:
-                self.init["period"] = value
-        else:
-            Population.__setattr__(self, name, value)
-
-    def __getattr__(self, name):
-        if name == "schedule":
-            if self.initialized:
-                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
-            else:
-                return self.init["schedule"]
-        elif name == "rates":
-            if self.initialized:
-                if len(self.geometry) > 1:
-                    # unflatten the data
-                    flat_values = self.cyInstance.get_rates()
-                    values = np.zeros(tuple([len(self.schedule)] + list(self.geometry)))
-                    for x in range(len(self.schedule)):
-                        values[x] = np.reshape(flat_values[x], self.geometry)
-                    return values
-                else:
-                    return self.cyInstance.get_rates()
-            else:
-                return self.init["rates"]
-        elif name == "period":
-            if self.initialized:
-                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
-            else:
-                return self.init["period"]
-        else:
-            return Population.__getattribute__(self, name)
