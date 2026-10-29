@@ -9,6 +9,7 @@ import json
 import copy
 
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
+from ANNarchy.parser.IR import NeuronRepresentation
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -190,7 +191,11 @@ class Neuron:
     def _analyse(self, net_id):
         # Analyse the neuron type
         if not self.description:
+            # HD (Oct 27th, 2026):
+            #   for now, we have old and new description
+            #   next to each other for easier development
             self.description = analyse_neuron(self, net_id)
+            self.ir = NeuronRepresentation.from_dict(self.description)
 
     def __repr__(self):
         if self.type == "rate":
