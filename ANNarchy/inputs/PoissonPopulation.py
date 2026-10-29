@@ -217,12 +217,12 @@ class PoissonPopulation(SpecificPopulation):
             raise Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
 
         if self.initialized:
-            if isinstance(self.rates_init, str):
+            if isinstance(rates, str):
                 pass # nothing to do here
-            elif isinstance(self.rates_init, (numpy.ndarray)):
-                self.cyInstance.rates = rates
-            elif isinstance(self.rates_init, (int, float)):
-                self.cyInstance.rates = numpy.ones(self.geometry) * rates
+            elif isinstance(rates, (numpy.ndarray)):
+                self.cyInstance.rates = rates.reshape(self.size)
+            elif isinstance(rates, (int, float)):
+                self.cyInstance.rates = numpy.ones(self.size) * rates
             else:
                 raise TypeError("PoissonPopulation: something went wrong ...")
 
