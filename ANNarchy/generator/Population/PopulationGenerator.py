@@ -143,7 +143,7 @@ class PopulationGenerator(object):
         Small helper function, used for instance in self.update_spike_neuron()
         """
         for attr in pop.neuron_ir.attributes:
-            if attr["name"] == name:
+            if attr.name == name:
                 return attr
 
         return None
@@ -158,11 +158,11 @@ class PopulationGenerator(object):
         variable related to global operations.
         """
         for attr in pop.neuron_ir.parameters:
-            if attr["name"] == name:
+            if attr.name == name:
                 return "par", attr
 
         for attr in pop.neuron_ir.variables:
-            if attr["name"] == name:
+            if attr.name == name:
                 return "var", attr
 
         for attr in pop.neuron_ir.random_distributions:
@@ -233,60 +233,60 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         # Parameters
         for par in pop.neuron_ir.parameters:
             # Avoid doublons
-            if par["name"] in already_processed:
+            if par.name in already_processed:
                 continue
 
             # Note that GPUs and CPUs handle bool values differently ...
             init = (
                 "false"
-                if par["ctype"] in ["char", "bool"]
-                else ("0" if par["ctype"] == "int" else "0.0")
+                if par.ctype in ["char", "bool"]
+                else ("0" if par.ctype == "int" else "0.0")
             )
-            if _check_paradigm("cuda", self._net_id) and par["locality"] == "global":
+            if _check_paradigm("cuda", self._net_id) and par.locality == "global":
                 par_ids = {
-                    "name": par["name"],
-                    "type": par["ctype"],
+                    "name": par.name,
+                    "type": par.ctype,
                     "init": init
                 }
-                code += attr_tpl[par["locality"]]["parameter"] % par_ids
+                code += attr_tpl[par.locality]["parameter"] % par_ids
             else:
                 par_ids = {
                     "id": pop.id,
-                    "name": par["name"],
-                    "type": par["ctype"],
+                    "name": par.name,
+                    "type": par.ctype,
                     "init": init,
                     "attr_type": "parameter",
                 }
-                code += attr_tpl[par["locality"]] % par_ids
+                code += attr_tpl[par.locality] % par_ids
 
-            already_processed.append(par["name"])
+            already_processed.append(par.name)
 
         # Variables
         for var in pop.neuron_ir.variables:
             # Avoid doublons
-            if var["name"] in already_processed:
+            if var.name in already_processed:
                 continue
 
             # Note that GPUs and CPUs handle bool values differently ...
             init = (
                 "false"
-                if var["ctype"]in ["char", "bool"]
-                else ("0" if var["ctype"] == "int" else "0.0")
+                if var.ctype in ["char", "bool"]
+                else ("0" if var.ctype == "int" else "0.0")
             )
             var_ids = {
                 "id": pop.id,
-                "name": var["name"],
-                "type": var["ctype"],
+                "name": var.name,
+                "type": var.ctype,
                 "init": init,
                 "attr_type": "variable",
             }
 
-            if _check_paradigm("cuda", self._net_id) and var["locality"] == "global":
-                code += attr_tpl[var["locality"]]["variable"] % var_ids
+            if _check_paradigm("cuda", self._net_id) and var.locality == "global":
+                code += attr_tpl[var.locality]["variable"] % var_ids
             else:
-                code += attr_tpl[var["locality"]] % var_ids
+                code += attr_tpl[var.locality] % var_ids
 
-            already_processed.append(var["name"])
+            already_processed.append(var.name)
 
         # Random numbers
         if _check_paradigm("openmp", self._net_id):
@@ -393,10 +393,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         code += "// Parameters\n"
         for attr in pop.neuron_ir.parameters:
             # HD: we need to clear only local parameters, the others are no vectors
-            if attr["locality"] == "local":
+            if attr.locality == "local":
                 # HD: clear alone does not deallocate, it only resets size.
                 #     So we need to call shrink_to_fit afterwards.
-                ids = {"ctype": attr["ctype"], "name": attr["name"]}
+                ids = {"ctype": attr.ctype, "name": attr.name}
                 code += "%(name)s.clear();\n" % ids
                 code += "%(name)s.shrink_to_fit();\n" % ids
         code += "\n"
@@ -405,10 +405,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         code += "// Variables\n"
         for attr in pop.neuron_ir.variables:
             # HD: we need to clear only local variables, the others are no vectors
-            if attr["locality"] == "local":
+            if attr.locality == "local":
                 # HD: clear alone does not deallocate, it only resets size.
                 #     So we need to call shrink_to_fit afterwards.
-                ids = {"ctype": attr["ctype"], "name": attr["name"]}
+                ids = {"ctype": attr.ctype, "name": attr.name}
                 code += "%(name)s.clear();\n" % ids
                 code += "%(name)s.shrink_to_fit();\n" % ids
 
@@ -456,8 +456,8 @@ _spike_history.shrink_to_fit();
         # Parameters
         code += "// Parameters\n"
         for attr in pop.neuron_ir.parameters:
-            ids = {"ctype": attr["ctype"], "name": attr["name"]}
-            if attr["locality"] == "global":
+            ids = {"ctype": attr.ctype, "name": attr.name}
+            if attr.locality == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
                 code += (
@@ -468,8 +468,8 @@ _spike_history.shrink_to_fit();
         # Variables
         code += "// Variables\n"
         for attr in pop.neuron_ir.variables:
-            ids = {"ctype": attr["ctype"], "name": attr["name"]}
-            if attr["locality"] == "global":
+            ids = {"ctype": attr.ctype, "name": attr.name}
+            if attr.locality == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
                 code += (
@@ -509,15 +509,14 @@ _spike_history.shrink_to_fit();
 
         # Sort the parameters/variables per type
         for attr in pop.neuron_ir.attributes:
-            if attr["name"] in already_processed:
+            if attr.name in already_processed:
                 continue
 
             # add an empty list for this type if needed
-            if attr["ctype"] not in code_ids_per_type.keys():
-                code_ids_per_type[attr["ctype"]] = []
+            if attr.ctype not in code_ids_per_type.keys():
+                code_ids_per_type[attr.ctype] = []
 
             # Important which template to choose
-            locality = attr["locality"]
             attr_type = (
                 "parameter"
                 if attr in pop.neuron_ir.parameters
@@ -526,34 +525,34 @@ _spike_history.shrink_to_fit();
 
             # For GPUs we need to tell the host that this variable need to be updated
             if _check_paradigm("cuda", self._net_id):
-                if attr_type == "parameter" and locality == "global":
+                if attr_type == "parameter" and attr.locality == "global":
                     read_dirty_flag = ""
                     write_dirty_flag = ""
                 else:
                     write_dirty_flag = "%(name)s_host_to_device = true;" % {
-                        "name": attr["name"]
+                        "name": attr.name
                     }
                     read_dirty_flag = (
                         "if ( %(name)s_device_to_host < t ) device_to_host();"
-                        % {"name": attr["name"]}
+                        % {"name": attr.name}
                     )
             else:
                 read_dirty_flag = ""
                 write_dirty_flag = ""
 
             # add to the processing list
-            code_ids_per_type[attr["ctype"]].append(
+            code_ids_per_type[attr.ctype].append(
                 {
-                    "type": attr["ctype"],
-                    "name": attr["name"],
-                    "locality": locality,
+                    "type": attr.ctype,
+                    "name": attr.name,
+                    "locality": attr.locality,
                     "attr_type": attr_type,
                     "write_dirty_flag": write_dirty_flag,
                     "read_dirty_flag": read_dirty_flag,
                 }
             )
 
-            already_processed.append(attr["name"])
+            already_processed.append(attr.name)
 
         # For rate-coded models add _sum_target
         if pop.neuron_ir.is_rate:

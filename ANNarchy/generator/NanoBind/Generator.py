@@ -302,17 +302,17 @@ class NanoBindGenerator:
         # Recordable are only variables
         for attr in pop.neuron_ir.variables:
             record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
-                id=pop.id, name=attr["name"]
+                id=pop.id, name=attr.name
             )
 
             ids = {
                 "id": pop.id,
-                "name": attr["name"],
+                "name": attr.name,
                 "target_float_prec": default_float_type.py_decl_type,
                 "source_float_prec": default_float_type.cpp_decl_type
             }
 
-            if attr['locality'] == "local":
+            if attr.locality == "local":
                 conversion_code = """
                         std::vector<%(target_float_prec)s> result;
 
@@ -349,7 +349,7 @@ class NanoBindGenerator:
 
             clear_container += (
                 """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(
-                    id=pop.id, name=attr["name"]
+                    id=pop.id, name=attr.name
                 )
             )
 

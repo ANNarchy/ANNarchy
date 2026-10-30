@@ -25,16 +25,89 @@ class RawNeuronFields:
     spike: str | None
 
 @dataclass(frozen=True)
-class RandomDistRepresentation:
+class AttributeRepresentation:
+    """
+    Stores common information shared between the different attribute types
+    in ANNarchy, i.e., parameter, variables, and random distributions.
+    """
+    name: str
+    ctype: str
+    locality: Literal["local", "global"]
+
+@dataclass(frozen=True)
+class ParameterRepresentation(AttributeRepresentation):
+    """
+    Stores the information related to an ANNarchy parameter, i.e., an
+    attribute whose value is independent from the neuron equations.
+    """
+    bounds: dict
+    flags: list[str]
+    init: int|float|str
+
+    @property
+    def eq(self) -> str:
+        return f"{self.name} = {self.init}"
+
+    @classmethod
+    def from_dict(cls, param_dict: dict) -> "ParameterRepresentation":
+        """ Temporary function: converts old-style dict into intermediate representation object """
+        return cls(
+            # common
+            name=param_dict["name"],
+            ctype=param_dict["ctype"],
+            locality=param_dict["locality"],
+            # parameter-specific
+            bounds=param_dict["bounds"],
+            flags=param_dict["flags"],
+            init=param_dict["init"]
+        )
+
+@dataclass(frozen=True)
+class VariableRepresentation(AttributeRepresentation):
+    bounds: dict
+    cpp: str
+    dependencies: list[str]
+    eq: str
+    flags: list[str]
+    init: int|float|str
+    method: str
+    num_flops: int
+    pre_loop: dict
+    switch: str|None
+    transformed_eq: str
+    untouched: list[dict[str,str]]
+
+    @classmethod
+    def from_dict(cls, variable_dict: dict) -> "VariableRepresentation":
+        """ Temporary function: converts old-style dict into intermediate representation object """
+        return cls(
+            # common
+            name=variable_dict["name"],
+            ctype=variable_dict["ctype"],
+            locality=variable_dict["locality"],
+            # variable-specific
+            bounds=variable_dict["bounds"],
+            cpp=variable_dict["cpp"],
+            dependencies=variable_dict.get("dependencies"),
+            eq=variable_dict["eq"],
+            flags=variable_dict["flags"],
+            init=variable_dict["init"],
+            method=variable_dict.get("method"),
+            num_flops=variable_dict.get("num_flops"),
+            pre_loop=variable_dict.get("pre_loop"),
+            switch=variable_dict.get("switch"),
+            transformed_eq=variable_dict.get("transformed_eq"),
+            untouched=variable_dict.get("untouched")
+        )
+
+@dataclass(frozen=True)
+class RandomDistRepresentation(AttributeRepresentation):
     """
     Stores information and code snippets related to values drawn from random distributions.
     """
     args: str
-    ctype: str
     dependencies: list[str]
     dist: str
-    locality: Literal["local", "semiglobal", "global"]
-    name: str
     template: str
 
     @property
@@ -78,9 +151,9 @@ class NeuronRepresentation:
     """
 
     _type: Literal["rate", "spike"]
-    _parameters: list[dict[str, str|Parameter]]
-    _variables: list[dict[str, str|Variable]]
-    _random_distributions: list[dict]
+    _parameters: list[ParameterRepresentation]
+    _variables: list[VariableRepresentation]
+    _random_distributions: list[RandomDistRepresentation]
     _targets: list[str]
     _functions: list[dict[str, str]]
     _global_operations: list[str]
@@ -93,7 +166,7 @@ class NeuronRepresentation:
 #########################################################################################
 
     @property
-    def attributes(self) -> Iterator[dict[str, Any]]:
+    def attributes(self) -> Iterator[AttributeRepresentation]:
         """
         Return an iterator over all attributes.
 
@@ -107,7 +180,7 @@ class NeuronRepresentation:
             self._variables
         )
 
-    def filter_by_locality(self, locality: Literal['local','global']) -> Iterator[dict[str, Any]]:
+    def filter_by_locality(self, locality: Literal['local','global']) -> Iterator[AttributeRepresentation]:
         """
         Return an iterator over all attributes with the provided `locality`.
 
@@ -119,18 +192,18 @@ class NeuronRepresentation:
         return (
             attr
             for attr in self.attributes
-            if attr["locality"] == locality
+            if attr.locality == locality
         )
 
     @property
-    def global_attributes(self) -> Iterator[dict[str, Any]]:
+    def global_attributes(self) -> Iterator[AttributeRepresentation]:
         """
         Return an iterator over all attributes with locality 'global'.
         """
         return self.filter_by_locality("global")
 
     @property
-    def local_attributes(self) -> Iterator[dict[str, Any]]:
+    def local_attributes(self) -> Iterator[AttributeRepresentation]:
         """
         Return an iterator over all attributes with locality 'local'.
         """
@@ -157,15 +230,15 @@ class NeuronRepresentation:
         return self._targets
 
     @property
-    def random_distributions(self) -> list[dict[str, dict]]:
+    def random_distributions(self) -> list[RandomDistRepresentation]:
         return self._random_distributions
 
     @property
-    def parameters(self) -> list[dict[str, str | Parameter]]:
+    def parameters(self) -> list[ParameterRepresentation]:
         return self._parameters
 
     @property
-    def variables(self) -> list[dict[str, str | Variable]]:
+    def variables(self) -> list[VariableRepresentation]:
         return self._variables
 
 #########################################################################################
@@ -175,17 +248,17 @@ class NeuronRepresentation:
     @property
     def attr_names(self) -> list[str]:
         """ Returns a list of names of all attributes. """
-        return [attr["name"] for attr in self.attributes]
+        return [attr.name for attr in self.attributes]
 
     @property
     def global_attr_names(self) -> list[str]:
         """ Returns a list of global attributes. """
-        return [attr["name"] for attr in self.global_attributes]
+        return [attr.name for attr in self.global_attributes]
 
     @property
     def local_attr_names(self) -> list[str]:
         """ Returns a list of local attributes. """
-        return [attr["name"] for attr in self.local_attributes]
+        return [attr.name for attr in self.local_attributes]
 
     @property
     def parameter_names(self) -> list[str]:
@@ -246,8 +319,12 @@ class NeuronRepresentation:
 
         return cls(
             _type = description['type'],
-            _parameters = description['parameters'],
-            _variables = description['variables'],
+            _parameters = [
+                ParameterRepresentation.from_dict(param) for param in description['parameters']
+            ],
+            _variables = [
+                VariableRepresentation.from_dict(var) for var in description['variables']
+            ],
             _random_distributions = [
                 RandomDistRepresentation.from_dict(random_dict=rd) for rd in description['random_distributions']
             ],
