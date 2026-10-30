@@ -118,7 +118,7 @@ class NanoBindGenerator:
         default_float_type = ConfigManager().get("dtype", self.net_id)
 
         # Model attributes
-        for attr in pop.neuron_type.ir.attr_names:
+        for attr in pop.neuron_ir.attr_names:
             # internal variables should not exposed to Python
             if attr.startswith("rand_"):
                 continue
@@ -130,7 +130,7 @@ class NanoBindGenerator:
                 'py_float_prec': default_float_type.py_decl_type,
                 'cpp_float_prec': default_float_type.cpp_decl_type
             }
-            if attr in pop.neuron_type.ir.global_attr_names:
+            if attr in pop.neuron_ir.global_attr_names:
                 attributes += tabify(pop_attr_accessor_global % ids, 2)
             else:
                 attributes += tabify(pop_attr_accessor_local % ids, 2)
@@ -138,20 +138,20 @@ class NanoBindGenerator:
             # On GPUs, we need to trigger a host-to-device transfer on next call of simulate()
             if _check_paradigm("cuda", self.net_id):
                 # for local attributes
-                if attr in pop.neuron_type.ir.local_attr_names:
+                if attr in pop.neuron_ir.local_attr_names:
                     attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
                         id=pop.id, name=attr
                     )
                 # for global attributes which are updated over time
-                if attr in pop.neuron_type.ir.global_attr_names and \
-                   attr in pop.neuron_type.ir.variable_names:
+                if attr in pop.neuron_ir.global_attr_names and \
+                   attr in pop.neuron_ir.variable_names:
                     attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
                         id=pop.id, name=attr
                     )
 
         # Arrays for the post-synaptic potential
-        if pop.neuron_type.type == "rate":
-            for target in sorted(list(set(pop.neuron_type.ir.targets + pop.targets))):
+        if pop.neuron_ir.is_rate:
+            for target in sorted(list(set(pop.neuron_ir.targets + pop.targets))):
                 attributes += (
                     """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(
                         id=pop.id, name="_sum_" + target
@@ -159,13 +159,13 @@ class NanoBindGenerator:
                 )
 
         # Functions
-        for func in pop.neuron_type.ir.functions:
+        for func in pop.neuron_ir.functions:
             # Wrapper
             additional_func += f"""
         .def("{func["name"]}", &PopStruct{pop.id}::{func["name"]})"""
 
         # Type-specific functions
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             additional_func += """\t\t.def("compute_firing_rate", [](PopStruct%(id)s& obj, %(py_float_prec)s window) {return obj.compute_firing_rate(%(cpp_float_prec)s{window});} )\n""" % {'id': pop.id, 'py_float_prec': default_float_type.py_decl_type, 'cpp_float_prec': default_float_type.cpp_decl_type}
 
             if pop.neuron_type.refractory or pop.refractory:
@@ -300,7 +300,7 @@ class NanoBindGenerator:
         default_float_type = ConfigManager().get("dtype", self.net_id)
 
         # Recordable are only variables
-        for attr in pop.neuron_type.ir.variables:
+        for attr in pop.neuron_ir.variables:
             record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
                 id=pop.id, name=attr["name"]
             )
@@ -354,9 +354,9 @@ class NanoBindGenerator:
             )
 
         # Arrays for the post-synaptic potential
-        if pop.neuron_type.type == "rate":
+        if pop.neuron_ir.is_rate:
             for target in sorted(
-                list(set(pop.neuron_type.ir.targets + pop.targets))
+                list(set(pop.neuron_ir.targets + pop.targets))
             ):
                 record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
                     id=pop.id, name="_sum_" + target
@@ -373,7 +373,7 @@ class NanoBindGenerator:
                 )
 
         # Spike events
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
                 id=pop.id, name="spike"
             )
@@ -391,7 +391,7 @@ class NanoBindGenerator:
             )
 
         # Axonal spike events are optional
-        if pop.neuron_type.type == "spike" and pop.neuron_type.ir.spike_processing("axon") is not None:
+        if pop.neuron_ir.is_spike and pop.neuron_ir.spike_processing("axon") is not None:
             record_flag += """\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(
                 id=pop.id, name="axon_spike"
             )
