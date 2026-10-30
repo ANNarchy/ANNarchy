@@ -128,10 +128,10 @@ class PopulationGenerator(object):
     // Random numbers
 """
         for rd in pop.neuron_ir.random_distributions:
-            declaration += self._templates["rng"][rd["locality"]]["decl"] % {
-                "rd_name": rd["name"],
-                "type": rd["ctype"],
-                "template": rd["template"] % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
+            declaration += self._templates["rng"][rd.locality]["decl"] % {
+                "rd_name": rd.name,
+                "type": rd.ctype,
+                "template": rd.template % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
                 "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
             }
 
@@ -166,7 +166,7 @@ class PopulationGenerator(object):
                 return "var", attr
 
         for attr in pop.neuron_ir.random_distributions:
-            if attr["name"] == name:
+            if attr.name == name:
                 return "rand", attr
 
         # the given name wasn't either an attribute nor a random distribution,
@@ -295,10 +295,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 for rd in pop.neuron_ir.random_distributions:
                     rng_ids = {
                         "id": pop.id,
-                        "rd_name": rd["name"],
-                        "type": rd["ctype"],
+                        "rd_name": rd.name,
+                        "type": rd.ctype,
                     }
-                    rng_code += self._templates["rng"][rd["locality"]]["init"] % rng_ids
+                    rng_code += self._templates["rng"][rd.locality]["init"] % rng_ids
 
                 code += tabify(rng_code, 2)
 
@@ -429,12 +429,12 @@ _spike_history.shrink_to_fit();
 
         # Random variables
         code += "\n// RNGs\n"
-        for dist in pop.neuron_ir.random_distributions:
+        for rd in pop.neuron_ir.random_distributions:
             rng_ids = {
                 "id": pop.id,
-                "rd_name": dist["name"],
+                "rd_name": rd.name,
             }
-            code += self._templates["rng"][dist["locality"]]["clear"] % rng_ids
+            code += self._templates["rng"][rd.locality]["clear"] % rng_ids
 
         code = tabify(code, 2)
         return code
@@ -480,9 +480,9 @@ _spike_history.shrink_to_fit();
         # Random variables
         code += "// RNGs\n"
         if _check_paradigm("openmp", self._net_id):
-            for dist in pop.neuron_ir.random_distributions:
-                ids = {"ctype": dist["ctype"], "name": dist["name"]}
-                if dist["locality"] == "local":
+            for rd in pop.neuron_ir.random_distributions:
+                ids = {"ctype": rd.ctype, "name": rd.name}
+                if rd.locality == "local":
                     code += (
                         "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n"
                         % ids
@@ -490,9 +490,9 @@ _spike_history.shrink_to_fit();
                 else:
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:
-            for dist in pop.neuron_ir.random_distributions:
+            for rd in pop.neuron_ir.random_distributions:
                 code += "size_in_bytes += sizeof(%(dev_rng_engine_type)s*);\t// gpu_%(name)s\n" % {
-                    "name": dist["name"],
+                    "name": rd.name,
                     "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                 }
 

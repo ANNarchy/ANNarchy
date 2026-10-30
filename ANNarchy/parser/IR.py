@@ -25,6 +25,37 @@ class RawNeuronFields:
     spike: str | None
 
 @dataclass(frozen=True)
+class RandomDistRepresentation:
+    """
+    Stores information and code snippets related to values drawn from random distributions.
+    """
+    args: str
+    ctype: str
+    dependencies: list[str]
+    dist: str
+    locality: Literal["local", "semiglobal", "global"]
+    name: str
+    template: str
+
+    @property
+    def definition(self) -> str:
+        """ Creates initialization statement """
+        return f"{self.template}({self.args})"
+
+    @classmethod
+    def from_dict(cls, random_dict: dict) -> "RandomDistRepresentation":
+        """ Temporary function: converts old-style dict into intermediate representation object """
+        return cls(
+            args = random_dict["args"],
+            ctype = random_dict["ctype"],
+            dependencies = random_dict["dependencies"],
+            dist = random_dict["dist"],
+            locality = random_dict["locality"],
+            name = random_dict["name"],
+            template = random_dict["template"]
+        )
+
+@dataclass(frozen=True)
 class SpikeProcessing:
     """
     Stores information and code snippets related to spike events.
@@ -217,7 +248,9 @@ class NeuronRepresentation:
             _type = description['type'],
             _parameters = description['parameters'],
             _variables = description['variables'],
-            _random_distributions = description['random_distributions'],
+            _random_distributions = [
+                RandomDistRepresentation.from_dict(random_dict=rd) for rd in description['random_distributions']
+            ],
             _targets = description['targets'],
             _functions = description['functions'],
             _global_operations = description['global_operations'],
