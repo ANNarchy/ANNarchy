@@ -73,8 +73,7 @@ class NeuronRepresentation:
         """
         return chain(
             self._parameters,
-            self._variables,
-            self._random_distributions,
+            self._variables
         )
 
     def filter_by_locality(self, locality: Literal['local','global']) -> Iterator[dict[str, Any]]:
@@ -131,6 +130,10 @@ class NeuronRepresentation:
         return self._random_distributions
 
     @property
+    def parameters(self) -> list[dict[str, str | Parameter]]:
+        return self._parameters
+
+    @property
     def variables(self) -> list[dict[str, str | Variable]]:
         return self._variables
 
@@ -152,6 +155,11 @@ class NeuronRepresentation:
     def local_attr_names(self) -> list[str]:
         """ Returns a list of local attributes. """
         return [attr["name"] for attr in self.local_attributes]
+
+    @property
+    def parameter_names(self) -> list[str]:
+        """ Return a list of names of the declared parameters. """
+        return [ tmp["name"] for tmp in self.parameters ]
 
     @property
     def variable_names(self) -> list[str]:

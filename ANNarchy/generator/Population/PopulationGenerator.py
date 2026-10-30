@@ -73,13 +73,13 @@ class PopulationGenerator(object):
 
         # The conductance/current variables for spiking neurons are stored in
         # pop.neuron_type.description['variables'] but only if they are used.
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             try:
-                all_targets = set(pop.neuron_type.description["targets"] + pop.targets)
+                all_targets = set(pop.neuron_ir.targets + pop.targets)
             except TypeError:
                 # The projection has multiple targets
                 all_targets = set(
-                    pop.neuron_type.description["targets"] + pop.targets[0]
+                    pop.neuron_ir.targets + pop.targets[0]
                 )
 
             for target in sorted(all_targets):
@@ -127,7 +127,7 @@ class PopulationGenerator(object):
         declaration += """
     // Random numbers
 """
-        for rd in pop.neuron_type.description["random_distributions"]:
+        for rd in pop.neuron_ir.random_distributions:
             declaration += self._templates["rng"][rd["locality"]]["decl"] % {
                 "rd_name": rd["name"],
                 "type": rd["ctype"],
@@ -142,10 +142,7 @@ class PopulationGenerator(object):
         """
         Small helper function, used for instance in self.update_spike_neuron()
         """
-        for attr in (
-            pop.neuron_type.description["variables"]
-            + pop.neuron_type.description["parameters"]
-        ):
+        for attr in pop.neuron_ir.attributes:
             if attr["name"] == name:
                 return attr
 
@@ -160,22 +157,22 @@ class PopulationGenerator(object):
         whether it is a local or global variable, a random variable or a
         variable related to global operations.
         """
-        for attr in pop.neuron_type.description["parameters"]:
+        for attr in pop.neuron_ir.parameters:
             if attr["name"] == name:
                 return "par", attr
 
-        for attr in pop.neuron_type.description["variables"]:
+        for attr in pop.neuron_ir.variables:
             if attr["name"] == name:
                 return "var", attr
 
-        for attr in pop.neuron_type.description["random_distributions"]:
+        for attr in pop.neuron_ir.random_distributions:
             if attr["name"] == name:
                 return "rand", attr
 
         # the given name wasn't either an attribute nor a random distribution,
         # lets test if it was a psp
         for target in sorted(
-            list(set(pop.neuron_type.description["targets"] + pop.targets))
+            list(set(pop.neuron_ir.targets + pop.targets))
         ):
             if name == "sum(" + target + ")":
                 return "psp", {
@@ -234,7 +231,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         already_processed = []
 
         # Parameters
-        for par in pop.neuron_type.description["parameters"]:
+        for par in pop.neuron_ir.parameters:
             # Avoid doublons
             if par["name"] in already_processed:
                 continue
@@ -265,7 +262,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             already_processed.append(par["name"])
 
         # Variables
-        for var in pop.neuron_type.description["variables"]:
+        for var in pop.neuron_ir.variables:
             # Avoid doublons
             if var["name"] in already_processed:
                 continue
@@ -293,9 +290,9 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         # Random numbers
         if _check_paradigm("openmp", self._net_id):
-            if len(pop.neuron_type.description["random_distributions"]) > 0:
+            if len(pop.neuron_ir.random_distributions) > 0:
                 rng_code = "\n// Random numbers\n"
-                for rd in pop.neuron_type.description["random_distributions"]:
+                for rd in pop.neuron_ir.random_distributions:
                     rng_ids = {
                         "id": pop.id,
                         "rd_name": rd["name"],
@@ -306,10 +303,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 code += tabify(rng_code, 2)
 
         else:
-            if len(pop.neuron_type.description["random_distributions"]) > 0:
+            if len(pop.neuron_ir.random_distributions) > 0:
                 code += """
                 // Random numbers"""
-                for dist in pop.neuron_type.description["random_distributions"]:
+                for dist in pop.neuron_ir.random_distributions:
                     rng_ids = {
                         "id": pop.id,
                         "rd_name": dist["name"],
@@ -322,9 +319,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         # rate-coded targets
         if pop.neuron_type.type == "rate":
-            for target in sorted(
-                list(set(pop.neuron_type.description["targets"] + pop.targets))
-            ):
+            for target in sorted(list(set(pop.neuron_ir.targets + pop.targets))):
                 ids = {
                     "id": pop.id,
                     "name": "_sum_" + target,
@@ -337,12 +332,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         # or unused synaptic spiking targets
         else:
             try:
-                all_targets = set(pop.neuron_type.description["targets"] + pop.targets)
+                all_targets = set(pop.neuron_ir.targets + pop.targets)
             except TypeError:
                 # The projection has multiple targets
-                all_targets = set(
-                    pop.neuron_type.description["targets"] + pop.targets[0]
-                )
+                all_targets = set(pop.neuron_ir.targets + pop.targets[0])
 
             for target in sorted(all_targets):
                 attr_name = "g_" + target
@@ -398,7 +391,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         # Variables
         code += "// Parameters\n"
-        for attr in pop.neuron_type.description["parameters"]:
+        for attr in pop.neuron_ir.parameters:
             # HD: we need to clear only local parameters, the others are no vectors
             if attr["locality"] == "local":
                 # HD: clear alone does not deallocate, it only resets size.
@@ -410,7 +403,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         # Variables
         code += "// Variables\n"
-        for attr in pop.neuron_type.description["variables"]:
+        for attr in pop.neuron_ir.variables:
             # HD: we need to clear only local variables, the others are no vectors
             if attr["locality"] == "local":
                 # HD: clear alone does not deallocate, it only resets size.
@@ -420,7 +413,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 code += "%(name)s.shrink_to_fit();\n" % ids
 
         # Spike-specific code
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             code += self._templates["spike_specific"]["spike"]["clear"]
 
             # Mean - FR
@@ -436,7 +429,7 @@ _spike_history.shrink_to_fit();
 
         # Random variables
         code += "\n// RNGs\n"
-        for dist in pop.neuron_type.description["random_distributions"]:
+        for dist in pop.neuron_ir.random_distributions:
             rng_ids = {
                 "id": pop.id,
                 "rd_name": dist["name"],
@@ -462,7 +455,7 @@ _spike_history.shrink_to_fit();
 
         # Parameters
         code += "// Parameters\n"
-        for attr in pop.neuron_type.description["parameters"]:
+        for attr in pop.neuron_ir.parameters:
             ids = {"ctype": attr["ctype"], "name": attr["name"]}
             if attr["locality"] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
@@ -474,7 +467,7 @@ _spike_history.shrink_to_fit();
 
         # Variables
         code += "// Variables\n"
-        for attr in pop.neuron_type.description["variables"]:
+        for attr in pop.neuron_ir.variables:
             ids = {"ctype": attr["ctype"], "name": attr["name"]}
             if attr["locality"] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
@@ -487,7 +480,7 @@ _spike_history.shrink_to_fit();
         # Random variables
         code += "// RNGs\n"
         if _check_paradigm("openmp", self._net_id):
-            for dist in pop.neuron_type.description["random_distributions"]:
+            for dist in pop.neuron_ir.random_distributions:
                 ids = {"ctype": dist["ctype"], "name": dist["name"]}
                 if dist["locality"] == "local":
                     code += (
@@ -497,7 +490,7 @@ _spike_history.shrink_to_fit();
                 else:
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:
-            for dist in pop.neuron_type.description["random_distributions"]:
+            for dist in pop.neuron_ir.random_distributions:
                 code += "size_in_bytes += sizeof(%(dev_rng_engine_type)s*);\t// gpu_%(name)s\n" % {
                     "name": dist["name"],
                     "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
@@ -515,22 +508,19 @@ _spike_history.shrink_to_fit();
         code_ids_per_type = {}
 
         # Sort the parameters/variables per type
-        for var in (
-            pop.neuron_type.description["parameters"]
-            + pop.neuron_type.description["variables"]
-        ):
-            if var["name"] in already_processed:
+        for attr in pop.neuron_ir.attributes:
+            if attr["name"] in already_processed:
                 continue
 
             # add an empty list for this type if needed
-            if var["ctype"] not in code_ids_per_type.keys():
-                code_ids_per_type[var["ctype"]] = []
+            if attr["ctype"] not in code_ids_per_type.keys():
+                code_ids_per_type[attr["ctype"]] = []
 
             # Important which template to choose
-            locality = var["locality"]
+            locality = attr["locality"]
             attr_type = (
                 "parameter"
-                if var in pop.neuron_type.description["parameters"]
+                if attr in pop.neuron_ir.parameters
                 else "variable"
             )
 
@@ -541,21 +531,21 @@ _spike_history.shrink_to_fit();
                     write_dirty_flag = ""
                 else:
                     write_dirty_flag = "%(name)s_host_to_device = true;" % {
-                        "name": var["name"]
+                        "name": attr["name"]
                     }
                     read_dirty_flag = (
                         "if ( %(name)s_device_to_host < t ) device_to_host();"
-                        % {"name": var["name"]}
+                        % {"name": attr["name"]}
                     )
             else:
                 read_dirty_flag = ""
                 write_dirty_flag = ""
 
             # add to the processing list
-            code_ids_per_type[var["ctype"]].append(
+            code_ids_per_type[attr["ctype"]].append(
                 {
-                    "type": var["ctype"],
-                    "name": var["name"],
+                    "type": attr["ctype"],
+                    "name": attr["name"],
                     "locality": locality,
                     "attr_type": attr_type,
                     "write_dirty_flag": write_dirty_flag,
@@ -563,13 +553,11 @@ _spike_history.shrink_to_fit();
                 }
             )
 
-            already_processed.append(var["name"])
+            already_processed.append(attr["name"])
 
         # For rate-coded models add _sum_target
-        if pop.neuron_type.type == "rate":
-            for target in sorted(
-                list(set(pop.neuron_type.description["targets"] + pop.targets))
-            ):
+        if pop.neuron_ir.is_rate:
+            for target in sorted(list(set(pop.neuron_ir.targets + pop.targets))):
                 prec_type = ConfigManager()._cpp_float_dtype(net_id=self._net_id)
 
                 # add to the processing list
@@ -589,7 +577,7 @@ _spike_history.shrink_to_fit();
                 )
 
         # For spiking models we add spike vector
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             # create new type category if needed
             if "int" not in code_ids_per_type.keys():
                 code_ids_per_type["int"] = []
