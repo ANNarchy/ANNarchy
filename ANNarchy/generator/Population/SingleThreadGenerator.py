@@ -358,9 +358,9 @@ class SingleThreadGenerator(PopulationGenerator):
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
                 attr = self._get_attr(pop, var)
-                attr_dict = {"name": attr["name"], "type": attr["ctype"]}
+                attr_dict = {"name": attr.name, "type": attr.ctype}
 
-                if attr["locality"] == "local":
+                if attr.locality == "local":
                     declare_code += (
                         """
     std::deque< std::vector< %(type)s > > _delayed_%(name)s; """
@@ -380,9 +380,9 @@ class SingleThreadGenerator(PopulationGenerator):
 """
             for var in pop.delayed_variables:
                 attr = self._get_attr(pop, var)
-                attr_dict = {"name": attr["name"], "type": attr["ctype"]}
+                attr_dict = {"name": attr.name, "type": attr.ctype}
 
-                if attr["locality"] == "local":
+                if attr.locality == "local":
                     declare_code += (
                         """
     std::deque< std::vector< %(type)s > > _delayed_%(name)s; """
@@ -408,23 +408,23 @@ class SingleThreadGenerator(PopulationGenerator):
         """
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
-            init_code += delay_tpl[attr["locality"]]["init"] % {
-                "name": attr["name"],
-                "type": attr["ctype"],
+            init_code += delay_tpl[attr.locality]["init"] % {
+                "name": attr.name,
+                "type": attr.ctype
             }
-            update_code += delay_tpl[attr["locality"]]["update"] % {"name": var}
-            reset_code += delay_tpl[attr["locality"]]["reset"] % {
+            update_code += delay_tpl[attr.locality]["update"] % {"name": var}
+            reset_code += delay_tpl[attr.locality]["reset"] % {
                 "id": pop.id,
                 "name": var,
             }
-            resize_code += delay_tpl[attr["locality"]]["resize"] % {
+            resize_code += delay_tpl[attr.locality]["resize"] % {
                 "id": pop.id,
                 "name": var,
-                "type": attr["ctype"],
+                "type": attr.ctype,
             }
 
         # Delaying spike events is done differently
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             init_code += """
         _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());"""
 

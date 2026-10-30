@@ -263,12 +263,12 @@ class NeuronRepresentation:
     @property
     def parameter_names(self) -> list[str]:
         """ Return a list of names of the declared parameters. """
-        return [ tmp["name"] for tmp in self.parameters ]
+        return [ tmp.name for tmp in self.parameters ]
 
     @property
     def variable_names(self) -> list[str]:
         """ Return a list of names of the declared variables. """
-        return [ tmp["name"] for tmp in self.variables ]
+        return [ tmp.name for tmp in self.variables ]
 
     def spike_processing(self, spike_type: Literal["neuron", "axon"] = "neuron") -> SpikeProcessing|None:
         """
