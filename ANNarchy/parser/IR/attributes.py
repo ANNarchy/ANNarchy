@@ -16,6 +16,17 @@ class AttributeRepresentation:
     ctype: str
     locality: Literal["local", "semiglobal", "global"]
 
+    def get_type(self) -> Literal["parameter", "variable"]:
+        """ Returns a short type declaration of the attribute. """
+        if isinstance(self, ParameterRepresentation):
+            return "parameter"
+        if isinstance(self, VariableRepresentation):
+            return "variable"
+
+        raise ValueError(
+            f"Unknown attribute type: {type(self).__name__}"
+        )
+
 @dataclass(frozen=True)
 class ParameterRepresentation(AttributeRepresentation):
     """

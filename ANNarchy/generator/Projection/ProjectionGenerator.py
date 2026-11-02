@@ -932,11 +932,7 @@ class ProjectionGenerator(object):
 
             # important properties for code generation
             locality = attr.locality
-            attr_type = (
-                "parameter"
-                if attr in proj.synapse_ir.parameters
-                else "variable"
-            )
+            attr_type = attr.get_type()
 
             # Special case for single weights
             if attr.name == "w" and proj._has_single_weight():
@@ -1152,11 +1148,7 @@ class ProjectionGenerator(object):
                 continue
 
             # Important to select which template
-            attr_type = (
-                "parameter"
-                if attr in proj.synapse_ir.parameters
-                else "variable"
-            )
+            attr_type = attr.get_type()
 
             # The synaptic weight
             if attr.name == "w":
@@ -1461,12 +1453,10 @@ max_delay = -1;"""
 
         # Other variables
         for attr in proj.synapse_ir.attributes:
-            attr_type = "parameter" if attr in proj.synapse_ir.parameters else "variable"
-            
             ids = {
                 "ctype": attr.ctype,
                 "name": attr.name,
-                "attr_type": attr_type
+                "attr_type": attr.get_type()
             }
 
             if attr.name == "w" and proj._has_single_weight():

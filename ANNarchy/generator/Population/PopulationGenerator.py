@@ -517,11 +517,7 @@ _spike_history.shrink_to_fit();
                 code_ids_per_type[attr.ctype] = []
 
             # Important which template to choose
-            attr_type = (
-                "parameter"
-                if attr in pop.neuron_ir.parameters
-                else "variable"
-            )
+            attr_type = attr.get_type()
 
             # For GPUs we need to tell the host that this variable need to be updated
             if _check_paradigm("cuda", self._net_id):
