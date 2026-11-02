@@ -119,7 +119,7 @@ class ProjectionGenerator(object):
         use_bitmask = (
             False
             if (
-                proj.synapse_type.description["plasticity"]
+                proj.synapse_ir.has_plasticity
                 or ConfigManager().get("disable_bitmask", net_id=self._net_id)
             )
             else True
@@ -857,28 +857,22 @@ class ProjectionGenerator(object):
         )
 
         # If no psp is defined, it's event-driven
-        has_event_driven = False
-        for var in proj.synapse_type.description["variables"]:
-            if var["method"] == "event-driven":
-                has_event_driven = True
-                break
-        if has_event_driven:
+        if proj.synapse_ir.has_event_driven():
             declare_event_driven = self._templates["event_driven"]["declare"]
 
         # Arrays for the random numbers
-        if len(proj.synapse_type.description["random_distributions"]) > 0:
-            declare_rng += """
+        for rd in proj.synapse_ir.random_distributions:
+            declare_rng += self._templates["rng"][rd.locality]["decl"] % {
+                "rd_name": rd.name,
+                "type": rd.ctype,
+                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
+                "template": rd.template % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
+                "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
+            }
+        if len(declare_rng) > 0:
+           declare_rng = """
     // Random numbers
-"""
-            for rd in proj.synapse_type.description["random_distributions"]:
-                declare_rng += self._templates["rng"][rd["locality"]]["decl"] % {
-                    "rd_name": rd["name"],
-                    "type": rd["ctype"],
-                    "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
-                    "template": rd["template"]
-                    % {"float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)},
-                    "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
-                }
+""" + declare_rng
 
         # Structural plasticity
         if ConfigManager().get("structural_plasticity", self._net_id):
@@ -927,28 +921,25 @@ class ProjectionGenerator(object):
         code_ids_per_type = {}
 
         # Sort the parameters/variables per type
-        for var in (
-            proj.synapse_type.description["parameters"]
-            + proj.synapse_type.description["variables"]
-        ):
+        for attr in proj.synapse_ir.attributes:
             # Avoid doublons
-            if var["name"] in attributes:
+            if attr.name in attributes:
                 continue
 
             # add an empty list for this type if needed
-            if var["ctype"] not in code_ids_per_type.keys():
-                code_ids_per_type[var["ctype"]] = []
+            if attr.ctype not in code_ids_per_type.keys():
+                code_ids_per_type[attr.ctype] = []
 
             # important properties for code generation
-            locality = var["locality"]
+            locality = attr.locality
             attr_type = (
                 "parameter"
-                if var in proj.synapse_type.description["parameters"]
+                if attr in proj.synapse_ir.parameters
                 else "variable"
             )
 
             # Special case for single weights
-            if var["name"] == "w" and proj._has_single_weight():
+            if attr.name == "w" and proj._has_single_weight():
                 locality = "global"
 
             # For GPUs we need to tell the host that this variable need to be updated
@@ -958,20 +949,20 @@ class ProjectionGenerator(object):
                     read_dirty_flag = ""
                 else:
                     write_dirty_flag = "%(name)s_host_to_device = true;" % {
-                        "name": var["name"]
+                        "name": attr.name
                     }
                     read_dirty_flag = (
                         "if ( %(name)s_device_to_host < t ) device_to_host(name);"
-                        % {"name": var["name"]}
+                        % {"name": attr.name}
                     )
             else:
                 write_dirty_flag = ""
                 read_dirty_flag = ""
 
-            code_ids_per_type[var["ctype"]].append(
+            code_ids_per_type[attr.ctype].append(
                 {
-                    "type": var["ctype"],
-                    "name": var["name"],
+                    "type": attr.ctype,
+                    "name": attr.name,
                     "locality": locality,
                     "attr_type": attr_type,
                     "read_dirty_flag": read_dirty_flag,
@@ -979,7 +970,7 @@ class ProjectionGenerator(object):
                 }
             )
 
-            attributes.append(var["name"])
+            attributes.append(attr.name)
 
         # Final code, can contain of multiple sets of accessor functions
         final_code = ""
@@ -1061,7 +1052,6 @@ class ProjectionGenerator(object):
                     )
                 else:
                     declare_parameters_variables += decl_template[locality] % ids
-                attributes.append(var["name"])
 
             # build up the final codes
             if local_attribute_get1 != "":
@@ -1113,17 +1103,16 @@ class ProjectionGenerator(object):
         Returns (None, None) by default, if none of this cases is true, indicating
         an error in code generation procedure.
         """
-        desc = proj.synapse_type.description
-        for attr in desc["parameters"]:
-            if attr["name"] == name:
+        for attr in proj.synapse_ir.parameters:
+            if attr.name == name:
                 return "par", attr
 
-        for attr in desc["variables"]:
-            if attr["name"] == name:
+        for attr in proj.synapse_ir.variables:
+            if attr.name == name:
                 return "var", attr
 
-        for attr in desc["random_distributions"]:
-            if attr["name"] == name:
+        for attr in proj.synapse_ir.random_distributions:
+            if attr.name == name:
                 return "rand", attr
 
         return None, None
@@ -1157,25 +1146,21 @@ class ProjectionGenerator(object):
         attributes = []
 
         # Initialize parameters
-        for var in (
-            proj.synapse_type.description["parameters"]
-            + proj.synapse_type.description["variables"]
-        ):
+        for attr in proj.synapse_ir.attributes:
             # Avoid doublons
-            if var["name"] in attributes:
+            if attr.name in attributes:
                 continue
 
             # Important to select which template
-            locality = var["locality"]
             attr_type = (
                 "parameter"
-                if var in proj.synapse_type.description["parameters"]
+                if attr in proj.synapse_ir.parameters
                 else "variable"
             )
 
             # The synaptic weight
-            if var["name"] == "w":
-                if var["locality"] == "global" or proj._has_single_weight():
+            if attr.name == "w":
+                if attr.locality == "global" or proj._has_single_weight():
                     if cpp_connector_available(
                         proj.connector_name,
                         proj._storage_format,
@@ -1186,7 +1171,7 @@ class ProjectionGenerator(object):
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
 
-                elif var["locality"] == "local":
+                elif attr.locality == "local":
                     if cpp_connector_available(
                         proj.connector_name,
                         proj._storage_format,
@@ -1198,11 +1183,9 @@ class ProjectionGenerator(object):
                                 "local"
                             ] % {
                                 "init": "w_dist_arg1",
-                                "type": var["ctype"],
-                                "attr_type": "parameter"
-                                if var in proj.synapse_type.description["parameters"]
-                                else "variable",
-                                "name": var["name"],
+                                "type": attr.ctype,
+                                "attr_type": attr_type,
+                                "name": attr.name,
                             }
 
                         elif isinstance(proj.connector_weight_dist, ANNRandom.Uniform):
@@ -1275,7 +1258,7 @@ class ProjectionGenerator(object):
                         weight_code = tabify(
                             init_code
                             % {
-                                "float_prec": ConfigManager()._cpp_float_dtype(net_id=_net_id)
+                                "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
                             },
                             2,
                         )
@@ -1284,14 +1267,14 @@ class ProjectionGenerator(object):
                     else:
                         init = (
                             "false"
-                            if var["ctype"] == "bool"
-                            else ("0" if var["ctype"] == "int" else "0.0")
+                            if attr.ctype == "bool"
+                            else ("0" if attr.ctype == "int" else "0.0")
                         )
-                        weight_code = attr_init_tpl[locality] % {
+                        weight_code = attr_init_tpl[attr.locality] % {
                             "id": proj.id,
                             "id_post": proj.post.id,
-                            "name": var["name"],
-                            "type": var["ctype"],
+                            "name": attr.name,
+                            "type": attr.ctype,
                             "init": init,
                             "attr_type": attr_type,
                             "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id)
@@ -1313,24 +1296,24 @@ class ProjectionGenerator(object):
             else:
                 init = (
                     "false"
-                    if var["ctype"] == "bool"
-                    else ("0" if var["ctype"] == "int" else "0.0")
+                    if attr.ctype == "bool"
+                    else ("0" if attr.ctype == "int" else "0.0")
                 )
-                var_ids = {
+                attr_ids = {
                     "id": proj.id,
                     "id_post": proj.post.id,
-                    "name": var["name"],
-                    "type": var["ctype"],
+                    "name": attr.name,
+                    "type": attr.ctype,
                     "init": init,
                     "attr_type": attr_type,
                     "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
                 }
-                if _check_paradigm("cuda", self._net_id) and locality == "global":
-                    code += attr_init_tpl[locality][attr_type] % var_ids
+                if _check_paradigm("cuda", self._net_id) and attr.locality == "global":
+                    code += attr_init_tpl[attr.locality][attr_type] % attr_ids
                 else:
-                    code += attr_init_tpl[locality] % var_ids
+                    code += attr_init_tpl[attr.locality] % attr_ids
 
-            attributes.append(var["name"])
+            attributes.append(attr.name)
 
         # Initialize delays differs for construction from LIL or CPP inited patterns
         if proj.max_delay > 1:
@@ -1412,12 +1395,7 @@ max_delay = -1;"""
             delay_code = ""
 
         # If no psp is defined, it's event-driven
-        has_event_driven = False
-        for var in proj.synapse_type.description["variables"]:
-            if var["method"] == "event-driven":
-                has_event_driven = True
-                break
-        if has_event_driven:
+        if proj.synapse_ir.has_event_driven():
             code += self._templates["event_driven"]["cpp_init"]
 
         # Pruning
@@ -1482,21 +1460,19 @@ max_delay = -1;"""
 """
 
         # Other variables
-        for attr in (
-            proj.synapse_type.description["variables"]
-            + proj.synapse_type.description["parameters"]
-        ):
+        for attr in proj.synapse_ir.attributes:
+            attr_type = "parameter" if attr in proj.synapse_ir.parameters else "variable"
+            
             ids = {
-                "ctype": attr["ctype"],
-                "name": attr["name"],
-                "attr_type": "parameter"
-                if attr in proj.synapse_type.description["parameters"]
-                else "variable",
+                "ctype": attr.ctype,
+                "name": attr.name,
+                "attr_type": attr_type
             }
 
-            locality = attr["locality"]
-            if attr["name"] == "w" and proj._has_single_weight():
+            if attr.name == "w" and proj._has_single_weight():
                 locality = "global"
+            else:
+                locality = attr.locality
 
             code += self._templates["attribute_cpp_size"][locality] % ids
 
@@ -1524,16 +1500,16 @@ max_delay = -1;"""
             code = ""
 
         # Variables
-        for attr in (
-            proj.synapse_type.description["variables"]
-            + proj.synapse_type.description["parameters"]
-        ):
-            ids = {"ctype": attr["ctype"], "name": attr["name"]}
+        for attr in proj.synapse_ir.attributes:
+            ids = {
+                "ctype": attr.ctype,
+                "name": attr.name
+            }
 
-            if attr["name"] == "w" and proj._has_single_weight():
+            if attr.name == "w" and proj._has_single_weight():
                 code += self._templates["attribute_cpp_delete"]["global"] % ids
             else:
-                code += self._templates["attribute_cpp_delete"][attr["locality"]] % ids
+                code += self._templates["attribute_cpp_delete"][attr.locality] % ids
 
         # SpecificProjection added some additional code
         if "clear_additional" in proj._specific_template.keys():

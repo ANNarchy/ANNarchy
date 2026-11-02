@@ -33,6 +33,7 @@ class SynapseRepresentation:
     _parameters: list[ParameterRepresentation]
     _variables: list[VariableRepresentation]
     _random_distributions: list[RandomDistRepresentation]
+    _plasticity: bool
     _raw: RawSynapseFields
 
 #########################################################################################
@@ -105,6 +106,22 @@ class SynapseRepresentation:
     def is_rate(self) -> bool:
         return self._type == "rate"
 
+    @property
+    def has_plasticity(self) -> bool:
+        return self._plasticity
+
+    @property
+    def random_distributions(self) -> list[RandomDistRepresentation]:
+        return self._random_distributions
+
+    @property
+    def parameters(self) -> list[ParameterRepresentation]:
+        return self._parameters
+
+    @property
+    def variables(self) -> list[VariableRepresentation]:
+        return self._variables
+
 #########################################################################################
 # Functions for gathering property names from the data fields.                          #
 #########################################################################################
@@ -113,6 +130,15 @@ class SynapseRepresentation:
     def attr_names(self) -> list[str]:
         """ Returns a list of names of all attributes. """
         return [attr.name for attr in self.attributes]
+
+    def has_event_driven(self) -> bool:
+        """ Check whether any equation should be computed event-driven """
+        has_event_driven = False
+        for var in self._variables:
+            if var.method == "event-driven":
+                has_event_driven = True
+                break        
+        return has_event_driven
 
     @classmethod
     def from_dict(cls, description) -> "SynapseRepresentation":
@@ -133,12 +159,13 @@ class SynapseRepresentation:
             _random_distributions = [
                 RandomDistRepresentation.from_dict(random_dict=rd) for rd in description['random_distributions']
             ],
-            _raw = RawSynapseFields(
+            _plasticity=description["plasticity"],
+            _raw=RawSynapseFields(
                 # use dict.get() for optional fields
                 parameters=description["raw_parameters"],
                 equations=description["raw_equations"],
                 functions=description.get("raw_functions"),
-                pre_spike=description["raw_pre_spike"],
+                pre_spike=description.get("raw_pre_spike"),
                 post_spike=description.get("raw_post_spike"),
                 axon_spike=description.get("raw_axon_spike")
             )

@@ -26,6 +26,6 @@ class RawSynapseFields:
     parameters: dict
     equations: str
     functions: str | None
-    pre_spike: str
+    pre_spike: str | None
     post_spike: str | None
     axon_spike: str | None
