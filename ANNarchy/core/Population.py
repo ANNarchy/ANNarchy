@@ -7,7 +7,7 @@ from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
-from ANNarchy.parser.IR import NeuronRepresentation
+from ANNarchy.representation import IRConverter
 
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
@@ -116,7 +116,7 @@ class Population:
         # HD (Oct 27th, 2026):
         #   for now, we have old and new description
         #   next to each other for easier development
-        self.neuron_ir = NeuronRepresentation.from_dict(self.neuron_type.description)
+        self.neuron_ir = IRConverter.convert_neuron(self.neuron_type.description)
 
         # Store the stop condition
         self.stop_condition = stop_condition

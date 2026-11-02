@@ -14,6 +14,7 @@ from .attributes import (
     VariableRepresentation,
     RandomDistRepresentation
 )
+from .converter import IRConverter
 from .raw import RawSynapseFields
 
 @dataclass(frozen=True)
@@ -151,13 +152,13 @@ class SynapseRepresentation:
         return cls(
             _type = description['type'],
             _parameters = [
-                ParameterRepresentation.from_dict(param) for param in description['parameters']
+                IRConverter.convert_parameter(param) for param in description['parameters']
             ],
             _variables = [
-                VariableRepresentation.from_dict(var) for var in description['variables']
+                IRConverter.convert_variable(var) for var in description['variables']
             ],
             _random_distributions = [
-                RandomDistRepresentation.from_dict(random_dict=rd) for rd in description['random_distributions']
+                IRConverter.convert_random_dist(random_dict=rd) for rd in description['random_distributions']
             ],
             _plasticity=description["plasticity"],
             _raw=RawSynapseFields(

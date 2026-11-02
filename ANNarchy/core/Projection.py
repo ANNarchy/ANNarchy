@@ -22,7 +22,7 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.core.Constant import Constant
-from ANNarchy.parser.IR import SynapseRepresentation
+from ANNarchy.representation import SynapseRepresentation
 
 class Projection:
     """
