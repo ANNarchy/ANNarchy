@@ -13,6 +13,19 @@ class RawNeuronFields:
     """
     parameters: dict
     equations: str
-    functions: str
+    functions: str | None
     reset: str | None
     spike: str | None
+
+@dataclass(frozen=True)
+class RawSynapseFields:
+    """
+    Stores the original arguments passed to `ANNarchy.core.Synapse`,
+    primarily for debugging purposes.
+    """
+    parameters: dict
+    equations: str
+    functions: str | None
+    pre_spike: str
+    post_spike: str | None
+    axon_spike: str | None

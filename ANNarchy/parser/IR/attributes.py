@@ -14,7 +14,7 @@ class AttributeRepresentation:
     """
     name: str
     ctype: str
-    locality: Literal["local", "global"]
+    locality: Literal["local", "semiglobal", "global"]
 
 @dataclass(frozen=True)
 class ParameterRepresentation(AttributeRepresentation):

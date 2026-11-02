@@ -22,7 +22,7 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.core.Constant import Constant
-
+from ANNarchy.parser.IR import SynapseRepresentation
 
 class Projection:
     """
@@ -136,6 +136,10 @@ class Projection:
 
         # Analyse the parameters and variables
         self.synapse_type._analyse(self.net_id)
+        # HD (Oct 27th, 2026):
+        #   for now, we have old and new description
+        #   next to each other for easier development
+        self.synapse_ir = SynapseRepresentation.from_dict(self.synapse_type.description)
 
         # Create a default name
         self.id = NetworkManager().get_network(net_id)._add_projection(self)
