@@ -8,10 +8,10 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 
 from .ProfileGenerator import ProfileGenerator
 from .ProfileTemplate import (
-    profile_base_template,
-    cpp11_profile_template,
     cpp11_omp_profile_template,
     cpp11_profile_header,
+    cpp11_profile_template,
+    profile_base_template,
 )
 
 

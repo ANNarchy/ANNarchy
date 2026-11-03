@@ -3,13 +3,13 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+from copy import deepcopy
+
 import ANNarchy
 
 # ANNarchy objects
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import (
@@ -20,15 +20,15 @@ from ANNarchy.generator.Projection.SingleThread import *
 
 # Useful functions
 from ANNarchy.generator.Utils import (
+    determine_idx_type_for_projection,
     generate_equation_code,
-    tabify,
-    remove_trailing_spaces,
     get_highest_available_simd_instructions_type,
-    determine_idx_type_for_projection
+    remove_trailing_spaces,
+    tabify,
 )
-
-import re
-from copy import deepcopy
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 
 class SingleThreadGenerator(ProjectionGenerator):

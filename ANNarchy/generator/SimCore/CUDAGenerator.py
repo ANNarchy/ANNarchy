@@ -3,18 +3,19 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from math import log, ceil
-
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern.NetworkManager import NetworkManager
-
-from ANNarchy.parser.Extraction import extract_functions
+from math import ceil, log
 
 from ANNarchy.generator import Profile
-from ANNarchy.generator.Template import CUDABaseTemplate
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda
 from ANNarchy.generator.SimCore.SimCoreGenerator import SimCoreGenerator
+from ANNarchy.generator.Template import CUDABaseTemplate
+from ANNarchy.generator.Template.GlobalOperationTemplate import (
+    global_operation_templates_cuda,
+)
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.parser.Extraction import extract_functions
+
 
 class CUDAGenerator(SimCoreGenerator):
     """

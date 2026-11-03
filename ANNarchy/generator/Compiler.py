@@ -3,37 +3,34 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import os
-import sys
 import importlib
-import subprocess
-import shutil
-import multiprocessing
-import time
 import json
+import multiprocessing
+import os
+import shutil
+import subprocess
+import sys
+import time
+
 import numpy as np
 from packaging.version import parse as parse_version
 
 # ANNarchy core informations
 import ANNarchy
-
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import (
-    _update_global_config,
-    _check_paradigm,
-    ConfigManager,
-)
-from ANNarchy.intern import Messages
-
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.extensions.image.ImagePopulation import VideoPopulation
-
-from ANNarchy.generator.Template.CMakeTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
-from ANNarchy.generator.Sanity import check_structure, check_experimental_features
+from ANNarchy.generator.Sanity import check_experimental_features, check_structure
+from ANNarchy.generator.Template.CMakeTemplate import *
 from ANNarchy.generator.Utils import check_cuda_version, detect_cuda_arch
-
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import (
+    ConfigManager,
+    _check_paradigm,
+    _update_global_config,
+)
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.parser.report.Report import report
 
 

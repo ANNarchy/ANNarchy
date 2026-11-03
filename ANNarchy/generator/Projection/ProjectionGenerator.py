@@ -3,21 +3,21 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.extensions.convolution import Transpose
+
+# Useful functions
+from ANNarchy.generator.Utils import (
+    cpp_connector_available,
+    determine_idx_type_for_projection,
+    tabify,
+)
+from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import (
     ConfigManager,
     _check_paradigm,
     _check_precision,
-)
-from ANNarchy.intern import Messages
-
-# Useful functions
-from ANNarchy.generator.Utils import (
-    tabify,
-    determine_idx_type_for_projection,
-    cpp_connector_available,
 )
 
 

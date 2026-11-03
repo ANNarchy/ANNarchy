@@ -3,33 +3,33 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+import re
+from copy import deepcopy
+
 import ANNarchy
 
 # ANNarchy objects
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
-from ANNarchy.intern import Messages
+from ANNarchy.generator.Projection.OpenMP import *
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import (
     ProjectionGenerator,
     get_bounds,
 )
-from ANNarchy.generator.Projection.OpenMP import *
 
 # Useful functions
 from ANNarchy.generator.Utils import (
-    generate_equation_code,
-    tabify,
-    remove_trailing_spaces,
-    get_highest_available_simd_instructions_type,
     determine_idx_type_for_projection,
+    generate_equation_code,
+    get_highest_available_simd_instructions_type,
+    remove_trailing_spaces,
+    tabify,
 )
-
-import re
-from copy import deepcopy
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 
 class OpenMPGenerator(ProjectionGenerator):

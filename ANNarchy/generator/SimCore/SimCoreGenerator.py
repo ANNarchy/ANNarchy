@@ -4,9 +4,9 @@
 """
 
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.parser.Extraction import extract_functions
+
 
 class SimCoreGenerator(object):
     """

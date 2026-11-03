@@ -4,15 +4,16 @@
 """
 
 import re
+import shutil
 import subprocess
 import sys
-import shutil
+
 import numpy
 
 from ANNarchy.core.PopulationView import PopulationView
-
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+
 
 def canonicalize(obj):
     """

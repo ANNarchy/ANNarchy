@@ -3,14 +3,16 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+from ANNarchy.generator import Profile
+from ANNarchy.generator.SimCore.SimCoreGenerator import SimCoreGenerator
+from ANNarchy.generator.Template import SingleThreadBaseTemplate
+from ANNarchy.generator.Template.GlobalOperationTemplate import (
+    global_operation_templates_st,
+)
+from ANNarchy.generator.Utils import tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.NetworkManager import NetworkManager
 
-from ANNarchy.generator.Utils import tabify
-from ANNarchy.generator import Profile
-from ANNarchy.generator.Template import SingleThreadBaseTemplate
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st
-from ANNarchy.generator.SimCore.SimCoreGenerator import SimCoreGenerator
 
 class SingleThreadGenerator(SimCoreGenerator):
     """

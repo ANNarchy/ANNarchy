@@ -11,26 +11,23 @@ import re
 from copy import deepcopy
 
 import ANNarchy
-
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
-
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
-from ANNarchy.intern import Messages
-
-from ANNarchy.generator.Utils import (
-    generate_equation_code,
-    tabify,
-    check_and_apply_pow_fix,
-    determine_idx_type_for_projection,
-)
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
+from ANNarchy.generator.Projection.CUDA import *
 from ANNarchy.generator.Projection.ProjectionGenerator import (
     ProjectionGenerator,
     get_bounds,
 )
-from ANNarchy.generator.Projection.CUDA import *
+from ANNarchy.generator.Utils import (
+    check_and_apply_pow_fix,
+    determine_idx_type_for_projection,
+    generate_equation_code,
+    tabify,
+)
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 
 class CUDAGenerator(ProjectionGenerator):
