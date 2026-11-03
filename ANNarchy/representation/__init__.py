@@ -1,4 +1,4 @@
-from .converter import IRConverter          # will be removed later
+from .converter import IRConverter  # will be removed later
 from .neuron import NeuronRepresentation
 from .synapse import SynapseRepresentation
 

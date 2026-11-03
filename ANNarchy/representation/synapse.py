@@ -11,11 +11,12 @@ from typing import Literal
 from .attributes import (
     AttributeRepresentation,
     ParameterRepresentation,
+    RandomDistRepresentation,
     VariableRepresentation,
-    RandomDistRepresentation
 )
 from .converter import IRConverter
 from .raw import RawSynapseFields
+
 
 @dataclass(frozen=True)
 class SynapseRepresentation:

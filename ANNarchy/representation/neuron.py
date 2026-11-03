@@ -11,11 +11,12 @@ from typing import Literal
 from .attributes import (
     AttributeRepresentation,
     ParameterRepresentation,
+    RandomDistRepresentation,
     VariableRepresentation,
-    RandomDistRepresentation
 )
 from .raw import RawNeuronFields
 from .spike import SpikeProcessing
+
 
 @dataclass(frozen=True)
 class NeuronRepresentation:
