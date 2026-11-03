@@ -114,13 +114,25 @@ class NeuronRepresentation:
     def random_distributions(self) -> list[RandomDistRepresentation]:
         return self._random_distributions
 
+    def has_random_distributions(self):
+        """ Returns `True` if the neuron definition includes at least one random distribution attribute. """
+        return len(self._random_distributions) > 0
+
     @property
     def parameters(self) -> list[ParameterRepresentation]:
         return self._parameters
 
+    def has_parameters(self):
+        """ Returns `True` if the neuron definition includes at least one parameter. """
+        return len(self._parameters) > 0
+
     @property
     def variables(self) -> list[VariableRepresentation]:
         return self._variables
+
+    def has_variables(self):
+        """ Returns `True` if the neuron definition includes at least one variable. """
+        return len(self._variables) > 0
 
 #########################################################################################
 # Functions for gathering property names from the data fields.                          #
