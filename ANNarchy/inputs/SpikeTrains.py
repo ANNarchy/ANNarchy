@@ -5,12 +5,12 @@
 
 import numpy as np
 
-from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.Population import Population
 from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 
 
 def _rectify(mu, corr, tau):
@@ -24,8 +24,8 @@ def _rectify(mu, corr, tau):
     Licence: CeCILL
     """
 
-    from scipy.special import erf  # pylint: disable=no-name-in-module
     from scipy.optimize import newton
+    from scipy.special import erf  # pylint: disable=no-name-in-module
 
     def _rectified_gaussian(mu, sigma):
         """

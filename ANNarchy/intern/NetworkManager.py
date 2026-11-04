@@ -7,8 +7,7 @@ import os
 import shutil
 import time
 
-from ANNarchy.intern import ConfigManagement
-from ANNarchy.intern import Messages
+from ANNarchy.intern import ConfigManagement, Messages
 
 
 class IDGenerator:

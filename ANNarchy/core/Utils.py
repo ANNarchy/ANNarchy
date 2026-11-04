@@ -3,16 +3,16 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import time
 import sys
-from functools import wraps
+import time
 from collections.abc import Mapping
+from functools import wraps
 
 import numpy as np
 
 from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 ###################################
 # ms->steps / steps->ms conversion

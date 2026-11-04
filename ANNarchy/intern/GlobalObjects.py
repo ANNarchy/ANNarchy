@@ -3,8 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 class GlobalObjectManager:

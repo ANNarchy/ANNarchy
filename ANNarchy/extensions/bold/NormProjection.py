@@ -5,10 +5,10 @@
 
 import numpy as np
 
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 
 class NormProjection(SpecificProjection):

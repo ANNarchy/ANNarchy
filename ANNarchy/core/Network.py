@@ -3,34 +3,31 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import time
-import secrets
 import inspect
-from typing import List
+import secrets
+import time
 from dataclasses import dataclass, field
+from typing import List
 
 import numpy
 
+import ANNarchy.core.CTypes as ANNarchyFloatTypes
+import ANNarchy.core.Global as Global
+import ANNarchy.core.IO as IO
+import ANNarchy.core.Simulate as Simulate
+import ANNarchy.extensions.bold as bold
+import ANNarchy.generator.Compiler as Compiler
+from ANNarchy.core.Constant import Constant
+from ANNarchy.core.Monitor import Monitor
+from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Projection import Projection
-from ANNarchy.core.Monitor import Monitor
-from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
-from ANNarchy.core.Constant import Constant
-
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-
-import ANNarchy.extensions.bold as bold
-import ANNarchy.core.Global as Global
-import ANNarchy.core.Simulate as Simulate
-import ANNarchy.core.IO as IO
-import ANNarchy.core.CTypes as ANNarchyFloatTypes
-import ANNarchy.generator.Compiler as Compiler
-
 from ANNarchy.core.Utils import _rec_size_in_bytes
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 # Meta class to avoid forcing the constructor

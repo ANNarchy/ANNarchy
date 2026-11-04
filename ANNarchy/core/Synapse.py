@@ -7,8 +7,8 @@ import copy
 import hashlib
 import json
 
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 

@@ -1,14 +1,14 @@
 # export connector functions
 from .Connector import (
-    one_to_one,
+    LILConnectivity,
     all_to_all,
-    gaussian,
     dog,
-    fixed_probability,
-    fixed_number_pre,
     fixed_number_post,
+    fixed_number_pre,
+    fixed_probability,
+    gaussian,
+    one_to_one,
 )
-from .Connector import LILConnectivity
 
 __all__ = [
     # Methods

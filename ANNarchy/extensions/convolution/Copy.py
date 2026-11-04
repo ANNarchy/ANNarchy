@@ -6,11 +6,11 @@
 from copy import deepcopy
 
 from ANNarchy.core import Global
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern import Messages
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 from .CopyTemplate import copy_proj_template, copy_sum_template
 from .Utils import SharedSynapse

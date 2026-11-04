@@ -3,13 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from typing import Union
 import copy
+from typing import Union
+
 import numpy
 
 from ANNarchy.core.CTypes import float64
-from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 default_config = dict(
     # Simulation Control

@@ -4,7 +4,9 @@
 """
 
 from dataclasses import dataclass
+
 from .Random import RandomDistribution
+
 
 # Parameters are attributes which does not change during simulate
 @dataclass

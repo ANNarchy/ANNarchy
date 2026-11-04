@@ -3,8 +3,9 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Attributes import Variable
+from ANNarchy.core.Neuron import Neuron
+
 
 def list_standard_neurons():
     "Returns a list of standard neuron models available."

@@ -3,21 +3,21 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Constant import Constant
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern import Messages
-from ANNarchy.representation import IRConverter
-
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.core.Neuron import Neuron, IndividualNeuron
-
-from typing import Iterator
-import numpy as np
 import copy
 import inspect
 import re
+from typing import Iterator
+
+import numpy as np
+
+from ANNarchy.core.Constant import Constant
+from ANNarchy.core.Neuron import IndividualNeuron, Neuron
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.representation import IRConverter
 
 
 class Population:

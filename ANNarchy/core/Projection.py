@@ -3,26 +3,28 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
-import math, os
-import copy, inspect
+import copy
+import inspect
+import math
+import os
 import pickle
 from typing import Iterator
 
-from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.core.Population import Population
-from ANNarchy.core.Neuron import IndividualNeuron
-from ANNarchy.core.Synapse import Synapse
-from ANNarchy.core.Dendrite import Dendrite
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core import ConnectorMethods
+import numpy as np
 
-from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.core import ConnectorMethods, Global
+from ANNarchy.core.Constant import Constant
+from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Neuron import IndividualNeuron
+from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Synapse import Synapse
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.core.Constant import Constant
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.representation import SynapseRepresentation
+
 
 class Projection:
     """

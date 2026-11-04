@@ -5,16 +5,16 @@
 
 import numpy as np
 
+from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Network import Network
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
-from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 from ANNarchy.intern import Messages
 
 from .InputEncoding import CPN, IB, PSO
-from .ReadOut import available_read_outs, IaF, IaF_ReadOut, IaF_TTKS, IaF_Acc
+from .ReadOut import IaF, IaF_Acc, IaF_ReadOut, IaF_TTKS, available_read_outs
 
 
 class ANNtoSNNConverter:

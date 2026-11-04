@@ -15,9 +15,9 @@ Implementation note:
 * the implementation code was formerly in weightsharing.SharedProjection.
 """
 
-from .Pooling import Pooling
 from .Convolve import Convolution
 from .Copy import Copy
+from .Pooling import Pooling
 from .Transpose import Transpose
 
 # Export only the instantiable classes

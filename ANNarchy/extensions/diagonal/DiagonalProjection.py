@@ -3,11 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Projection import Projection
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-
 import numpy as np
+
+from ANNarchy.core.Projection import Projection
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 
 class DiagonalProjection(Projection):

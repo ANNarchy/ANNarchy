@@ -6,14 +6,12 @@
 import inspect
 
 from ANNarchy.core.PopulationView import PopulationView
-
-from ANNarchy.extensions.bold.BoldModel import BoldModel
 from ANNarchy.extensions.bold.AccProjection import AccProjection
+from ANNarchy.extensions.bold.BoldModel import BoldModel
 from ANNarchy.extensions.bold.PredefinedModels import balloon_RN
-
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 class BoldMonitor:

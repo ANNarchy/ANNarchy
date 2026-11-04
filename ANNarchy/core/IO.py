@@ -5,15 +5,16 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-from ANNarchy.core.Constant import Constant
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern import Messages
-
-import re
 import os
 import pickle
+import re
+
 import numpy as np
+
+from ANNarchy.core import Global
+from ANNarchy.core.Constant import Constant
+from ANNarchy.intern import Messages
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 def load_parameters(
