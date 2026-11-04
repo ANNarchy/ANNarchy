@@ -306,19 +306,19 @@ class CUDAGenerator(PopulationGenerator):
 
         # Variables (device side)
         code += "// parameters\n"
-        for attr in pop.neuron_type.description["parameters"]:
-            if attr["locality"] == "local":
-                code += """cudaFree(gpu_%(name)s); \n""" % {"name": attr["name"]}
+        for attr in pop.neuron_ir.parameters:
+            if attr.locality == "local":
+                code += f"""cudaFree(gpu_{attr.name}); \n"""
 
         code += "\n// variables\n"
-        for attr in pop.neuron_type.description["variables"]:
-            code += """cudaFree(gpu_%(name)s); \n""" % {"name": attr["name"]}
+        for attr in pop.neuron_ir.variables:
+            code += f"""cudaFree(gpu_{attr.name}); \n"""
 
         code += "\n// delayed attributes\n"
-        if pop.neuron_type.type == "rate":
+        if pop.neuron_ir.is_rate:
             delay_tpl = self._templates["attribute_delayed"]
             for var in pop.delayed_variables:
-                if var in pop.neuron_type.description["local"]:
+                if var in pop.neuron_ir.local_attr_names:
                     code += delay_tpl["local"]["clear"] % {"name": var}
                 else:
                     continue
@@ -326,10 +326,8 @@ class CUDAGenerator(PopulationGenerator):
         # clear PSP targets ( for rate-coded neurons, for spiking they are part of population variables )
         code += "\n// targets\n"
         if pop.neuron_type.type == "rate":
-            for target in sorted(
-                list(set(pop.neuron_type.description["targets"] + pop.targets))
-            ):
-                code += """cudaFree(gpu__sum_%(target)s); \n""" % {"target": target}
+            for target in sorted(set(pop.neuron_ir.targets + pop.targets)):
+                code += f"""cudaFree(gpu__sum_{target}); \n"""
 
         # just code layout
         code = tabify(code, 2)
@@ -351,13 +349,11 @@ class CUDAGenerator(PopulationGenerator):
         For rate-coded networks we need to reset the weighted sum in each step, as the kernels simply
         add up.
         """
-        if pop.neuron_type.type != "rate":
+        if pop.neuron_ir.is_spike:
             return ""
 
         code = ""
-        for target in sorted(
-            list(set(pop.neuron_type.description["targets"] + pop.targets))
-        ):
+        for target in sorted(set(pop.neuron_ir.targets + pop.targets)):
             code += """
     #if defined (__pop%(id)s_nb__)
         call_clear_sum( RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s->stream), pop%(id)s->size, pop%(id)s->gpu__sum_%(target)s );
@@ -435,9 +431,9 @@ class CUDAGenerator(PopulationGenerator):
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
                 attr = self._get_attr(pop, var)
-                declare_code += delay_tpl[attr["locality"]]["declare"] % {
+                declare_code += delay_tpl[attr.locality]["declare"] % {
                     "var": var,
-                    "type": attr["ctype"],
+                    "type": attr.ctype,
                 }
         else:
             # Spiking networks should only exchange spikes
@@ -463,15 +459,15 @@ class CUDAGenerator(PopulationGenerator):
 
             attr_dict = {
                 "id": pop.id,
-                "name": attr["name"],
-                "type": attr["ctype"],
+                "name": attr.name,
+                "type": attr.ctype,
                 "delay": pop.max_delay,
             }
 
-            init_code += delay_tpl[attr["locality"]]["init"] % attr_dict
-            update_code += delay_tpl[attr["locality"]]["update"] % attr_dict
-            reset_code += delay_tpl[attr["locality"]]["reset"] % attr_dict
-            resize_code += delay_tpl[attr["locality"]]["resize"] % attr_dict
+            init_code += delay_tpl[attr.locality]["init"] % attr_dict
+            update_code += delay_tpl[attr.locality]["update"] % attr_dict
+            reset_code += delay_tpl[attr.locality]["reset"] % attr_dict
+            resize_code += delay_tpl[attr.locality]["resize"] % attr_dict
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == "spike":
@@ -589,15 +585,15 @@ class CUDAGenerator(PopulationGenerator):
         deps = []
 
         # Variables
-        for var in pop.neuron_type.description["variables"]:
-            if var["locality"] == locality:
-                deps.append(var["name"])
-                if "dependencies" in var.keys():
-                    deps += var["dependencies"]
+        for var in pop.neuron_ir.variables:
+            if var.locality == locality:
+                deps.append(var.name)
+                for dep in var.dependencies:
+                    deps.append(dep)
 
         # Random distributions
-        for rd in pop.neuron_type.description["random_distributions"]:
-            for dep in rd["dependencies"]:
+        for rd in pop.neuron_ir.random_distributions:
+            for dep in rd.dependencies:
                 deps.append(dep)
 
         # Remove doublons / sort the attribute names to
@@ -606,19 +602,20 @@ class CUDAGenerator(PopulationGenerator):
 
         # Generate the header and call lines
         for dep in deps:
-            attr_type, attr_dict = self._get_attr_and_type(pop, dep)
+            attr_type, attr = self._get_attr_and_type(pop, dep)
+
             if attr_type is None:
                 continue
 
             ids = {
                 "id": pop.id,
-                "name": attr_dict["name"],
-                "type": attr_dict["ctype"],
+                "name": attr.name,
+                "type": attr.ctype,
                 "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
             }
 
             if attr_type == "par":
-                if dep in pop.neuron_type.description["global"]:
+                if dep in pop.neuron_ir.global_attr_names:
                     add_args_header += ", const %(type)s %(name)s" % ids
                     add_args_invoke += ", %(name)s" % ids
                     add_args_call += ", pop%(id)s->%(name)s" % ids
@@ -878,10 +875,10 @@ class CUDAGenerator(PopulationGenerator):
         for dep in pop.neuron_type.description["stop_condition"]["dependencies"]:
             attr = self._get_attr(pop, dep)
 
-            if attr["locality"] == "local":
+            if attr.locality == "local":
                 mem_transfer += """
     cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-""" % {"attr_name": attr["name"], "type": attr["ctype"]}
+""" % {"attr_name": attr.name, "type": attr.ctype}
 
         # Retrieve the code
         condition = pop.neuron_type.description["stop_condition"]["cpp"] % {
@@ -1087,19 +1084,20 @@ class CUDAGenerator(PopulationGenerator):
 
         # Replace %(global_idx)s for global parameters
         for var in pop.neuron_type.description["global"]:
-            attr_type, attr_dict = self._get_attr_and_type(pop, var)
+            attr_type, attr = self._get_attr_and_type(pop, var)
+
             if attr_type == "par":
                 if pre_loop.strip() != "":
                     pre_loop = pre_loop.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if glob_eqs.strip() != "":
                     glob_eqs = glob_eqs.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if loc_eqs.strip() != "":
                     loc_eqs = loc_eqs.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
 
         # Fill the placeholder
@@ -1251,7 +1249,7 @@ class CUDAGenerator(PopulationGenerator):
                 )
 
         # Is there any variable?
-        if len(pop.neuron_type.description["variables"]) == 0:
+        if not pop.neuron_ir.has_variables():
             return "", "", "", ""
 
         kernel_decl = ""
@@ -1313,24 +1311,25 @@ class CUDAGenerator(PopulationGenerator):
             refr_eqs = ""
 
         # Replace %(global_idx)s for global parameters
-        for var in pop.neuron_type.description["global"]:
-            attr_type, attr_dict = self._get_attr_and_type(pop, var)
+        for var in pop.neuron_ir.global_attr_names:
+            attr_type, attr = self._get_attr_and_type(pop, var)
+
             if attr_type == "par":
                 if pre_code.strip() != "":
                     pre_code = pre_code.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if refr_eqs.strip() != "":
                     refr_eqs = refr_eqs.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if glob_eqs.strip() != "":
                     glob_eqs = glob_eqs.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if loc_eqs.strip() != "":
                     loc_eqs = loc_eqs.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
 
         # Fill the placeholder
@@ -1511,17 +1510,17 @@ class CUDAGenerator(PopulationGenerator):
 
         # generate header, call and body args
         for var in kernel_deps:
-            attr_type, attr_dict = self._get_attr_and_type(pop, var)
+            attr_type, attr = self._get_attr_and_type(pop, var)
 
-            if attr_type == "par" and attr_dict["locality"] == "global":
-                header_args += ", const " + attr_dict["ctype"] + " " + var
+            if attr_type == "par" and attr.locality == "global":
+                header_args += ", const " + attr.ctype + " " + var
                 header_invoke += ", " + var
                 call_args += ", pop" + str(pop.id) + "->" + var
 
                 cond = cond.replace(var + "%(global_index)s", var)
                 reset = reset.replace(var + "%(global_index)s", var)
             else:
-                header_args += ", " + attr_dict["ctype"] + "* " + var
+                header_args += ", " + attr.ctype + "* " + var
                 header_invoke += ", " + var
                 call_args += ", pop" + str(pop.id) + "->gpu_" + var
 
@@ -1660,9 +1659,10 @@ class CUDAGenerator(PopulationGenerator):
         # Variables/Parameters
         host_device_transfer += """
     // host to device transfers for %(name)s""" % {"name": pop.name}
-        for attr in pop.neuron_type.description["variables"]:
-            ids = {"id": pop.id, "attr_name": attr["name"], "type": attr["ctype"]}
-            if attr["name"] in pop.neuron_type.description["local"]:
+
+        for attr in pop.neuron_ir.variables:
+            ids = {"id": pop.id, "attr_name": attr.name, "type": attr.ctype}
+            if attr.name in pop.neuron_ir.local_attr_names:
                 host_device_transfer += (
                     self._templates["attribute_transfer"]["HtoD_local"] % ids
                 )
@@ -1670,9 +1670,9 @@ class CUDAGenerator(PopulationGenerator):
                 host_device_transfer += (
                     self._templates["attribute_transfer"]["HtoD_global"] % ids
                 )
-        for attr in pop.neuron_type.description["parameters"]:
-            ids = {"id": pop.id, "attr_name": attr["name"], "type": attr["ctype"]}
-            if attr["name"] in pop.neuron_type.description["local"]:
+        for attr in pop.neuron_ir.parameters:
+            ids = {"id": pop.id, "attr_name": attr.name, "type": attr.ctype}
+            if attr.name in pop.neuron_ir.local_attr_names:
                 host_device_transfer += (
                     self._templates["attribute_transfer"]["HtoD_local"] % ids
                 )
@@ -1682,9 +1682,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Rate-coded targets
         if pop.neuron_type.type == "rate":
-            for target in sorted(
-                list(set(pop.neuron_type.description["targets"] + pop.targets))
-            ):
+            for target in sorted(set(pop.neuron_ir.targets + pop.targets)):
                 ids = {
                     "attr_name": "_sum_" + target,
                     "type": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
@@ -1695,7 +1693,7 @@ class CUDAGenerator(PopulationGenerator):
                 )
 
         # Refractoriness
-        if pop.neuron_type.type == "spike":
+        if pop.neuron_ir.is_spike:
             if pop.neuron_type.refractory or pop.refractory:
                 host_device_transfer += """
         // refractory
@@ -1717,9 +1715,9 @@ class CUDAGenerator(PopulationGenerator):
 
         # Write back variables. The operation should be performed only if it hasn't done
         # since the last simulate() / step() and for a given variable.
-        for attr in pop.neuron_type.description["variables"]:
-            ids = {"attr_name": attr["name"], "type": attr["ctype"], "id": pop.id}
-            if attr["name"] in pop.neuron_type.description["local"]:
+        for attr in pop.neuron_ir.variables:
+            ids = {"attr_name": attr.name, "type": attr.ctype, "id": pop.id}
+            if attr.name in pop.neuron_ir.local_attr_names:
                 device_host_transfer += (
                     self._templates["attribute_transfer"]["DtoH_local"] % ids
                 )

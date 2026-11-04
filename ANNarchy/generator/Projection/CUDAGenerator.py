@@ -454,19 +454,22 @@ class CUDAGenerator(ProjectionGenerator):
                 _, attr = self._get_attr_and_type(proj, dep)
                 attr_ids = {
                     "id_proj": proj.id,
-                    "type": attr["ctype"],
-                    "name": attr["name"],
+                    "type": attr.ctype,
+                    "name": attr.name
                 }
                 add_args_header += ", const %(type)s* __restrict__ %(name)s" % attr_ids
                 add_args_call += ", proj%(id_proj)s->gpu_%(name)s" % attr_ids
                 add_args_kernel += ", %(name)s" % attr_ids
 
             for dep in list(set(proj.synapse_type.description["dependencies"]["pre"])):
-                _, attr = PopulationGenerator._get_attr_and_type(proj.pre, dep)
+                _, attr = PopulationGenerator._get_attr_and_type(
+                    proj.pre if not isinstance(proj.pre, PopulationView) else proj.pre.population,
+                    dep
+                )
                 attr_ids = {
                     "id_pre": proj.pre.id,
-                    "type": attr["ctype"],
-                    "name": attr["name"],
+                    "type": attr.ctype,
+                    "name": attr.name,
                     "host_pre_prefix": self._template_ids["host_pre_prefix"],
                 }
 
@@ -923,14 +926,14 @@ if(%(condition)s){
                 # already contained
                 continue
 
-            attr_type, attr_dict = self._get_attr_and_type(proj, dep)
+            attr_type, attr = self._get_attr_and_type(proj, dep)
             attr_ids = {
                 "id_proj": proj.id,
-                "name": attr_dict["name"],
-                "type": attr_dict["ctype"],
+                "name": attr.name,
+                "type": attr.ctype
             }
 
-            if attr_type == "par" and attr_dict["locality"] == "global":
+            if attr_type == "par" and attr.locality == "global":
                 kernel_args_header += ", const %(type)s %(name)s" % attr_ids
                 kernel_args_invoke += ", %(name)s" % attr_ids
                 kernel_args_call += ", proj%(id_proj)s->%(name)s" % attr_ids
@@ -938,11 +941,11 @@ if(%(condition)s){
                 # replace any occurences of this parameter
                 if event_driven_code.strip() != "":
                     event_driven_code = event_driven_code.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if pre_spike_code.strip() != "":
                     pre_spike_code = pre_spike_code.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
             else:
                 kernel_args_header += ", %(type)s* %(name)s" % attr_ids
@@ -1243,39 +1246,39 @@ if(%(condition)s){
             # Check whether the variable *dep* is part of pre-/post-population
             if dep in pop_deps:
                 if dep in proj.synapse_type.description["dependencies"]["pre"]:
-                    attr_type, attr_dict = PopulationGenerator._get_attr_and_type(
+                    attr_type, attr = PopulationGenerator._get_attr_and_type(
                         proj.pre, dep
                     )
                     ids = {
-                        "type": attr_dict["ctype"],
-                        "name": attr_dict["name"],
-                        "id": proj.pre.id,
+                        "type": attr.ctype,
+                        "name": attr.name,
+                        "id": proj.pre.id
                     }
                     kernel_args_decl += ", %(type)s* __restrict__ pre_%(name)s" % ids
                     kernel_args_invoke += ", pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
                 if dep in proj.synapse_type.description["dependencies"]["post"]:
-                    attr_type, attr_dict = PopulationGenerator._get_attr_and_type(
+                    attr_type, attr = PopulationGenerator._get_attr_and_type(
                         proj.post, dep
                     )
                     ids = {
-                        "type": attr_dict["ctype"],
-                        "name": attr_dict["name"],
-                        "id": proj.post.id,
+                        "type": attr.ctype,
+                        "name": attr.name,
+                        "id": proj.post.id
                     }
                     kernel_args_decl += ", %(type)s* __restrict__ post_%(name)s" % ids
                     kernel_args_invoke += ", post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
             # Check whether the variable *dep* is part of the projection
-            attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
+            attr_type, attr = ProjectionGenerator._get_attr_and_type(proj, dep)
             if attr_type is not None:
                 if attr_type == "par":
                     ids = {
                         "id_proj": proj.id,
-                        "type": attr_dict["ctype"],
-                        "name": attr_dict["name"],
+                        "type": attr.ctype,
+                        "name": attr.name
                     }
 
                     if dep in proj.synapse_type.description["global"]:
@@ -1290,8 +1293,8 @@ if(%(condition)s){
                 elif attr_type == "var":
                     ids = {
                         "id_proj": proj.id,
-                        "type": attr_dict["ctype"],
-                        "name": attr_dict["name"],
+                        "type": attr.ctype,
+                        "name": attr.name
                     }
                     kernel_args_decl += ", %(type)s* __restrict__ %(name)s" % ids
                     kernel_args_invoke += ", %(name)s" % ids
@@ -1301,11 +1304,12 @@ if(%(condition)s){
                     ids = {
                         "id_proj": proj.id,
                         "type": ConfigManager()._cpp_gpu_rng_engine(net_id=proj.net_id),
-                        "name": attr_dict["name"],
+                        "name": attr.name
                     }
                     kernel_args_decl += ", %(type)s* state_%(name)s" % ids
                     kernel_args_invoke += ", state_%(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
+
                 else:
                     raise ValueError("attr_type for variable " + dep + " is invalid")
 
@@ -1316,7 +1320,7 @@ if(%(condition)s){
             ids = {
                 "id": proj.pre.id,
                 "name": glop["variable"],
-                "type": attr["ctype"],
+                "type": attr.ctype,
                 "func": glop["function"],
             }
             kernel_args_decl += ", %(type)s pre__%(func)s_%(name)s" % ids
@@ -1328,7 +1332,7 @@ if(%(condition)s){
             ids = {
                 "id": proj.post.id,
                 "name": glop["variable"],
-                "type": attr["ctype"],
+                "type": attr.ctype,
                 "func": glop["function"],
             }
             kernel_args_decl += ", %(type)s post__%(func)s_%(name)s" % ids
@@ -1547,7 +1551,7 @@ if(%(condition)s){
         """
         Post-synaptic event kernel for CUDA devices
         """
-        if proj.synapse_type.type == "rate":
+        if proj.synapse_ir.is_rate:
             return "", "", "", ""
 
         if proj.synapse_type.description["post_spike"] == []:
@@ -1605,31 +1609,30 @@ _last_event%(local_index)s = t;
             post_deps.append(post_eq["name"])
 
         # Create add_args for event-driven eqs and post_event
-        kernel_deps = sorted(
-            list(set(post_deps + event_deps))
-        )  # variables can occur in several eqs
+        # Keep in mind, single variables can occur in several eqs
+        kernel_deps = sorted(set(post_deps + event_deps))
         for dep in kernel_deps:
             if dep == "w":
                 continue
 
-            attr_type, attr_dict = self._get_attr_and_type(proj, dep)
+            attr_type, attr = self._get_attr_and_type(proj, dep)
             attr_ids = {
                 "id": proj.id,
-                "type": attr_dict["ctype"],
-                "name": attr_dict["name"],
+                "type": attr.ctype,
+                "name": attr.name
             }
-            if attr_type == "par" and attr_dict["locality"] == "global":
+            if attr_type == "par" and attr.locality == "global":
                 add_args_header += ", const %(type)s %(name)s" % attr_ids
                 add_args_invoke += ", %(name)s" % attr_ids
                 add_args_call += ", proj%(id)s->%(name)s" % attr_ids
 
                 if post_code.strip != "":
                     post_code = post_code.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
                 if event_driven_code.strip() != "":
                     event_driven_code = event_driven_code.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
             else:
                 add_args_header += ", %(type)s* %(name)s" % attr_ids
@@ -1639,26 +1642,26 @@ _last_event%(local_index)s = t;
         # Check for equations which consider post-synaptic neural state variables
         for post_eq in proj.synapse_type.description["post_spike"]:
             for dep in post_eq["prepost_dependencies"]["pre"]:
-                attr_type, attr_dict = PopulationGenerator._get_attr_and_type(
+                attr_type, attr = PopulationGenerator._get_attr_and_type(
                     proj.pre, dep
                 )
                 attr_ids = {
                     "id": proj.pre.id,
-                    "type": attr_dict["ctype"],
-                    "name": attr_dict["name"],
+                    "type": attr.ctype,
+                    "name": attr.name
                 }
                 add_args_header += ", %(type)s* pre_%(name)s" % attr_ids
                 add_args_invoke += ", pre_%(name)s" % attr_ids
                 add_args_call += ", pop%(id)s->gpu_%(name)s" % attr_ids
 
             for dep in post_eq["prepost_dependencies"]["post"]:
-                attr_type, attr_dict = PopulationGenerator._get_attr_and_type(
+                attr_type, attr = PopulationGenerator._get_attr_and_type(
                     proj.post, dep
                 )
                 attr_ids = {
                     "id": proj.post.id,
-                    "type": attr_dict["ctype"],
-                    "name": attr_dict["name"],
+                    "type": attr.ctype,
+                    "name": attr.name
                 }
                 add_args_header += ", %(type)s* post_%(name)s" % attr_ids
                 add_args_invoke += ", post_%(name)s" % attr_ids
@@ -1853,16 +1856,16 @@ _last_event%(local_index)s = t;
 
         # Global parameters have no index
         for syn_dep in syn_deps:
-            attr_type, attr_dict = self._get_attr_and_type(proj, syn_dep)
+            attr_type, attr = self._get_attr_and_type(proj, syn_dep)
 
-            if attr_type == "par" and attr_dict["locality"] == "global":
+            if attr_type == "par" and attr.locality == "global":
                 equations = equations.replace(
-                    attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                    attr.name + "%(global_index)s", attr.name
                 )
 
                 if pre_loop.strip() != "":
                     pre_loop = pre_loop.replace(
-                        attr_dict["name"] + "%(global_index)s", attr_dict["name"]
+                        attr.name + "%(global_index)s", attr.name
                     )
 
         # Finalize equations, add pre-loop and/or rank assignment

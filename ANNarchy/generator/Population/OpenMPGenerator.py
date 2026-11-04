@@ -74,7 +74,7 @@ class OpenMPGenerator(PopulationGenerator):
         reset_spike = ""
         declare_spike = ""
         init_spike = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             spike_specific_tpl = self._templates["spike_specific"]
 
             # Main data for spiking pops
@@ -267,45 +267,32 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Basic informations common to all populations
         pop_desc = {
-            "include": """#include "pop%(id)s.hpp"\n""" % {"id": pop.id},
-            "extern": """extern PopStruct%(id)s *pop%(id)s;\n""" % {"id": pop.id},
-            "instance": """PopStruct%(id)s *pop%(id)s;\n""" % {"id": pop.id},
-            "init": """    pop%(id)s->init_population();\n""" % {"id": pop.id},
+            "include": f"""#include "pop{pop.id}.hpp"\n""",
+            "extern": f"""extern PopStruct{pop.id} *pop{pop.id};\n""",
+            "instance": f"""PopStruct{pop.id} *pop{pop.id};\n""",
+            "init": f"""    pop{pop.id}->init_population();\n"""
         }
 
         # Generate the calls to be made in the main ANNarchyCore[net_id].cpp
-        if (
-            len(pop.neuron_type.description["variables"]) > 0
-            or "update_variables" in pop._specific_template.keys()
-        ):
+        if pop.neuron_ir.has_variables() or "update_variables" in pop._specific_template:
             if update_variables != "":
-                pop_desc["update"] = """\tpop%(id)s->update(tid);\n""" % {"id": pop.id}
+                pop_desc["update"] = f"""\tpop{pop.id}->update(tid);\n"""
 
-                if pop.neuron_type.type == "spike":
-                    pop_desc["update"] += """\tpop%(id)s->spike_gather(tid);\n""" % {
-                        "id": pop.id
-                    }
+                if pop.neuron_ir.is_spike:
+                    pop_desc["update"] += f"""\tpop{pop.id}->spike_gather(tid);\n"""
             else:
                 if "spike_gather_code" in pop._specific_template.keys():
                     if pop._specific_template["spike_gather_code"] != "":
-                        pop_desc["update"] = """\tpop%(id)s->spike_gather(tid);\n""" % {
-                            "id": pop.id
-                        }
+                        pop_desc["update"] = f"""\tpop{pop.id}->spike_gather(tid);\n"""
 
-        if len(pop.neuron_type.description["random_distributions"]) > 0:
-            pop_desc["rng_update"] = """\tpop%(id)s->update_rng(tid);\n""" % {
-                "id": pop.id
-            }
+        if pop.neuron_ir.has_random_distributions():
+            pop_desc["rng_update"] = f"""\tpop{pop.id}->update_rng(tid);\n"""
 
         if pop.max_delay > 1:
-            pop_desc["delay_update"] = tabify(
-                """pop%(id)s->update_delay();\n""" % {"id": pop.id}, 1
-            )
+            pop_desc["delay_update"] = tabify(f"""pop{pop.id}->update_delay();\n""", 1)
 
         if len(pop.global_operations) > 0:
-            pop_desc["gops_update"] = (
-                """\tpop%(id)s->update_global_ops(tid, nt);\n""" % {"id": pop.id}
-            )
+            pop_desc["gops_update"] = f"""\tpop{pop.id}->update_global_ops(tid, nt);\n"""
 
         return pop_desc
 
@@ -361,12 +348,12 @@ class OpenMPGenerator(PopulationGenerator):
         declare_code = """
     // Delayed variables"""
 
-        if pop.neuron_type.type == "rate":
+        if pop.neuron_ir.is_rate:
             for var in pop.delayed_variables:
                 attr = self._get_attr(pop, var)
-                attr_dict = {"name": attr["name"], "type": attr["ctype"]}
+                attr_dict = {"name": attr.name, "type": attr.ctype}
 
-                if attr["locality"] == "local":
+                if attr.locality == "local":
                     declare_code += (
                         """
     std::deque< std::vector< %(type)s > > _delayed_%(name)s; """
@@ -386,9 +373,9 @@ class OpenMPGenerator(PopulationGenerator):
 """
             for var in pop.delayed_variables:
                 attr = self._get_attr(pop, var)
-                attr_dict = {"name": attr["name"], "type": attr["ctype"]}
+                attr_dict = {"name": attr.name, "type": attr.ctype}
 
-                if attr["locality"] == "local":
+                if attr.locality == "local":
                     declare_code += (
                         """
     std::deque< std::vector< %(type)s > > _delayed_%(name)s; """
@@ -414,19 +401,19 @@ class OpenMPGenerator(PopulationGenerator):
         """
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
-            init_code += delay_tpl[attr["locality"]]["init"] % {
-                "name": attr["name"],
-                "type": attr["ctype"],
+            init_code += delay_tpl[attr.locality]["init"] % {
+                "name": attr.name,
+                "type": attr.ctype,
             }
-            update_code += delay_tpl[attr["locality"]]["update"] % {"name": var}
-            reset_code += delay_tpl[attr["locality"]]["reset"] % {
+            update_code += delay_tpl[attr.locality]["update"] % {"name": var}
+            reset_code += delay_tpl[attr.locality]["reset"] % {
                 "id": pop.id,
                 "name": var,
             }
-            resize_code += delay_tpl[attr["locality"]]["resize"] % {
+            resize_code += delay_tpl[attr.locality]["resize"] % {
                 "id": pop.id,
                 "name": var,
-                "type": attr["ctype"],
+                "type": attr.ctype,
             }
 
         # Delaying spike events is done differently
@@ -563,7 +550,7 @@ class OpenMPGenerator(PopulationGenerator):
         declare_FR = ""
         init_FR = ""
         reset_FR = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             declare_FR = """
     // Mean Firing rate
     std::vector< std::queue<long int> > _spike_history;
@@ -598,7 +585,8 @@ class OpenMPGenerator(PopulationGenerator):
         "Computes the average firing rate based on history"
         mean_FR_push = ""
         mean_FR_update = ""
-        if pop.neuron_type.description["type"] == "spike":
+
+        if pop.neuron_ir.is_spike:
             mean_FR_push = """
                     // Update the mean firing rate
                     if (_mean_fr_window > 0)
@@ -676,7 +664,7 @@ class OpenMPGenerator(PopulationGenerator):
         Generate the C++ for drawing pseudo-random numbers in each step.
         The random variables are drawn sequentially from the same source.
         """
-        if len(pop.neuron_type.description["random_distributions"]) == 0:
+        if not pop.neuron_ir.has_random_distributions():
             return ""
 
         if ConfigManager().get("disable_parallel_rng", self._net_id):
@@ -693,34 +681,34 @@ class OpenMPGenerator(PopulationGenerator):
         local_code = ""
         global_code = ""
         rng_dist_code = ""
-        for rd in pop.neuron_type.description["random_distributions"]:
+        for rd in pop.neuron_ir.random_distributions:
             rng_dist_code += self._templates["rng"]["dist_decl"] % {
-                "rd_name": rd["name"],
-                "rd_init": rd["definition"]
+                "rd_name": rd.name,
+                "rd_init": rd.definition
                 % {
                     "id": pop.id,
                     "float_prec": ConfigManager()._cpp_float_dtype(net_id=self._net_id),
-                    "global_index": "",
-                },
+                    "global_index": ""
+                }
             }
 
-            if rd["locality"] == "local":
+            if rd.locality == "local":
                 if not use_parallel_rng:
-                    local_code += self._templates["rng"][rd["locality"]]["update"] % {
+                    local_code += self._templates["rng"][rd.locality]["update"] % {
                         "id": pop.id,
-                        "rd_name": rd["name"],
-                        "index": 0,
+                        "rd_name": rd.name,
+                        "index": 0
                     }
                 else:
-                    local_code += self._templates["rng"][rd["locality"]]["update"] % {
+                    local_code += self._templates["rng"][rd.locality]["update"] % {
                         "id": pop.id,
-                        "rd_name": rd["name"],
-                        "index": "tid",
+                        "rd_name": rd.name,
+                        "index": "tid"
                     }
             else:
-                global_code += self._templates["rng"][rd["locality"]]["update"] % {
+                global_code += self._templates["rng"][rd.locality]["update"] % {
                     "id": pop.id,
-                    "rd_name": rd["name"],
+                    "rd_name": rd.name
                 }
 
         if use_parallel_rng:

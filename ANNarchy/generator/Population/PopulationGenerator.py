@@ -3,8 +3,12 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.Messages import CodeGeneratorException
+from ANNarchy.representation.rate import RatePSP
 
 
 class PopulationGenerator(object):
@@ -138,10 +142,13 @@ class PopulationGenerator(object):
         return declaration
 
     @staticmethod
-    def _get_attr(pop, name):
+    def _get_attr(pop: Population, name: str):
         """
         Small helper function, used for instance in self.update_spike_neuron()
         """
+        if isinstance(pop, PopulationView):
+            raise CodeGeneratorException("PopulationGenerator: expected a `Population` not `PopulationView`")
+
         for attr in pop.neuron_ir.attributes:
             if attr.name == name:
                 return attr
@@ -149,7 +156,7 @@ class PopulationGenerator(object):
         return None
 
     @staticmethod
-    def _get_attr_and_type(pop, name):
+    def _get_attr_and_type(pop: Population, name: str):
         """
         Small helper function, used for instance in self.update_spike_neuron().
 
@@ -157,6 +164,9 @@ class PopulationGenerator(object):
         whether it is a local or global variable, a random variable or a
         variable related to global operations.
         """
+        if isinstance(pop, PopulationView):
+            raise CodeGeneratorException("PopulationGenerator: expected a `Population` not `PopulationView`")
+
         for attr in pop.neuron_ir.parameters:
             if attr.name == name:
                 return "par", attr
@@ -171,14 +181,9 @@ class PopulationGenerator(object):
 
         # the given name wasn't either an attribute nor a random distribution,
         # lets test if it was a psp
-        for target in sorted(
-            list(set(pop.neuron_ir.targets + pop.targets))
-        ):
+        for target in sorted(set(pop.neuron_ir.targets + pop.targets)):
             if name == "sum(" + target + ")":
-                return "psp", {
-                    "ctype": ConfigManager()._cpp_float_dtype(net_id=pop.net_id),
-                    "name": "_sum_" + target,
-                }
+                return "psp", RatePSP(ctype=ConfigManager()._cpp_float_dtype(net_id=pop.net_id), name="_sum_" + target, locality="local")
 
         return None, None
 
@@ -309,10 +314,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 for dist in pop.neuron_ir.random_distributions:
                     rng_ids = {
                         "id": pop.id,
-                        "rd_name": dist["name"],
+                        "rd_name": dist.name,
                         "dev_rng_engine_type": ConfigManager()._cpp_gpu_rng_engine(net_id=self._net_id)
                     }
-                    code += self._templates["rng"][dist["locality"]]["init"] % rng_ids
+                    code += self._templates["rng"][dist.locality]["init"] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)
