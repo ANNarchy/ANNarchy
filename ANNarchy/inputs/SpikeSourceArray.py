@@ -113,7 +113,7 @@ class SpikeSourceArray(SpecificPopulation):
     @property
     def period(self):
         if self.initialized:
-            return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
+            return convert_steps_to_ms(self.cyInstance.period, self.net_id)
         else:
             return self.init["period"]
 
@@ -196,7 +196,7 @@ class SpikeSourceArray(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
-            geometry=self.geometry,
+            geometry=self.geometry[0],  # tuple->int
             spike_times=self.spike_times,
             period=self.period,
             name=self.name,
