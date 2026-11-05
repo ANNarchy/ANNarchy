@@ -208,28 +208,17 @@ class SpikeSourceArray(SpecificPopulation):
         "Sort, unify the spikes and transform them into steps."
         return [
             sorted(
-                list(
-                    set(
-                        [
-                            convert_ms_to_steps(t, self.net_id)
-                            for t in neur_times
-                        ]
-                    )
+                set(
+                    [
+                        convert_ms_to_steps(t, self.net_id)
+                        for t in neur_times
+                    ]
                 )
             )
             for neur_times in spike_times
         ]
 
-    def _generate_st(self):
-        """
-        Code generation for single-thread.
-        """
-        self._generate_omp()
-
-    def _generate_omp(self):
-        """
-        Code generation for openMP paradigm.
-        """
+    def _generate(self):
         # Add possible targets
         for target in self.targets:
             tpl = {
@@ -251,6 +240,8 @@ class SpikeSourceArray(SpecificPopulation):
             self.neuron_type.description["variables"].append(tpl)
             self.neuron_type.description["local"].append("g_" + target)
 
+        # Attributes are the same for all paradigms, as we
+        # perform the computation for CUDA on host-side
         self._specific_template["declare_additional"] = """
     // Custom local parameter spike_times
     std::vector< std::vector< long int > > spike_times ;
@@ -293,8 +284,42 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        if ConfigManager().get("num_threads", self.net_id) == 1:
-            self._specific_template["update_variables"] = """
+        self._specific_template["test_spike_cond"] = ""
+
+        # The nanobind wrapper is the same for all paradigms.
+        self._specific_template["wrapper"] = f"""
+    // SpikeSourceArray pop{self.id}
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("spike_times", &PopStruct{self.id}::spike_times)
+        .def_rw("period", &PopStruct{self.id}::period)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+        .def_rw("r", &PopStruct{self.id}::r)
+        // needs to be called after changing spike_times
+        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
+
+        # will call _generate_st, _generate_omp, generate_cuda
+        # dependent on the paradigm
+        return super()._generate()
+
+    def _generate_st(self):
+        """
+        Code generation for single-thread.
+        """
+        self._specific_template["update_variables"] = """
         if(_active){
             spiked.clear();
             for(int i = 0; i < size; i++){
@@ -318,8 +343,12 @@ class SpikeSourceArray(SpecificPopulation):
             _t++;
         }
 """
-        else:
-            self._specific_template["update_variables"] = """
+
+    def _generate_omp(self):
+        """
+        Code generation for openMP paradigm.
+        """
+        self._specific_template["update_variables"] = """
         if(_active){
             #pragma omp single
             {
@@ -353,31 +382,6 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
 """
-        self._specific_template["test_spike_cond"] = ""
-
-        self._specific_template["wrapper"] = f"""
-    // SpikeSourceArray pop{self.id}
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("spike_times", &PopStruct{self.id}::spike_times)
-        .def_rw("period", &PopStruct{self.id}::period)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-        .def_rw("r", &PopStruct{self.id}::r)
-        // needs to be called after changing spike_times
-        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
-
-        // Other methods
-		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
-
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
-        .def("clear", &PopStruct{self.id}::clear);
-        """
 
     def _generate_cuda(self):
         """
@@ -388,6 +392,7 @@ class SpikeSourceArray(SpecificPopulation):
         devices for now. Consequently, we use the CPU side implementation and
         transfer after computation the results to the GPU.
         """
+        # generate the update kernel for host-side
         self._generate_st()
 
         # Maybe not the most elegant solution, but it works (HD: 14th Feb. 2025)
