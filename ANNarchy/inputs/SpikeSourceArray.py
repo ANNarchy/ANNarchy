@@ -61,20 +61,32 @@ class SpikeSourceArray(SpecificPopulation):
 
     def __init__(
         self,
+        geometry: int|None=None,
         spike_times: list[list[float]]|list[float]|None=None,
         period: float=-1,
-        name: str=None,
+        name: str|None=None,
         copied: bool=False,
         net_id: int=0
     ):
-        if not isinstance(spike_times, list):
+        # Sanity checks
+        if geometry is None and spike_times is None:
+            Messages.error("SpikeSourcArray: either `geometry` or `spike_times` must be set.")
+
+        if geometry is not None and not isinstance(geometry, int):
+            Messages.error("SpikeSourceArray: the population is expected to be 1-dimensional.")
+
+        if spike_times is not None and not isinstance(spike_times, list):
             Messages.error("In a SpikeSourceArray, spike_times must be a Python list.")
 
-        if isinstance(spike_times[0], list):  # several neurons
-            nb_neurons = len(spike_times)
-        else:  # a single Neuron
-            nb_neurons = 1
-            spike_times = [spike_times]
+        # extract geometry from the provided list following a simple rule:
+        # - [[float]]: several neurons
+        # - [float]:   single neuron
+        if geometry is None:
+            if isinstance(spike_times[0], list):
+                geometry = len(spike_times)
+            else:
+                geometry = 1
+                spike_times = [spike_times]
 
         # Create a fake neuron just to be sure the description has the correct parameters
         neuron = Neuron(
@@ -88,7 +100,7 @@ class SpikeSourceArray(SpecificPopulation):
 
         # Register Population
         super().__init__(
-            geometry=nb_neurons, neuron=neuron, name=name, copied=copied, net_id=net_id
+            geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id
         )
 
         self.init["spike_times"] = spike_times
@@ -184,6 +196,7 @@ class SpikeSourceArray(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
+            geometry=self.geometry,
             spike_times=self.spike_times,
             period=self.period,
             name=self.name,
@@ -423,6 +436,10 @@ class SpikeSourceArray(SpecificPopulation):
         """
         Initializes the nanobind wrapper.
         """
+        # Sanity check
+        if self.init["spike_times"] is None:
+            Messages.error("SpikeSourceArray: `spike_times` must be initialized either during construction or by calling `update`.")
+
         self.cyInstance = getattr(module, self.class_name + "_wrapper")(
             self.size, self.max_delay
         )
