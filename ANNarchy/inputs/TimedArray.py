@@ -361,6 +361,19 @@ class TimedArray(SpecificPopulation):
         self.rates = np.array(rates)
         self.period = period
 
+    def reset(self, attributes: list|None = None) -> None:
+        """
+        Resets all parameters and variables of the population to the value they had before the call to `net.compile()`.
+
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+        """
+        # Sanity check
+        if self.init["rates"] is None:
+            Messages.error("TimedArray: `rates` must be initialized during construction or by calling `update` before `compile` to allow `reset` to be called.")
+
+        # Reset other properties
+        super().reset(attributes)
+
     #
     # Internal API
     #
