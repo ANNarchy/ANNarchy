@@ -4,6 +4,7 @@
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
 from .Random import RandomDistribution
 
@@ -40,12 +41,12 @@ class Parameter:
 
     :param value: Initial value of the parameter. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
-    :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
+    :param type: Data type of the parameter. Must be in ['double', 'float', 'int', 'bool'].
     """
 
     value: float | int | bool | RandomDistribution
-    locality: str = "global"
-    type: str = "float"
+    locality: Literal["global", "semiglobal", "local"] = "global"
+    type: Literal["float", "int", "bool"] = "float"
 
     def _hash_repr(self):
         """
@@ -88,7 +89,7 @@ class Variable:
     :param max: maximum value that the variable can take.
     :param method: numerical method to be used when the equation is an ODE. Must be in ['explicit', 'implicit', 'semiimplicit', 'exponential','midpoint', 'rk4', 'event-driven']
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
-    :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
+    :param type: Data type of the parameter. Must be in ['float', 'int', 'bool'].
     """
 
     equation: str
@@ -96,8 +97,8 @@ class Variable:
     min: float = None
     max: float = None
     method: str = None
-    locality: str = "local"
-    type: str = "float"
+    locality: Literal["global", "semiglobal", "local"] = "local"
+    type: Literal["float", "int", "bool"] = "float"
 
     def _hash_repr(self):
         """
@@ -114,7 +115,7 @@ class Variable:
             "equation": self.equation,
             "init": self.init,
             "min": self. min,
-            "min": self. max,
+            "max": self. max,
             "method": self.method,
             "locality": self.locality,
             "type": self.type
