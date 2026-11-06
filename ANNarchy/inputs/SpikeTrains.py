@@ -224,8 +224,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self,
         rates: float | list[float],
         corr: float | list[float],
-        schedule: list[float] = None,
-        tau: float = None,
+        schedule: list[float]|None = None,
+        tau: float|None = None,
         reset: bool = True
     ):
         """
@@ -270,6 +270,12 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         # before update reset the internal timers
         if self.initialized and reset:
             self.reset()
+
+            # tau is resetted to value before compile ...
+            self.tau = tau
+
+        # store rates
+        self.rates = rates
 
         # store schedule
         self.schedule = schedule

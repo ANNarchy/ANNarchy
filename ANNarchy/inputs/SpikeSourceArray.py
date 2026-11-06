@@ -61,20 +61,32 @@ class SpikeSourceArray(SpecificPopulation):
 
     def __init__(
         self,
+        geometry: int|None=None,
         spike_times: list[list[float]]|list[float]|None=None,
         period: float=-1,
-        name: str=None,
+        name: str|None=None,
         copied: bool=False,
         net_id: int=0
     ):
-        if not isinstance(spike_times, list):
+        # Sanity checks
+        if geometry is None and spike_times is None:
+            Messages.error("SpikeSourcArray: either `geometry` or `spike_times` must be set.")
+
+        if geometry is not None and not isinstance(geometry, int):
+            Messages.error("SpikeSourceArray: the population is expected to be 1-dimensional.")
+
+        if spike_times is not None and not isinstance(spike_times, list):
             Messages.error("In a SpikeSourceArray, spike_times must be a Python list.")
 
-        if isinstance(spike_times[0], list):  # several neurons
-            nb_neurons = len(spike_times)
-        else:  # a single Neuron
-            nb_neurons = 1
-            spike_times = [spike_times]
+        # extract geometry from the provided list following a simple rule:
+        # - [[float]]: several neurons
+        # - [float]:   single neuron
+        if geometry is None:
+            if isinstance(spike_times[0], list):
+                geometry = len(spike_times)
+            else:
+                geometry = 1
+                spike_times = [spike_times]
 
         # Create a fake neuron just to be sure the description has the correct parameters
         neuron = Neuron(
@@ -88,7 +100,7 @@ class SpikeSourceArray(SpecificPopulation):
 
         # Register Population
         super().__init__(
-            geometry=nb_neurons, neuron=neuron, name=name, copied=copied, net_id=net_id
+            geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id
         )
 
         self.init["spike_times"] = spike_times
@@ -101,7 +113,7 @@ class SpikeSourceArray(SpecificPopulation):
     @property
     def period(self):
         if self.initialized:
-            return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
+            return convert_steps_to_ms(self.cyInstance.period, self.net_id)
         else:
             return self.init["period"]
 
@@ -184,6 +196,7 @@ class SpikeSourceArray(SpecificPopulation):
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
+            geometry=self.geometry[0],  # tuple->int
             spike_times=self.spike_times,
             period=self.period,
             name=self.name,
@@ -195,28 +208,17 @@ class SpikeSourceArray(SpecificPopulation):
         "Sort, unify the spikes and transform them into steps."
         return [
             sorted(
-                list(
-                    set(
-                        [
-                            convert_ms_to_steps(t, self.net_id)
-                            for t in neur_times
-                        ]
-                    )
+                set(
+                    [
+                        convert_ms_to_steps(t, self.net_id)
+                        for t in neur_times
+                    ]
                 )
             )
             for neur_times in spike_times
         ]
 
-    def _generate_st(self):
-        """
-        Code generation for single-thread.
-        """
-        self._generate_omp()
-
-    def _generate_omp(self):
-        """
-        Code generation for openMP paradigm.
-        """
+    def _generate(self):
         # Add possible targets
         for target in self.targets:
             tpl = {
@@ -238,6 +240,8 @@ class SpikeSourceArray(SpecificPopulation):
             self.neuron_type.description["variables"].append(tpl)
             self.neuron_type.description["local"].append("g_" + target)
 
+        # Attributes are the same for all paradigms, as we
+        # perform the computation for CUDA on host-side
         self._specific_template["declare_additional"] = """
     // Custom local parameter spike_times
     std::vector< std::vector< long int > > spike_times ;
@@ -280,8 +284,42 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        if ConfigManager().get("num_threads", self.net_id) == 1:
-            self._specific_template["update_variables"] = """
+        self._specific_template["test_spike_cond"] = ""
+
+        # The nanobind wrapper is the same for all paradigms.
+        self._specific_template["wrapper"] = f"""
+    // SpikeSourceArray pop{self.id}
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("spike_times", &PopStruct{self.id}::spike_times)
+        .def_rw("period", &PopStruct{self.id}::period)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+        .def_rw("r", &PopStruct{self.id}::r)
+        // needs to be called after changing spike_times
+        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
+
+        # will call _generate_st, _generate_omp, generate_cuda
+        # dependent on the paradigm
+        return super()._generate()
+
+    def _generate_st(self):
+        """
+        Code generation for single-thread.
+        """
+        self._specific_template["update_variables"] = """
         if(_active){
             spiked.clear();
             for(int i = 0; i < size; i++){
@@ -305,8 +343,12 @@ class SpikeSourceArray(SpecificPopulation):
             _t++;
         }
 """
-        else:
-            self._specific_template["update_variables"] = """
+
+    def _generate_omp(self):
+        """
+        Code generation for openMP paradigm.
+        """
+        self._specific_template["update_variables"] = """
         if(_active){
             #pragma omp single
             {
@@ -340,31 +382,6 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
 """
-        self._specific_template["test_spike_cond"] = ""
-
-        self._specific_template["wrapper"] = f"""
-    // SpikeSourceArray pop{self.id}
-    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
-        // Constructor
-        .def(nanobind::init<int, int>())
-
-        // Common attributes
-        .def_rw("size", &PopStruct{self.id}::size)
-        .def_rw("spike_times", &PopStruct{self.id}::spike_times)
-        .def_rw("period", &PopStruct{self.id}::period)
-        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
-        .def_rw("r", &PopStruct{self.id}::r)
-        // needs to be called after changing spike_times
-        .def("recompute_spike_times", &PopStruct{self.id}::recompute_spike_times)
-
-        // Other methods
-		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
-
-        .def("activate", &PopStruct{self.id}::set_active)
-        .def("reset", &PopStruct{self.id}::reset)
-        .def("size_in_bytes", &PopStruct{self.id}::size_in_bytes)
-        .def("clear", &PopStruct{self.id}::clear);
-        """
 
     def _generate_cuda(self):
         """
@@ -375,6 +392,7 @@ class SpikeSourceArray(SpecificPopulation):
         devices for now. Consequently, we use the CPU side implementation and
         transfer after computation the results to the GPU.
         """
+        # generate the update kernel for host-side
         self._generate_st()
 
         # Maybe not the most elegant solution, but it works (HD: 14th Feb. 2025)
@@ -423,6 +441,10 @@ class SpikeSourceArray(SpecificPopulation):
         """
         Initializes the nanobind wrapper.
         """
+        # Sanity check
+        if self.init["spike_times"] is None:
+            Messages.error("SpikeSourceArray: `spike_times` must be initialized either during construction or by calling `update`.")
+
         self.cyInstance = getattr(module, self.class_name + "_wrapper")(
             self.size, self.max_delay
         )
