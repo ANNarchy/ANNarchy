@@ -10,6 +10,7 @@ import shutil
 import numpy
 
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Random import RandomDistribution
 
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
@@ -45,15 +46,26 @@ def canonicalize(obj):
             #"data": canonicalize(obj.tolist()),
         }
 
+    # ANNarchy random distribution objects
+    if isinstance(obj, RandomDistribution):
+        print(obj.__class__.__name__)
+        return {
+            "__type__": "ANNarchy.RandomDistribution",
+            "__class__": obj.__class__.__name__
+            # HD (Nov 6th, 2026):
+            # For now, I leave out the precise arguments, as they
+            # are not important for the generated code
+            # TODO: verify, if this causes problems in report ...
+        }
+
+    # Python default types: dict, list, tuple, set
     if isinstance(obj, dict):
         return {
             str(key): canonicalize(value)
             for key, value in sorted(obj.items(), key=lambda item: str(item[0]))
         }
-
     if isinstance(obj, (list, tuple)):
         return [canonicalize(x) for x in obj]
-
     if isinstance(obj, set):
         return sorted(canonicalize(x) for x in obj)
 
@@ -61,6 +73,7 @@ def canonicalize(obj):
     if hasattr(obj, "__hash_repr__"):
         return canonicalize(obj.__hash_repr__())
 
+    # Other object types, e.g., classes
     if hasattr(obj, "__dict__"):
         return {
             "__type__": f"{type(obj).__module__}.{type(obj).__qualname__}",
@@ -70,6 +83,7 @@ def canonicalize(obj):
             },
         }
 
+    # TODO: maybe I should make a warning??
     raise TypeError(f"Cannot hash object of type {type(obj)!r}")
 
 def sort_odes(desc, locality="local"):
