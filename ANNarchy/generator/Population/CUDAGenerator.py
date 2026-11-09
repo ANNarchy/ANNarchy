@@ -74,7 +74,7 @@ class CUDAGenerator(PopulationGenerator):
             reset_spike += spike_tpl["spike"]["reset"] % {"id": pop.id}
 
             # If there is a refractory period
-            if pop.neuron_type.refractory or pop.refractory:
+            if pop.neuron_type.refractory:
                 declare_spike += spike_tpl["refractory"]["declare"] % {"id": pop.id}
                 if isinstance(
                     pop.neuron_type.description["refractory"], str
@@ -1302,7 +1302,7 @@ class CUDAGenerator(PopulationGenerator):
         pre_code += rng_pre_loop
 
         # within refractory perid, only conductance variables
-        if pop.neuron_type.refractory or pop.refractory:
+        if pop.neuron_type.refractory:
             refr_eqs = generate_equation_code(
                 pop.neuron_type.description, "local", conductance_only=True, padding=3
             )
@@ -1398,7 +1398,7 @@ class CUDAGenerator(PopulationGenerator):
                 add_args_call += """, pop%(id)s->_%(op)s_%(var)s""" % ids
 
             # Is there a refractory period?
-            if pop.neuron_type.refractory or pop.refractory:
+            if pop.neuron_type.refractory:
                 # 'old' loc_eqs is now only executed ouside refractory period
                 loc_eqs = """
         // Refractory period
@@ -1529,7 +1529,7 @@ class CUDAGenerator(PopulationGenerator):
         reset = reset % ids
 
         # Is there a refractory period?
-        if pop.neuron_type.refractory or pop.refractory:
+        if pop.neuron_type.refractory:
             # Identify the refractory variable.
             # By default, it is refractory, but users can specify another one
             refrac_var = "refractory[i]"
@@ -1694,7 +1694,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Refractoriness
         if pop.neuron_ir.is_spike:
-            if pop.neuron_type.refractory or pop.refractory:
+            if pop.neuron_type.refractory:
                 host_device_transfer += """
         // refractory
         if( refractory_dirty )

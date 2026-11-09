@@ -82,7 +82,7 @@ class SingleThreadGenerator(PopulationGenerator):
             reset_spike += spike_specific_tpl["spike"]["reset"] % {"id": pop.id}
 
             # If there is a refractory period
-            if pop.neuron_type.refractory or pop.refractory:
+            if pop.neuron_type.refractory:
                 declare_spike += spike_specific_tpl["refractory"]["declare"] % {
                     "id": pop.id
                 }
@@ -825,7 +825,7 @@ class SingleThreadGenerator(PopulationGenerator):
 
         # Is there a refractory period?
         has_refractory = (
-            "in_ref" if (pop.neuron_type.refractory or pop.refractory) else None
+            "in_ref" if pop.neuron_type.refractory else None
         )
 
         # Gather pre-loop declaration (dt/tau for ODEs)
@@ -969,7 +969,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
         # Is there a refractory period?
         has_refractory = (
-            True if (pop.neuron_type.refractory or pop.refractory) else False
+            True if pop.neuron_type.refractory else False
         )
 
         # Decrement refractory if necessary

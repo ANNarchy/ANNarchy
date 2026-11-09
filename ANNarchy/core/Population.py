@@ -282,15 +282,9 @@ class Population:
         # Reset to generate the right structures
         self.cyInstance.reset()
 
-        # If the spike population has a refractory period:
-        if (
-            self.neuron_type.type == "spike"
-            and self.neuron_type.description["refractory"]
-        ):
-            if not isinstance(
-                self.neuron_type.description["refractory"], str
-            ):  # the variable will be used directly
-                self.refractory = self.neuron_type.description["refractory"]
+        # If the spike population has a refractory period
+        if self.neuron_ir.is_spike and self.neuron_type.description['refractory']:
+            self.refractory = self.neuron_type.description['refractory']
 
         # Spiking neurons can compute a mean FR
         if self.neuron_type.type == "spike":

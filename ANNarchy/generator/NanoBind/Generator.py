@@ -167,7 +167,7 @@ class NanoBindGenerator:
         if pop.neuron_ir.is_spike:
             additional_func += """\t\t.def("compute_firing_rate", [](PopStruct%(id)s& obj, %(py_float_prec)s window) {return obj.compute_firing_rate(%(cpp_float_prec)s{window});} )\n""" % {'id': pop.id, 'py_float_prec': default_float_type.py_decl_type, 'cpp_float_prec': default_float_type.cpp_decl_type}
 
-            if pop.neuron_type.refractory or pop.refractory:
+            if pop.neuron_type.refractory:
                 additional_func += (
                     f"""\t\t.def_rw("refractory", &PopStruct{pop.id}::refractory)\n"""
                 )
