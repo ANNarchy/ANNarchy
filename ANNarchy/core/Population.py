@@ -14,6 +14,7 @@ from ANNarchy.core.Constant import Constant
 from ANNarchy.core.Neuron import IndividualNeuron, Neuron
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Utils import convert_steps_to_ms
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -661,10 +662,7 @@ class Population:
         if self.neuron_type.description["type"] == "spike":
             if self.initialized:
                 if not isinstance(self.neuron_type.description["refractory"], str):
-                    return (
-                        ConfigManager().get("dt", self.net_id)
-                        * self.cyInstance.get_refractory()
-                    )
+                    return convert_steps_to_ms(self.cyInstance.refractory, net_id=self.net_id)
                 else:
                     return getattr(self, self.neuron_type.description["refractory"])
             else:

@@ -13,11 +13,15 @@ Breaking Changes:
 
 New/Changed features:
 * on GPUs added reduced floating-point precision types (fp16, bfloat16), see commits 53e51f4, 38a5262, 00cf229, 0d885ee. Note that this is an experimental feature, bug reports are appreciated.
+* refactored handling of neuron/synapse models for reports (see also issue #54 for details)
 
 Bugfixes:
 * SpikeSourceArray: setting spike_times after compile was not applied (issue #50)
 * `property` decorators could be ignored for SpecificPopulations (commit 445091b)
 * Monitor: recorded axonal spike events were not readable (commit b2f7485)
+* Population: updating refractory times after `compile` failed (commit d40cd0d)
+* HomogeneousCorrelatedSpikeTrains were not working for OpenMP/CUDA (commit c6e7b1b, 984e120)
+
 
 **5.0.4.1**
 
