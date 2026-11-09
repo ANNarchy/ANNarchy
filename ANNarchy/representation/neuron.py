@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from itertools import chain
 from typing import Literal
 
+from ANNarchy.core.Random import RandomDistribution
+
 from .attributes import (
     AttributeRepresentation,
     ParameterRepresentation,
@@ -18,7 +20,7 @@ from .raw import RawNeuronFields
 from .spike import SpikeProcessing
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class NeuronRepresentation:
     """
     Stores information extracted from the parsed neuron type for
@@ -41,6 +43,7 @@ class NeuronRepresentation:
     _spike: SpikeProcessing | None
     _axon_spike: SpikeProcessing | None
     _raw: RawNeuronFields
+    _refractory: str|int|float|RandomDistribution
 
 #########################################################################################
 # Create iterators for traversing the data fields.                                      #
@@ -117,6 +120,15 @@ class NeuronRepresentation:
     def has_random_distributions(self):
         """ Returns `True` if the neuron definition includes at least one random distribution attribute. """
         return len(self._random_distributions) > 0
+
+    @property
+    def refractory(self) -> str|int|float|RandomDistribution:
+        """ Returns the assigned refractory time """
+        return self._refractory
+
+    @refractory.setter
+    def refractory(self, value):
+        self._refractory = value
 
     @property
     def parameters(self) -> list[ParameterRepresentation]:

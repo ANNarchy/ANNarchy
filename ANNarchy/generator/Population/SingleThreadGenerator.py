@@ -73,7 +73,8 @@ class SingleThreadGenerator(PopulationGenerator):
         reset_spike = ""
         declare_spike = ""
         init_spike = ""
-        if pop.neuron_type.description["type"] == "spike":
+
+        if pop.neuron_ir.is_spike:
             spike_specific_tpl = self._templates["spike_specific"]
 
             # Main data for spiking pops
@@ -86,9 +87,7 @@ class SingleThreadGenerator(PopulationGenerator):
                 declare_spike += spike_specific_tpl["refractory"]["declare"] % {
                     "id": pop.id
                 }
-                if isinstance(
-                    pop.neuron_type.description["refractory"], str
-                ):  # no need to instantiate refractory
+                if isinstance(pop.neuron_ir.refractory, str):  # no need to instantiate refractory
                     init_spike += spike_specific_tpl["refractory"]["init_extern"] % {
                         "id": pop.id
                     }

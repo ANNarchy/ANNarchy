@@ -94,11 +94,14 @@ class IRConverter:
                 )
             else:
                 axon_spike_desc = None
+
+            refractory = description['refractory']
         else:
             spike_desc = None
             axon_spike_desc = None
             raw_reset = None
             raw_spike = None
+            refractory = None
 
         return NeuronRepresentation(
             _type = description['type'],
@@ -122,5 +125,6 @@ class IRConverter:
                 functions = description['raw_functions'],
                 reset = raw_reset,
                 spike = raw_spike
-            )
+            ),
+            _refractory = refractory
         )

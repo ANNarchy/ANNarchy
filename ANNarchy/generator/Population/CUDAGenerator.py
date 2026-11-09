@@ -76,9 +76,7 @@ class CUDAGenerator(PopulationGenerator):
             # If there is a refractory period
             if pop.neuron_type.refractory:
                 declare_spike += spike_tpl["refractory"]["declare"] % {"id": pop.id}
-                if isinstance(
-                    pop.neuron_type.description["refractory"], str
-                ):  # no need to instantiate refractory
+                if isinstance(pop.neuron_ir.refractory, str):  # no need to instantiate refractory
                     init_spike += spike_tpl["refractory"]["init_extern"] % {
                         "id": pop.id
                     }

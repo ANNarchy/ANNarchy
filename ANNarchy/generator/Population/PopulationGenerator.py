@@ -76,7 +76,8 @@ class PopulationGenerator(object):
         declaration, already_processed = self._generate_default_get_set(pop)
 
         # The conductance/current variables for spiking neurons are stored in
-        # pop.neuron_type.description['variables'] but only if they are used.
+        # pop.neuron_ir.variables but only if they are used in equations, such as
+        # reset or decay.
         if pop.neuron_ir.is_spike:
             try:
                 all_targets = set(pop.neuron_ir.targets + pop.targets)

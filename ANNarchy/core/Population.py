@@ -283,11 +283,11 @@ class Population:
         self.cyInstance.reset()
 
         # If the spike population has a refractory period
-        if self.neuron_ir.is_spike and self.neuron_type.description['refractory']:
-            self.refractory = self.neuron_type.description['refractory']
+        if self.neuron_ir.is_spike and self.neuron_ir.refractory:
+            self.refractory = self.neuron_ir.refractory
 
         # Spiking neurons can compute a mean FR
-        if self.neuron_type.type == "spike":
+        if self.neuron_ir.is_spike:
             getattr(self.cyInstance, "compute_firing_rate")(self._compute_mean_fr)
 
     def _size_in_bytes(self) -> int:
@@ -655,12 +655,12 @@ class Population:
         "Refractory period (in ms)."
         if self.neuron_type.description["type"] == "spike":
             if self.initialized:
-                if not isinstance(self.neuron_type.description["refractory"], str):
+                if not isinstance(self.neuron_ir.refractory, str):
                     return convert_steps_to_ms(self.cyInstance.refractory, net_id=self.net_id)
                 else:
-                    return getattr(self, self.neuron_type.description["refractory"])
+                    return getattr(self, self.neuron_ir.refractory)
             else:
-                return self.neuron_type.description["refractory"]
+                return self.neuron_ir.refractory
         else:
             Messages.warning("Rate-coded neurons do not have refractory periods...")
             return None
@@ -668,10 +668,10 @@ class Population:
     @refractory.setter
     def refractory(self, value: float | str):
         if self.neuron_type.description["type"] == "spike":
-            if isinstance(self.neuron_type.description["refractory"], str):
+            if isinstance(self.neuron_ir.refractory, str):
                 Messages.warning(
                     "The refractory period is linked to the neural variable",
-                    self.neuron_type.description["refractory"],
+                    self.neuron_ir.refractory,
                     ", doing nothing... Change its value instead.",
                 )
                 return
@@ -700,7 +700,7 @@ class Population:
                     self.cyInstance.refractory_dirty = True
 
             else:  # not initialized yet, saving for later
-                self.neuron_type.description["refractory"] = value
+                self.neuron_ir.refractory = value
         else:
             Messages.warning("Rate-coded neurons do not have refractory periods...")
 

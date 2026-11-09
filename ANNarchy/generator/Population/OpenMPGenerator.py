@@ -87,9 +87,7 @@ class OpenMPGenerator(PopulationGenerator):
                 declare_spike += spike_specific_tpl["refractory"]["declare"] % {
                     "id": pop.id
                 }
-                if isinstance(
-                    pop.neuron_type.description["refractory"], str
-                ):  # no need to instantiate refractory
+                if isinstance(pop.neuron_ir.refractory, str):  # no need to instantiate refractory
                     init_spike += spike_specific_tpl["refractory"]["init_extern"] % {
                         "id": pop.id
                     }
