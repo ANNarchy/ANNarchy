@@ -4,6 +4,7 @@
 """
 
 from .attributes import (
+    FunctionRepresentation,
     ParameterRepresentation,
     RandomDistRepresentation,
     VariableRepresentation,
@@ -71,6 +72,21 @@ class IRConverter:
         )
 
     @staticmethod
+    def convert_function(description: dict) -> FunctionRepresentation:
+        """
+        converts the parsed function dictionary into an IR.
+
+        Implementation note:
+
+            I leave out many fields for now: args, arg_types, arg_line, content, parsed_content.
+            They are likely needed in the parsing process.
+        """
+        return FunctionRepresentation(
+            cpp=description["cpp"],
+            name=description["name"]
+        )
+
+    @staticmethod
     def convert_neuron(description) -> NeuronRepresentation:
         """
         Creates the new intermediate representation from the description object currently
@@ -115,7 +131,9 @@ class IRConverter:
                 IRConverter.convert_random_dist(random_dict=rd) for rd in description['random_distributions']
             ],
             _targets = description['targets'],
-            _functions = description['functions'],
+            _functions = [
+                IRConverter.convert_function(func) for func in description['functions']
+            ],
             _global_operations = description['global_operations'],
             _spike = spike_desc,
             _axon_spike = axon_spike_desc,

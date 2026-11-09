@@ -149,9 +149,7 @@ class Population:
         "List of attribute names (parameters + variables)."
 
         # Get a list of user-defined functions
-        self.functions = [
-            func["name"] for func in self.neuron_type.description["functions"]
-        ]
+        self.functions = self.neuron_ir.function_names
         "List of functions defined by the neuron model."
 
         # Store initial values

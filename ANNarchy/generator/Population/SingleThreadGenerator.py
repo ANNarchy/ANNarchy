@@ -458,14 +458,14 @@ class SingleThreadGenerator(PopulationGenerator):
         population header.
         """
         # Local functions
-        if len(pop.neuron_type.description["functions"]) == 0:
+        if not pop.neuron_ir.has_functions:
             return ""
 
         declaration = """
     // Local functions
 """
-        for func in pop.neuron_type.description["functions"]:
-            declaration += " " * 4 + func["cpp"] + "\n"
+        for func in pop.neuron_ir.functions:
+            declaration += " " * 4 + func.cpp + "\n"
 
         return declaration
 

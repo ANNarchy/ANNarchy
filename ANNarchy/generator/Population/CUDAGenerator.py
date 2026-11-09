@@ -648,27 +648,27 @@ class CUDAGenerator(PopulationGenerator):
             * host_define, device_define
         """
         # Local functions
-        if len(pop.neuron_type.description["functions"]) == 0:
+        if not pop.neuron_ir.has_functions:
             return "", ""
 
         host_code = ""
         device_code = ""
-        for func in pop.neuron_type.description["functions"]:
-            cpp_func = func["cpp"] + "\n"
+        for func_desc in pop.neuron_ir.functions:
+            cpp_func = func_desc.cpp + "\n"
 
             host_code += cpp_func
             # TODO: improve code
             if ConfigManager()._cpp_float_dtype(net_id=self._net_id) == "float":
                 device_code += cpp_func.replace(
-                    "float " + func["name"],
+                    "float " + func_desc.name,
                     "__device__ float pop%(id)s_%(func)s"
-                    % {"id": pop.id, "func": func["name"]},
+                    % {"id": pop.id, "func": func_desc.name},
                 )
             else:
                 device_code += cpp_func.replace(
-                    "double " + func["name"],
+                    "double " + func_desc.name,
                     "__device__ double pop%(id)s_%(func)s"
-                    % {"id": pop.id, "func": func["name"]},
+                    % {"id": pop.id, "func": func_desc.name},
                 )
 
         return host_code, check_and_apply_pow_fix(device_code, self._cuda_version)
@@ -681,15 +681,15 @@ class CUDAGenerator(PopulationGenerator):
 
         Please note: the placeholder like %(global_idx)s etc. must be already filled.
         """
-        for func in pop.neuron_type.description["functions"]:
-            search_term = r"%(name)s\([^\(]*\)" % {"name": func["name"]}
+        for func_name in pop.neuron_ir.function_names:
+            search_term = r"%(name)s\([^\(]*\)" % {"name": func_name}
 
             func_occur = re.findall(search_term, glob_eqs)
             for term in func_occur:
                 glob_eqs = loc_eqs.replace(
                     term,
                     term.replace(
-                        func["name"], "pop" + str(pop.id) + "_" + func["name"]
+                        func_name, "pop" + str(pop.id) + "_" + func_name
                     ),
                 )
 
@@ -698,7 +698,7 @@ class CUDAGenerator(PopulationGenerator):
                 loc_eqs = loc_eqs.replace(
                     term,
                     term.replace(
-                        func["name"], "pop" + str(pop.id) + "_" + func["name"]
+                        func_name, "pop" + str(pop.id) + "_" + func_name
                     ),
                 )
 
@@ -1105,7 +1105,7 @@ class CUDAGenerator(PopulationGenerator):
         rng_post_loop = rng_post_loop % ids
 
         # replace local function calls
-        if len(pop.neuron_type.description["functions"]) > 0:
+        if pop.neuron_ir.has_functions:
             glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
 
         # Global operations
@@ -1338,7 +1338,7 @@ class CUDAGenerator(PopulationGenerator):
         refr_eqs = refr_eqs % ids
 
         # replace local function calls
-        if len(pop.neuron_type.description["functions"]) > 0:
+        if pop.neuron_ir.has_functions:
             glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
 
         # Global variables

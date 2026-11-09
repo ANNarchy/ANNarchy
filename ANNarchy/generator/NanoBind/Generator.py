@@ -158,10 +158,10 @@ class NanoBindGenerator:
                 )
 
         # Functions
-        for func in pop.neuron_ir.functions:
+        for func_name in pop.neuron_ir.function_names:
             # Wrapper
             additional_func += f"""
-        .def("{func["name"]}", &PopStruct{pop.id}::{func["name"]})"""
+        .def("{func_name}", &PopStruct{pop.id}::{func_name})"""
 
         # Type-specific functions
         if pop.neuron_ir.is_spike:

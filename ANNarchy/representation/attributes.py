@@ -71,3 +71,13 @@ class RandomDistRepresentation(AttributeRepresentation):
     def definition(self) -> str:
         """ Creates initialization statement """
         return f"{self.template}({self.args})"
+
+@dataclass(slots=True)
+class FunctionRepresentation:
+    """
+    Stores information and code snippets related to functions. Note that, these functions
+    can not access the neural/synaptic states, therefore, everything need to be provided
+    as arguments.
+    """
+    cpp: str
+    name: str

@@ -12,6 +12,7 @@ from ANNarchy.core.Random import RandomDistribution
 
 from .attributes import (
     AttributeRepresentation,
+    FunctionRepresentation,
     ParameterRepresentation,
     RandomDistRepresentation,
     VariableRepresentation,
@@ -38,7 +39,7 @@ class NeuronRepresentation:
     _variables: list[VariableRepresentation]
     _random_distributions: list[RandomDistRepresentation]
     _targets: list[str]
-    _functions: list[dict[str, str]] # FunctionRepresentation
+    _functions: list[FunctionRepresentation]
     _global_operations: list[str]
     _spike: SpikeProcessing | None
     _axon_spike: SpikeProcessing | None
@@ -109,6 +110,10 @@ class NeuronRepresentation:
     def functions(self) -> list[dict[str, str]]:
         return self._functions
 
+    def has_functions(self):
+        """ Returns `True` if the neuron definition includes at least one locally defined function. """
+        return len(self._functions) > 0
+
     @property
     def targets(self) -> list[str]:
         return self._targets
@@ -174,6 +179,11 @@ class NeuronRepresentation:
     def variable_names(self) -> list[str]:
         """ Return a list of names of the declared variables. """
         return [ tmp.name for tmp in self.variables ]
+
+    @property
+    def function_names(self) -> list[str]:
+        """ Return a list of names of the declared functions. """
+        return [ tmp.name for tmp in self.functions ]
 
     def spike_processing(self, spike_type: Literal["neuron", "axon"] = "neuron") -> SpikeProcessing|None:
         """
