@@ -108,15 +108,16 @@ class Population:
         # Network
         self.net_id = net_id
 
-        # Store the neuron type
+        # Instantiate neuron type if needed
         if inspect.isclass(neuron):
             self.neuron_type = neuron()
         else:
             self.neuron_type = copy.deepcopy(neuron)
+
+        # Trigger parsing of the neuron type
         self.neuron_type._analyse(self.net_id)
-        # HD (Oct 27th, 2026):
-        #   for now, we have old and new description
-        #   next to each other for easier development
+
+        # Create a local IR
         self.neuron_ir = IRConverter.convert_neuron(self.neuron_type.description)
 
         # Store the stop condition
@@ -141,10 +142,10 @@ class Population:
         "List of parameter names."
         self.variables = []
         "List of variable names."
-        for param in self.neuron_type.description["parameters"]:
-            self.parameters.append(param["name"])
-        for var in self.neuron_type.description["variables"]:
-            self.variables.append(var["name"])
+        for param in self.neuron_ir.parameter_names:
+            self.parameters.append(param)
+        for var in self.neuron_ir.variable_names:
+            self.variables.append(var)
         self.attributes = self.parameters + self.variables
         "List of attribute names (parameters + variables)."
 
@@ -154,10 +155,10 @@ class Population:
 
         # Store initial values
         self.init = {}
-        for param in self.neuron_type.description["parameters"]:
-            self.init[param["name"]] = param["init"]
-        for var in self.neuron_type.description["variables"]:
-            self.init[var["name"]] = var["init"]
+        for param in self.neuron_ir.parameters:
+            self.init[param.name] = param.init
+        for var in self.neuron_ir.variables:
+            self.init[var.name] = var.init
 
         # List of targets actually connected
         self.targets = []
@@ -389,7 +390,7 @@ class Population:
                 if self.initialized:  # access after compile()
                     return self._get_cython_attribute(name)
                 else:  # access before compile()
-                    if name in self.neuron_type.description["local"]:
+                    if name in self.neuron_ir.local_attr_names:
                         if isinstance(self.init[name], np.ndarray):
                             return self.init[name]
                         else:
@@ -446,7 +447,7 @@ class Population:
             if _check_paradigm("cuda", self.net_id):
                 self.cyInstance.device_to_host(attribute)
 
-            if attribute in self.neuron_type.description["local"]:
+            if attribute in self.neuron_ir.local_attr_names:
                 data = np.array(getattr(self.cyInstance, attribute))
                 return data.reshape(self.geometry)
             else:
@@ -478,7 +479,7 @@ class Population:
             else:
                 ctype = self._get_attribute_cpp_type(attribute)
 
-            if attribute in self.neuron_type.description["local"]:
+            if attribute in self.neuron_ir.local_attr_names:
                 if isinstance(value, np.ndarray):
                     if _check_paradigm("cuda", self.net_id):
                         if ctype == "char":
@@ -519,10 +520,7 @@ class Population:
                 setattr(self.cyInstance, attribute, value)
                 if _check_paradigm("cuda", self.net_id):
                     # Attributes need to be updated during next simulate() call.
-                    if attribute in [
-                        attr["name"]
-                        for attr in self.neuron_type.description["variables"]
-                    ]:
+                    if attribute in self.neuron_ir.variable_names:
                         setattr(self.cyInstance, attribute + "_host_to_device", True)
 
         except Exception as e:
@@ -535,12 +533,9 @@ class Population:
         Determines C++ data type for a given attribute
         """
         ctype = None
-        for var in (
-            self.neuron_type.description["variables"]
-            + self.neuron_type.description["parameters"]
-        ):
-            if var["name"] == attribute:
-                ctype = var["ctype"]
+        for attr in self.neuron_ir.attributes:
+            if attr.name == attribute:
+                ctype = attr.ctype
                 break
 
         return ctype
@@ -636,7 +631,7 @@ class Population:
             return np.zeros(self.geometry)
 
         # Variable prefix depends on model type
-        prefix = "g_" if self.neuron_type.type == "spike" else "_sum_"
+        prefix = "g_" if self.neuron_ir.is_spike else "_sum_"
 
         # GPUs need to trigger memory transfer first
         if _check_paradigm("cuda", self.net_id):
@@ -651,7 +646,7 @@ class Population:
     @property
     def refractory(self) -> float | str:
         "Refractory period (in ms)."
-        if self.neuron_type.description["type"] == "spike":
+        if self.neuron_ir.is_spike:
             if self.initialized:
                 if not isinstance(self.neuron_ir.refractory, str):
                     return convert_steps_to_ms(self.cyInstance.refractory, net_id=self.net_id)
@@ -665,7 +660,7 @@ class Population:
 
     @refractory.setter
     def refractory(self, value: float | str):
-        if self.neuron_type.description["type"] == "spike":
+        if self.neuron_ir.is_spike:
             if isinstance(self.neuron_ir.refractory, str):
                 Messages.warning(
                     "The refractory period is linked to the neural variable",
@@ -720,7 +715,7 @@ class Population:
                 "compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... "
             )
 
-        if self.neuron_type.type == "rate":
+        if self.neuron_ir.is_rate:
             Messages.error(
                 "compute_firing_rate(): the neuron is already rate-coded..."
             )
@@ -1018,28 +1013,25 @@ class Population:
         desc["variables"] = self.variables
 
         # Save all attributes
-        for var in (
-            self.neuron_type.description["parameters"]
-            + self.neuron_type.description["variables"]
-        ):
+        for attr in self.neuron_ir.attributes:
             try:
-                if var["locality"] == "local":
-                    if var["ctype"] == "bool":
+                if attr.locality == "local":
+                    if attr.ctype == "bool":
                         dtype = np.dtype(bool)
-                    elif var["ctype"] == "int":
+                    elif attr.ctype == "int":
                         dtype = np.dtype(int)
                     else:
                         dtype = np.dtype(float)
 
-                    data = np.array(getattr(self.cyInstance, var["name"]), dtype=dtype)
-                    desc[var["name"]] = data.reshape(self.geometry)
+                    data = np.array(getattr(self.cyInstance, attr.name), dtype=dtype)
+                    desc[attr.name] = data.reshape(self.geometry)
                 else:
-                    desc[var["name"]] = getattr(self.cyInstance, var["name"])
+                    desc[attr.name] = getattr(self.cyInstance, attr.name)
 
-            except:
+            except Exception as e:
                 Messages.warning(
                     "Can not save the attribute "
-                    + var["name"]
+                    + attr.name
                     + " in the population "
                     + self.name
                     + "."
