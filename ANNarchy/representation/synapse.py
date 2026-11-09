@@ -18,7 +18,7 @@ from .converter import IRConverter
 from .raw import RawSynapseFields
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class SynapseRepresentation:
     """
     Stores information extracted from the parsed synapse type for

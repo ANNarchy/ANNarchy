@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from .attributes import AttributeRepresentation
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class RatePSP(AttributeRepresentation):
     """
     Stores information and code snippets related to postsynaptic potentials, which are

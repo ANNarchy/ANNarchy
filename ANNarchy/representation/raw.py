@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class RawNeuronFields:
     """
     Stores the original arguments passed to `ANNarchy.core.Neuron`,
@@ -18,7 +18,7 @@ class RawNeuronFields:
     reset: str | None
     spike: str | None
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class RawSynapseFields:
     """
     Stores the original arguments passed to `ANNarchy.core.Synapse`,

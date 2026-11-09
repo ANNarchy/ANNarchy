@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class AttributeRepresentation:
     """
     Stores common information shared between the different attribute types
@@ -28,7 +28,7 @@ class AttributeRepresentation:
             f"Unknown attribute type: {type(self).__name__}"
         )
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class ParameterRepresentation(AttributeRepresentation):
     """
     Stores the information related to an ANNarchy parameter, i.e., an
@@ -42,7 +42,7 @@ class ParameterRepresentation(AttributeRepresentation):
     def eq(self) -> str:
         return f"{self.name} = {self.init}"
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class VariableRepresentation(AttributeRepresentation):
     bounds: dict
     cpp: str
@@ -57,7 +57,7 @@ class VariableRepresentation(AttributeRepresentation):
     transformed_eq: str
     untouched: list[dict[str,str]]
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class RandomDistRepresentation(AttributeRepresentation):
     """
     Stores information and code snippets related to values drawn from random distributions.

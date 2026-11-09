@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True)
 class SpikeProcessing:
     """
     Stores information and code snippets related to spike events.
