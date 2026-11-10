@@ -224,8 +224,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self,
         rates: float | list[float],
         corr: float | list[float],
-        schedule: list[float]|None = None,
-        tau: float|None = None,
+        schedule: list[float] | None = None,
+        tau: float | None = None,
         reset: bool = True
     ):
         """
@@ -274,7 +274,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             self.reset()
 
             # tau is resetted to value before compile ...
-            self.tau = tau
+            if tau is not None:
+                self.tau = tau
 
         # store rates
         self.rates = rates
