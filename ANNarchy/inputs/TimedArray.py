@@ -95,10 +95,10 @@ class TimedArray(SpecificPopulation):
     def __init__(
         self,
         rates: np.ndarray = None,
-        geometry: int | tuple = None,
+        geometry: int|tuple|None = None,
         schedule: float = 0.0,
         period: float = -1.0,
-        name: str = None,
+        name: str|None = None,
         copied: bool = False,
         net_id: int = 0,
     ):
@@ -241,8 +241,8 @@ class TimedArray(SpecificPopulation):
     def update(
         self,
         rates: np.ndarray,
-        schedule: float = None,
-        period: float = None,
+        schedule: float | None = None,
+        period: float | None = None,
         reset: bool = True
     ) -> None:
         """
@@ -365,7 +365,7 @@ class TimedArray(SpecificPopulation):
         """
         # Sanity check
         if self.init["rates"] is None:
-            Messages.error("TimedArray: `rates` must be initialized during construction or by calling `update` before `compile` to allow `reset` to be called.")
+            Messages.warning("TimedArray - reset: `rates` should be initialized during construction or by calling `update` before `compile`.")
 
         # Reset other properties
         super().reset(attributes)
