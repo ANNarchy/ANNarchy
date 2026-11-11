@@ -99,6 +99,9 @@ class GlobalObjectManager:
     ## Functions
     ################################
     def add_function(self, function):
+        """
+        Adds a globally available function.
+        """
         name = function.split("(")[0]
         if self.get_function(name) is not None:
             Messages.error(
@@ -107,12 +110,18 @@ class GlobalObjectManager:
         self._objects["functions"].append((name, function))
 
     def functions(self, name: str, network=None):
+        """
+        Access a global function.
+
+        :param name: name of the function.
+        :param network: ANNarchy.core.Network instance (already compiled, optional).
+        """
         net_id = 0 if network is None else network.id
         try:
             func = getattr(
-                NetworkManager().get_network(net_id=net_id).instance, "func_" + name
+                NetworkManager().get_network(net_id=net_id).instance, name + "_wrapper"
             )
-        except:
+        except AttributeError:
             Messages.error("call to", name, ": the function is not compiled yet.")
 
         return func
