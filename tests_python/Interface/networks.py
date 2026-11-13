@@ -6,7 +6,6 @@ This file is part of ANNarchy.
 """
 
 from ANNarchy import (
-    add_function,
     Constant,
     Hebb,
     IF_curr_exp,
@@ -19,11 +18,9 @@ from ANNarchy import (
 )
 
 
-add_function("fa(x) = 2/(x*x)")
 mu = Constant("mu", 0.2)
 
 Constant("b", 0.2)
-add_function("f(x) = 5.0 * x + 140")
 
 
 Izhikevich = Neuron(
@@ -84,6 +81,9 @@ Oja = Synapse(
 
 class RateCodedNetwork(Network):
     def __init__(self):
+        self.add_function("fa(x) = 2/(x*x)")
+        self.add_function("f(x) = 5.0 * x + 140")
+
         self.pop1 = self.create(name="pop1", neuron=emptyNeuron1, geometry=1)
         self.pop2 = self.create(name="pop2", neuron=DefaultNeuron, geometry=1)
         self.pop3 = self.create(name="pop3", neuron=emptyNeuron2, geometry=(2, 2))
@@ -109,6 +109,9 @@ class RateCodedNetwork(Network):
 
 class SpikingNetwork(Network):
     def __init__(self):
+        self.add_function("fa(x) = 2/(x*x)")
+        self.add_function("f(x) = 5.0 * x + 140")
+
         self.pop1 = self.create(name="pop1", neuron=IF_curr_exp, geometry=1)
         self.pop2 = self.create(name="pop2", neuron=Izhikevich, geometry=1)
         self.pop3 = self.create(name="pop3", neuron=Izhikevich, geometry=(2, 2))

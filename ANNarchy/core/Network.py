@@ -27,6 +27,7 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Utils import _rec_size_in_bytes
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.NetworkManager import NetworkManager
 
 
@@ -546,6 +547,62 @@ class Network(metaclass=NetworkMeta):
             # Create the constant inside this network
             c._set_child_network(self.id)
             c._copy(self.id)
+
+    def add_function(self, function: str):
+        """
+        Defines a global function which can be used by all neurons and synapses.
+
+        The function must have only one return value and use only the passed arguments.
+
+        Examples of valid functions:
+
+        ```python
+        import ANNarchy as ann
+        net = ann.Network()
+
+        net.add_function('logistic(x) = 1 / (1 + exp(-x))')
+
+        net.add_function('''
+            piecewise(x, a, b) = if x < a:
+                                    a
+                                else:
+                                    if x > b :
+                                        b
+                                    else:
+                                        x
+        ''')
+        ```
+
+        Please refer to the manual to know the allowed mathematical functions.
+
+        :param function: (multi)string representing the function.
+        """
+        GlobalObjectManager().add_function(function)
+
+    def functions(self, name: str):
+        """
+        Allows to access a global function declared with ``add_function()`` and use it from Python using arrays **after compilation of the magic network**.
+
+        The name of the function is not added to the global namespace to avoid overloading.
+
+        ```python
+        import ANNarchy as ann
+        net = ann.Network()
+
+        net.add_function("logistic(x) = 1. / (1. + exp(-x))")
+
+        net.compile()
+
+        result = net.functions('logistic')([0., 1., 2., 3., 4.])
+        ```
+
+        Only lists or 1D Numpy arrays can be passed as arguments, not single values nor multidimensional arrays.
+
+        When passing several arguments, make sure they have the same size.
+
+        :param name: name of the function.
+        """
+        return GlobalObjectManager().functions(name, self)
 
     ###################################
     # Compile

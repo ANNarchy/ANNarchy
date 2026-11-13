@@ -99,20 +99,35 @@ class GlobalObjectManager:
     ## Functions
     ################################
     def add_function(self, function):
+        """
+        Adds a globally available function.
+        """
         name = function.split("(")[0]
         if self.get_function(name) is not None:
-            Messages.error(
+            Messages.warning(
                 f"add_function(): the global function {name} already exists at the global level."
             )
-        self._objects["functions"].append((name, function))
+        else:
+            self._objects["functions"].append((name, function))
 
-    def functions(self, name: str, network=None):
-        net_id = 0 if network is None else network.id
+    def functions(self, name: str, network: "Network" = None):
+        """
+        Access a global function.
+
+        :param name: name of the function.
+        :param network: ANNarchy.core.Network instance (already compiled).
+        """
+        if network is None:
+            from ANNarchy.core.Global import magic_network
+            network = magic_network()
+            if not network.compiled:
+                network.compile()
+
         try:
             func = getattr(
-                NetworkManager().get_network(net_id=net_id).instance, "func_" + name
+                network.instance, name + "_wrapper"
             )
-        except:
+        except AttributeError:
             Messages.error("call to", name, ": the function is not compiled yet.")
 
         return func

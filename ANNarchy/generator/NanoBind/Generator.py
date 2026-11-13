@@ -3,11 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate
+from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
+from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate, function_template
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Profiler import profiler_template
 from ANNarchy.generator.NanoBind.Projection import *
-from ANNarchy.generator.Utils import tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -180,7 +180,7 @@ class NanoBindGenerator:
             "additional": additional_func,
         }
         wrapper_code += "\n"
-        return wrapper_code
+        return remove_trailing_spaces(wrapper_code)
 
     def _generate_proj_wrapper(self, proj: "Projection") -> str:
         methods = ""
@@ -285,7 +285,7 @@ class NanoBindGenerator:
             "float_prec": ConfigManager()._cpp_float_dtype(net_id=self.net_id),
         }
         wrapper_code += "\n"
-        return wrapper_code
+        return remove_trailing_spaces(wrapper_code)
 
     def _generate_pop_mon_wrapper(self, pop: "Population") -> str:
         """
@@ -415,7 +415,7 @@ class NanoBindGenerator:
         }
         wrapper_code += "\n"
 
-        return wrapper_code
+        return remove_trailing_spaces(wrapper_code)
 
     def _generate_proj_mon_wrapper(self, proj: "Projection") -> str:
         """
@@ -448,7 +448,7 @@ class NanoBindGenerator:
         }
         wrapper_code += "\n"
 
-        return wrapper_code
+        return remove_trailing_spaces(wrapper_code)
 
     def _generate_constant(self, constants) -> str:
         """
@@ -484,7 +484,6 @@ class NanoBindGenerator:
                 description=function, local_global=True, net_id=self.net_id
             )[0]
             # Wrapper
-            wrapper_code += f"""
-    m.def("{desc["name"]}", &{desc["name"]});"""
+            wrapper_code += function_template % {'name': desc["name"]}
 
         return wrapper_code

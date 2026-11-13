@@ -50,3 +50,58 @@ NB_MODULE(ANNarchyWrapper%(net_id)s, m) {
 %(profiling_wrapper)s
 }
 """
+
+function_template = """
+    m.def("%(name)s_wrapper", [](nanobind::object x) -> nanobind::object {
+
+        // Single value?
+        auto numpy = nanobind::module_::import_("numpy");
+
+        if (nanobind::isinstance<nanobind::float_>(x) ||
+            nanobind::isinstance<nanobind::int_>(x) ||
+            nanobind::cast<bool>(numpy.attr("isscalar")(x))) {
+
+            double value = nanobind::cast<double>(x);
+            return nanobind::cast(%(name)s(value));
+        }
+
+        // Python-List
+        if (nanobind::isinstance<nanobind::list>(x)) {
+
+            std::vector<double> values =
+                nanobind::cast<std::vector<double>>(x);
+
+            for (auto &v : values)
+                v = %(name)s(v);
+
+            return nanobind::cast(values);
+        }
+
+        // NumPy-Array?
+        if (nanobind::isinstance<nanobind::ndarray<>>(x)) {
+
+            auto arr = nanobind::cast<
+                nanobind::ndarray<const double, nanobind::ndim<1>>
+            >(x);
+
+            size_t n = arr.shape(0);
+
+            auto *data = new std::vector<double>(n);
+
+            for (size_t i = 0; i < n; ++i)
+                (*data)[i] = %(name)s(arr(i));
+
+            nanobind::capsule owner(data, [](void *p) noexcept {
+                delete static_cast<std::vector<double> *>(p);
+            });
+
+            return nanobind::cast(
+                nanobind::ndarray<double, nanobind::numpy>(
+                    data->data(), {n}, owner
+                )
+            );
+        }
+
+        throw nanobind::type_error("Expected single value, list of scalars, or NumPy array");
+    });
+"""

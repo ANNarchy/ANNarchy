@@ -232,7 +232,7 @@ def compile(
     check_structure(network.get_populations(), network.get_projections())
 
     # check if the user access some new features, or old ones which changed.
-    check_experimental_features(network.get_populations(), network.get_projections())
+    check_experimental_features(net_id=net_id)
 
     # Code Generation
     compiler.code_generation()

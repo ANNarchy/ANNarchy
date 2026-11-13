@@ -9,6 +9,7 @@ from ANNarchy.core.CTypes import *
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
@@ -67,12 +68,13 @@ def check_structure(populations, projections):
     _check_structural_plasticity(projections)
 
 
-def check_experimental_features(populations, projections):
+def check_experimental_features(net_id=0):
     """
     The idea behind this method, is to check if new experimental features are used. This
     should help also the user to be aware of changes.
+
+    :param net_id: ID of the network whose objects should be checked
     """
-    net_id = populations[0].net_id
 
     #
     #   Floating-point values being used for simulation
@@ -84,7 +86,7 @@ def check_experimental_features(populations, projections):
     #   Check for recently added / specialized sparse matrix formats ...
     #
     detected_formats = []
-    for proj in projections:
+    for proj in NetworkManager().get_network(net_id=net_id).get_projections():
         detected_formats.append(
             (proj._storage_format, proj._storage_order, proj.synapse_type.type)
         )
