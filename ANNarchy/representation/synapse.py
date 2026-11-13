@@ -28,7 +28,7 @@ class SynapseRepresentation:
 
         No default values are provided, so all fields must be explicitly
         initialized when an instance is created. Currently, instances are
-        created via the `from_dict` method.
+        created via the IRConverter.
     """
 
     _type: Literal["rate", "spike"]
@@ -47,10 +47,13 @@ class SynapseRepresentation:
         """
         Return an iterator over all attributes.
 
+        Random distributions are intentionally excluded; access them through
+        `random_distributions`.
+
         Implementation note:
 
             Unlike list concatenation with `+`, this does not create a new list.
-            The original attribute dictionaries are yielded directly.
+            The stored attribute representations are yielded directly.
         """
         return chain(
             self._parameters,
@@ -67,7 +70,7 @@ class SynapseRepresentation:
         Implementation note:
 
             Unlike list concatenation with `+`, this does not create a new list.
-            The original attribute dictionaries are yielded directly.
+            The stored attribute representations are yielded directly
         """
         return (
             attr
@@ -78,21 +81,21 @@ class SynapseRepresentation:
     @property
     def global_attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with locality 'global'.
+        Return an iterator over all parameters and variables with locality 'global'.
         """
         return self.filter_by_locality("global")
 
     @property
     def semiglobal_attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with locality 'semiglobal'.
+        Return an iterator over all parameters and variables with locality 'semiglobal'.
         """
         return self.filter_by_locality("semiglobal")
 
     @property
     def local_attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with locality 'local'.
+        Return an iterator over all parameters and variables with locality 'local'.
         """
         return self.filter_by_locality("local")
 

@@ -12,17 +12,25 @@ class AttributeRepresentation:
     """
     Stores common information shared between the different attribute types
     in ANNarchy, i.e., parameter, variables, and random distributions.
+
+    Implementation note:
+
+        By definition, attributes used by neurons are either "local" or
+        "global", whereas those used by synapses can additionally
+        be "semiglobal".
     """
     name: str
     ctype: str
     locality: Literal["local", "semiglobal", "global"]
 
-    def get_type(self) -> Literal["parameter", "variable"]:
+    def get_type(self) -> Literal["parameter", "variable", "random_dist"]:
         """ Returns a short type declaration of the attribute. """
         if isinstance(self, ParameterRepresentation):
             return "parameter"
         if isinstance(self, VariableRepresentation):
             return "variable"
+        if isinstance(self, RandomDistRepresentation):
+            return "random_dist"
 
         raise ValueError(
             f"Unknown attribute type: {type(self).__name__}"

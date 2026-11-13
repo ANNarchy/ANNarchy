@@ -31,7 +31,7 @@ class NeuronRepresentation:
 
         No default values are provided, so all fields must be explicitly
         initialized when an instance is created. Currently, instances are
-        created via the `from_dict` method.
+        created via the IRConverter.
     """
 
     _type: Literal["rate", "spike"]
@@ -44,7 +44,7 @@ class NeuronRepresentation:
     _spike: SpikeProcessing | None
     _axon_spike: SpikeProcessing | None
     _raw: RawNeuronFields
-    _refractory: str|int|float|RandomDistribution
+    _refractory: str|int|float|RandomDistribution|None
 
 #########################################################################################
 # Create iterators for traversing the data fields.                                      #
@@ -53,12 +53,15 @@ class NeuronRepresentation:
     @property
     def attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes.
+        Iterate over parameters followed by variables.
+
+        Random distributions are intentionally excluded; access them through
+        `random_distributions`.
 
         Implementation note:
 
             Unlike list concatenation with `+`, this does not create a new list.
-            The original attribute dictionaries are yielded directly.
+            The stored attribute representations are yielded directly.
         """
         return chain(
             self._parameters,
@@ -67,12 +70,12 @@ class NeuronRepresentation:
 
     def filter_by_locality(self, locality: Literal['local','global']) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with the provided `locality`.
+        Return an iterator over all variables and parameters with the provided `locality`.
 
         Implementation note:
 
             Unlike list concatenation with `+`, this does not create a new list.
-            The original attribute dictionaries are yielded directly.
+            The stored attribute representations are yielded directly.
         """
         return (
             attr
@@ -83,14 +86,14 @@ class NeuronRepresentation:
     @property
     def global_attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with locality 'global'.
+        Return an iterator over all variables and parameters with locality 'global'.
         """
         return self.filter_by_locality("global")
 
     @property
     def local_attributes(self) -> Iterator[AttributeRepresentation]:
         """
-        Return an iterator over all attributes with locality 'local'.
+        Return an iterator over all variables and parameters with locality 'local'.
         """
         return self.filter_by_locality("local")
 
@@ -107,7 +110,7 @@ class NeuronRepresentation:
         return self._type == "rate"
 
     @property
-    def functions(self) -> list[dict[str, str]]:
+    def functions(self) -> list[FunctionRepresentation]:
         return self._functions
 
     def has_functions(self):
@@ -157,17 +160,17 @@ class NeuronRepresentation:
 
     @property
     def attr_names(self) -> list[str]:
-        """ Returns a list of names of all attributes. """
+        """ Returns a list of names of all parameters and variables. """
         return [attr.name for attr in self.attributes]
 
     @property
     def global_attr_names(self) -> list[str]:
-        """ Returns a list of global attributes. """
+        """ Returns a list of global parameters and variables. """
         return [attr.name for attr in self.global_attributes]
 
     @property
     def local_attr_names(self) -> list[str]:
-        """ Returns a list of local attributes. """
+        """ Returns a list of local parameters and variables. """
         return [attr.name for attr in self.local_attributes]
 
     @property
