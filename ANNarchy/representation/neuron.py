@@ -142,6 +142,13 @@ class NeuronRepresentation:
     def parameters(self) -> list[ParameterRepresentation]:
         return self._parameters
 
+    def parameters_by_locality(
+        self,
+        locality: Literal["local", "global"],
+    ) -> Iterator[ParameterRepresentation]:
+        """ Iterate over parameters with the requested locality. """
+        return (param for param in self.parameters if param.locality == locality)
+
     def has_parameters(self):
         """ Returns `True` if the neuron definition includes at least one parameter. """
         return len(self._parameters) > 0
@@ -177,6 +184,13 @@ class NeuronRepresentation:
     def parameter_names(self) -> list[str]:
         """ Return a list of names of the declared parameters. """
         return [ tmp.name for tmp in self.parameters ]
+
+    def parameter_names_by_locality(
+        self,
+        locality: Literal["local", "global"],
+    ) -> list[str]:
+        """ Return a list of names of parameters with the requested locality. """
+        return [parameter.name for parameter in self.parameters_by_locality(locality)]
 
     @property
     def variable_names(self) -> list[str]:

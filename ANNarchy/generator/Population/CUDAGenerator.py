@@ -65,7 +65,7 @@ class CUDAGenerator(PopulationGenerator):
         reset_spike = ""
         declare_spike = ""
         init_spike = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             spike_tpl = self._templates["spike_specific"]
 
             # Main data for spiking pops
@@ -386,18 +386,16 @@ class CUDAGenerator(PopulationGenerator):
         reset_read_flags = "// read-back flags: variables\n"
 
         attributes = []
-        for var in pop.neuron_type.description["variables"]:
-            if var["name"] in attributes:
+        for var_name in pop.neuron_ir.variable_names:
+            if var_name in attributes:
                 continue
 
-            reset_read_flags += var["name"] + "_device_to_host = 0;\n"
-            attributes.append(var["name"])
+            reset_read_flags += var_name + "_device_to_host = 0;\n"
+            attributes.append(var_name)
 
         reset_read_flags += "\n// read-back flags: targets\n"
-        if pop.neuron_type.type == "rate":
-            for target in sorted(
-                list(set(pop.neuron_type.description["targets"] + pop.targets))
-            ):
+        if pop.neuron_ir.is_rate:
+            for target in sorted(set(pop.neuron_ir.targets + pop.targets)):
                 reset_read_flags += "_sum_" + target + "_device_to_host = 0;\n"
 
         return tabify(reset_read_flags, 2)
@@ -537,7 +535,7 @@ class CUDAGenerator(PopulationGenerator):
         declare_FR = ""
         init_FR = ""
         reset_FR = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             declare_FR = """
     // Mean Firing rate
     std::vector< std::queue<long int> > _spike_history;
@@ -928,7 +926,7 @@ class CUDAGenerator(PopulationGenerator):
             we do the computation on the CPU - side for now.
         """
         mean_FR_update = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             mean_FR_update = """
         if ( _mean_fr_window > 0) {
             // Update the queues
@@ -1012,7 +1010,7 @@ class CUDAGenerator(PopulationGenerator):
                 )
 
         # Is there any variable?
-        if len(pop.neuron_type.description["variables"]) == 0:
+        if not pop.neuron_ir.has_variables:
             return "", "", "", ""
 
         device_kernel = ""
@@ -1033,16 +1031,17 @@ class CUDAGenerator(PopulationGenerator):
         )
 
         # Remove %(global_index)s for global parameters
-        for par in pop.neuron_type.description["parameters"]:
-            if par["locality"] == "global":
-                glob_eqs = glob_eqs.replace(
-                    par["name"] + "%(global_index)s", par["name"]
-                )
-                loc_eqs = loc_eqs.replace(par["name"] + "%(global_index)s", par["name"])
+        for par_name in pop.neuron_ir.parameter_names_by_locality("global"):
+            glob_eqs = glob_eqs.replace(
+                par_name + "%(global_index)s", par_name
+            )
+            loc_eqs = loc_eqs.replace(
+                par_name + "%(global_index)s", par_name
+            )
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_loop = ""
-        for var in pop.neuron_type.description["variables"]:
+        for var in pop.neuron_ir.variables:
             if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
                 pre_loop += (
                     ConfigManager()._cpp_float_dtype(net_id=self._net_id)
@@ -1061,7 +1060,7 @@ class CUDAGenerator(PopulationGenerator):
             )
 
         # sum() must generate _sum___all__[i] = _sum_exc[i] + sum_inh[i] + ... at the beginning of local equations
-        if "__all__" in pop.neuron_type.description["targets"]:
+        if "__all__" in pop.neuron_ir.targets:
             eqs = " " * 8 + "// Sum over all targets\n"
             eqs += " " * 8 + "_sum___all__[i] = "
             for target in pop.targets:
@@ -1081,7 +1080,7 @@ class CUDAGenerator(PopulationGenerator):
         pre_loop += rng_pre_loop
 
         # Replace %(global_idx)s for global parameters
-        for var in pop.neuron_type.description["global"]:
+        for var in pop.neuron_ir.global_attr_names:
             attr_type, attr = self._get_attr_and_type(pop, var)
 
             if attr_type == "par":
