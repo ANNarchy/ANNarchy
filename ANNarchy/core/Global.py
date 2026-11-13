@@ -218,6 +218,7 @@ def add_function(function: str):
 
     :param function: (multi)string representing the function.
     """
+    Messages.warning("The use of global `add_function` is deprecated. It's now part of the `Network` class.")
     GlobalObjectManager().add_function(function)
 
 
@@ -241,6 +242,7 @@ def functions(name: str, network=None):
 
     :param name: name of the function.
     """
+    Messages.warning("The use of global `functions` is deprecated. It's now part of the `Network` class.")
     return GlobalObjectManager().functions(name, network)
 
 
