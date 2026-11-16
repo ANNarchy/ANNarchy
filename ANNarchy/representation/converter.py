@@ -6,6 +6,7 @@
 from .attributes import (
     FunctionRepresentation,
     ParameterRepresentation,
+    PreLoopRepresentation,
     RandomDistRepresentation,
     VariableRepresentation,
 )
@@ -38,6 +39,16 @@ class IRConverter:
         )
 
     @staticmethod
+    def convert_pre_loop(pre_loop_dict):
+        if pre_loop_dict is None or len(pre_loop_dict)==0:
+            return PreLoopRepresentation(name=None, value=None)
+        else:
+            return PreLoopRepresentation(
+                name=pre_loop_dict["name"],
+                value=pre_loop_dict["value"]
+            )
+
+    @staticmethod
     def convert_variable(variable_dict: dict) -> VariableRepresentation:
         return VariableRepresentation(
             # common
@@ -53,7 +64,7 @@ class IRConverter:
             init=variable_dict["init"],
             method=variable_dict.get("method"),
             num_flops=variable_dict.get("num_flops"),
-            pre_loop=variable_dict.get("pre_loop"),
+            pre_loop=IRConverter().convert_pre_loop(variable_dict.get("pre_loop")),
             switch=variable_dict.get("switch"),
             transformed_eq=variable_dict.get("transformed_eq"),
             untouched=variable_dict.get("untouched")

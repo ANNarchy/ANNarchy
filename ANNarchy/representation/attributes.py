@@ -51,7 +51,20 @@ class ParameterRepresentation(AttributeRepresentation):
         return f"{self.name} = {self.init}"
 
 @dataclass(slots=True)
+class PreLoopRepresentation:
+    """
+    For some ODE cases values are pre-computed. Optional part of the
+    `VariableRepresentation`.
+    """
+    name : str | None
+    value: str | None
+
+@dataclass(slots=True)
 class VariableRepresentation(AttributeRepresentation):
+    """
+    Stores the information related to an ANNarchy variables, i.e., an
+    attribute whose value changes based on the neuron equations.
+    """
     bounds: dict
     cpp: str
     dependencies: list[str]
@@ -60,10 +73,15 @@ class VariableRepresentation(AttributeRepresentation):
     init: int|float|str
     method: str
     num_flops: int
-    pre_loop: dict
+    pre_loop: PreLoopRepresentation
     switch: str|None
     transformed_eq: str
     untouched: list[dict[str,str]]
+
+    @property
+    def has_pre_loop(self):
+        """ Returns `True` if a name and value has been set for pre_loop. """
+        return self.pre_loop.name is not None and self.pre_loop.value is not None
 
 @dataclass(slots=True)
 class RandomDistRepresentation(AttributeRepresentation):

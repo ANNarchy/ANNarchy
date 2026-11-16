@@ -551,7 +551,7 @@ class SingleThreadGenerator(PopulationGenerator):
         declare_FR = ""
         init_FR = ""
         reset_FR = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             declare_FR = """
     // Mean Firing rate
     std::vector< std::queue<long int> > _spike_history;
@@ -586,7 +586,7 @@ class SingleThreadGenerator(PopulationGenerator):
         "Computes the average firing rate based on history"
         mean_FR_push = ""
         mean_FR_update = ""
-        if pop.neuron_type.description["type"] == "spike":
+        if pop.neuron_ir.is_spike:
             mean_FR_push = """
                     // Store the event for the mean firing rate
                     if (_mean_fr_window > 0)
@@ -719,18 +719,11 @@ class SingleThreadGenerator(PopulationGenerator):
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
-        for var in pop.neuron_type.description["variables"]:
-            if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
-                pre_code += (
-                    var["ctype"]
-                    + " "
-                    + var["pre_loop"]["name"]
-                    + " = "
-                    + var["pre_loop"]["value"]
-                    + ";\n"
-                )
+        for var in pop.neuron_ir.variables:
+            if var.has_pre_loop:
+                pre_code += f"""{var.ctype} {var.pre_loop.name} = {var.pre_loop.value};\n"""
         code = (
-            tabify(pre_code, 3)
+            tabify(pre_code, 2)
             % {
                 "id": pop.id,
                 "local_index": "[i]",
@@ -829,16 +822,9 @@ class SingleThreadGenerator(PopulationGenerator):
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
-        for var in pop.neuron_type.description["variables"]:
-            if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
-                pre_code += (
-                    var["ctype"]
-                    + " "
-                    + var["pre_loop"]["name"]
-                    + " = "
-                    + var["pre_loop"]["value"]
-                    + ";\n"
-                )
+        for var in pop.neuron_ir.variables:
+            if var.has_pre_loop:
+                pre_code += f"""{var.ctype} {var.pre_loop.name} = {var.pre_loop.value};\n"""
         if len(pre_code) > 0:
             pre_code = """
             // Updating the step sizes
