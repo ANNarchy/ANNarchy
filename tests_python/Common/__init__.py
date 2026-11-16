@@ -11,6 +11,7 @@ from .test_NumericalMethod import (
 from .test_BuiltinFunctions import test_BuiltinFunctions
 from .test_RandomVariables import (
     test_NeuronRandomVariables,
+    test_NeuronRandomVariablesDeps,
     test_SynapseRandomVariables,
 )
 from .test_CustomFunc import test_CustomFunc

@@ -771,8 +771,8 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Random distributions
         deps = []
-        for rd in pop.neuron_type.description["random_distributions"]:
-            for dep in rd["dependencies"]:
+        for rd in pop.neuron_ir.random_distributions:
+            for dep in rd.dependencies:
                 deps += dep
 
         # Global variables

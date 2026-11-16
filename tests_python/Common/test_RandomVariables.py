@@ -78,6 +78,46 @@ class test_NeuronRandomVariables(unittest.TestCase):
         numpy.testing.assert_allclose(r, 0.5, atol=0.5)  # 0<=x<=1
         self.assertNotAlmostEqual(r, 0.0)  # x != 0
 
+class test_NeuronRandomVariablesDeps(unittest.TestCase):
+    """
+    """
+    @classmethod
+    def setUpClass(cls):
+
+        DependOnParameter = Neuron(
+            parameters=dict(
+                n_min = -2.0,
+                n_max =  2.0
+            ),
+            equations=[
+                'r = Uniform(n_min, n_max)'
+            ]
+        )
+
+        cls._network = Network(seed=1)
+        cls._tc_dep_pop = cls._network.create(3, DependOnParameter)
+
+        cls._network.compile(silent=True, directory=TARGET_FOLDER)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
+
+    def setUp(self):
+        """
+        Automatically called before each test method, basically to reset the
+        network after every test.
+        """
+        self._network.reset()
+
+    def test_compile(self):
+        """
+        Trigger compilation of the above method.
+        """
+        pass
 
 class test_SynapseRandomVariables(unittest.TestCase):
     """
