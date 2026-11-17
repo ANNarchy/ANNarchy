@@ -1042,15 +1042,8 @@ class CUDAGenerator(PopulationGenerator):
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_loop = ""
         for var in pop.neuron_ir.variables:
-            if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
-                pre_loop += (
-                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
-                    + " "
-                    + var["pre_loop"]["name"]
-                    + " = "
-                    + var["pre_loop"]["value"]
-                    + ";\n"
-                )
+            if var.has_pre_loop:
+                pre_loop += f"""{var.ctype} {var.pre_loop.name} = {var.pre_loop.value};\n"""
         if pre_loop.strip() != "":
             pre_loop = (
                 """
@@ -1273,16 +1266,10 @@ class CUDAGenerator(PopulationGenerator):
         # Gather pre-loop declaration (dt/tau for ODEs) and
         # update the related kernels
         pre_code = ""
-        for var in pop.neuron_type.description["variables"]:
-            if "pre_loop" in var.keys() and len(var["pre_loop"]) > 0:
-                pre_code += (
-                    ConfigManager()._cpp_float_dtype(net_id=self._net_id)
-                    + " "
-                    + var["pre_loop"]["name"]
-                    + " = "
-                    + var["pre_loop"]["value"]
-                    + ";\n"
-                )
+        for var in pop.neuron_ir.variables:
+            if var.has_pre_loop:
+                pre_code += f"""{var.ctype} {var.pre_loop.name} = {var.pre_loop.value};\n"""
+
         if pre_code.strip() != "":
             pre_code = """
     // Updating the step sizes
