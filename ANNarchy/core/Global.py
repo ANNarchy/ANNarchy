@@ -252,11 +252,11 @@ def functions(name: str, network=None):
 def _bytes_human_readable(size_in_bytes):
     """Transforms given size in GB/MB/KB or bytes dependent on the value."""
     if size_in_bytes > (1024 * 1024 * 1024):
-        return "{:.2f} GB".format(float(size_in_bytes) / (1024.0 * 1024.0 * 1024.0))
+        return f"{float(size_in_bytes) / (1024.0 * 1024.0 * 1024.0):.2f} GB"
     elif size_in_bytes > (1024 * 1024):
-        return "{:.2f} MB".format(float(size_in_bytes) / (1024.0 * 1024.0))
+        return f"{float(size_in_bytes) / (1024.0 * 1024.0):.2f} MB"
     elif size_in_bytes > (1024):
-        return "{:.2f} KB".format(float(size_in_bytes) / (1024.0))
+        return f"{float(size_in_bytes) / (1024.0):.2f} KB"
     else:
         return str(size_in_bytes) + " bytes"
 

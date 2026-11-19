@@ -779,9 +779,7 @@ def _generate_inputs(net_id):
 
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         if isinstance(pop, input_type_list):
-            input_desc += r"{} & {} \\ \hline".format(
-                pop.name, pop.neuron_type.short_description
-            )
+            input_desc += rf"{pop.name} & {pop.neuron_type.short_description} \\ \hline"
             input_desc += "\n"
 
     input_desc += r"""

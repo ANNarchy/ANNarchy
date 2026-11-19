@@ -138,16 +138,12 @@ class NanoBindGenerator:
             if _check_paradigm("cuda", self.net_id):
                 # for local attributes
                 if attr in pop.neuron_type.description["local"]:
-                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
-                        id=pop.id, name=attr
-                    )
+                    attributes += f"""\t\t.def_rw("{attr}_host_to_device", &PopStruct{pop.id}::{attr}_host_to_device)\n"""
                 # for global attributes which are updated over time
                 if attr in pop.neuron_type.description["global"] and attr in [
                     tmp["name"] for tmp in pop.neuron_type.description["variables"]
                 ]:
-                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
-                        id=pop.id, name=attr
-                    )
+                    attributes += f"""\t\t.def_rw("{attr}_host_to_device", &PopStruct{pop.id}::{attr}_host_to_device)\n"""
 
         # Arrays for the post-synaptic potential
         if pop.neuron_type.type == "rate":

@@ -1153,7 +1153,7 @@ class Network(metaclass=NetworkMeta):
 
         if rng_changed:
             Messages.debug("RNG generators are now configured as following:")
-            Messages.debug("  seed={} (accounts for C++ and NumPy)".format(self.seed))
+            Messages.debug(f"  seed={self.seed} (accounts for C++ and NumPy)")
             Messages.debug(
                 "  use_seed_seq={}".format(
                     "True" if self._get_config("use_seed_seq") else "False"
@@ -1436,7 +1436,7 @@ class Network(metaclass=NetworkMeta):
             obj = self.get_population(post.name)
             if obj is None:  # Sanity check
                 Messages.error(
-                    "The post-synaptic population '{}' was not found".format(post.name)
+                    f"The post-synaptic population '{post.name}' was not found"
                 )
             post = obj
 
@@ -1444,7 +1444,7 @@ class Network(metaclass=NetworkMeta):
             obj = self.get_population(pre.name)
             if obj is None:  # Sanity check
                 Messages.error(
-                    "The pre-synaptic population '{}' was not found".format(pre.name)
+                    f"The pre-synaptic population '{pre.name}' was not found"
                 )
             pre = obj
 
