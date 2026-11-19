@@ -4,6 +4,7 @@
 """
 from dataclasses import dataclass
 
+
 class CTypeBase:
     """
     Base class for CTypes used in our framework. All functions should be

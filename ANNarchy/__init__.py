@@ -1,41 +1,45 @@
 # Generic imports
-import os, sys
+import os
+import sys
 import types
+
+from .core.Attributes import Creating, Parameter, Pruning, Variable
+from .core.Constant import Constant
+from .core.CTypes import *
+from .core.Dendrite import Dendrite
 
 # ANNarchy core
 from .core.Global import *
-from .core.Simulate import *
-from .core.Constant import Constant
-from .core.Neuron import Neuron
-from .core.Attributes import Parameter, Variable, Creating, Pruning
-from .core.Synapse import Synapse
-from .core.Population import Population
-from .core.Projection import Projection
-from .inputs import *
-from .core.Dendrite import Dendrite
-from .core.Random import (
-    Uniform,
-    DiscreteUniform,
-    Normal,
-    LogNormal,
-    Gamma,
-    Exponential,
-    Binomial,
-)
 from .core.IO import (
-    save,
+    MonitorList,
     load,
     load_parameter,
     load_parameters,
+    save,
     save_parameters,
-    MonitorList,
 )
-from .core.Utils import sparse_random_matrix, sparse_delays_from_weights, timeit
 from .core.Monitor import Monitor
 from .core.Network import Network
-from .parser.report.Report import report
+from .core.Neuron import Neuron
+from .core.Population import Population
+from .core.Projection import Projection
+from .core.Random import (
+    Binomial,
+    DiscreteUniform,
+    Exponential,
+    Gamma,
+    LogNormal,
+    Normal,
+    Uniform,
+)
+from .core.Simulate import *
+from .core.Synapse import Synapse
+from .core.Utils import sparse_delays_from_weights, sparse_random_matrix, timeit
+from .extensions import *
+from .inputs import *
+from .intern import Messages
+from .intern.ConfigManagement import setup
 from .models.Neurons import (
-    LeakyIntegrator,
     EIF_cond_alpha_isfa_ista,
     EIF_cond_exp_isfa_ista,
     GIF_curr,
@@ -45,20 +49,11 @@ from .models.Neurons import (
     IF_cond_exp,
     IF_curr_alpha,
     IF_curr_exp,
-    Izhikevich
+    Izhikevich,
+    LeakyIntegrator,
 )
-from .models.Synapses import (
-    Hebb,
-    IBCM,
-    Oja,
-    STDP,
-    STP,
-    Synapse
-)
-from .extensions import *
-from .intern.ConfigManagement import setup
-from .intern import Messages
-from .core.CTypes import *
+from .models.Synapses import IBCM, STDP, STP, Hebb, Oja, Synapse
+from .parser.report.Report import report
 
 # Cython modules
 try:
@@ -74,10 +69,10 @@ If ANNarchy is already installed, something went wrong with the compilation, try
 """)
 
 # Compilation (like in ANNarchy 4)
-from .generator import compile
-
 # several setup() arguments can be set on command-line
 from ANNarchy.generator.CmdLineArgParser import CmdLineArgParser
+
+from .generator import compile
 
 _arg_parser = CmdLineArgParser()
 _arg_parser.parse_arguments_for_setup()

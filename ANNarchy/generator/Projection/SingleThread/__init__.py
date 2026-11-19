@@ -28,19 +28,19 @@ BaseTemplates:
 
 """
 
-from . import LIL as LIL_SingleThread
-from . import COO as COO_SingleThread
-from . import DIA as DIA_SingleThread
 from . import BSR as BSR_SingleThread
+from . import COO as COO_SingleThread
 from . import CSR as CSR_SingleThread
 from . import CSR_T as CSR_T_SingleThread
+from . import DIA as DIA_SingleThread
 from . import ELL as ELL_SingleThread
 from . import ELLR as ELLR_SingleThread
-from . import SELL as SELL_SingleThread
 from . import HYB as HYB_SingleThread
+from . import LIL as LIL_SingleThread
+from . import SELL as SELL_SingleThread
 from . import Dense as Dense_SingleThread
-from . import Dense_T as Dense_T_SingleThread
 from . import Dense_PV as Dense_PV_SingleThread
+from . import Dense_T as Dense_T_SingleThread
 
 __all__ = [
     "BaseTemplates",

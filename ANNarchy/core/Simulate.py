@@ -3,16 +3,15 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.core.Population import Population
-from ANNarchy.core import Global
-
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-
-from math import ceil
-import time
 import operator
+import time
+from math import ceil
+
+from ANNarchy.core import Global
+from ANNarchy.core.Population import Population
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 __all__ = [
     "simulate",

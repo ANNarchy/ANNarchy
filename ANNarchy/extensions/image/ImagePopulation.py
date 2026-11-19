@@ -3,11 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-
-from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.core.Population import Population
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 try:
     from PIL import Image

@@ -3,15 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate, function_template
 from ANNarchy.generator.NanoBind.Population import *
-from ANNarchy.generator.NanoBind.Projection import *
 from ANNarchy.generator.NanoBind.Profiler import profiler_template
-
-from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.generator.NanoBind.Projection import *
+from ANNarchy.generator.Utils import remove_trailing_spaces, tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.parser.Extraction import extract_functions
 
 

@@ -5,28 +5,28 @@
 
 import re
 
+from ANNarchy.core.Attributes import Creating, Parameter, Pruning, Variable
 from ANNarchy.core.Random import (
     available_distributions,
     distributions_arguments,
     distributions_equivalents,
 )
-from ANNarchy.core.Attributes import Parameter, Variable, Creating, Pruning
-from ANNarchy.parser.Equation import Equation
-from ANNarchy.parser.Function import FunctionParser
-from ANNarchy.parser.StringManipulation import (
-    split_equation,
-    extract_name,
-    extract_flags,
-    prepare_string,
-    process_equations,
-)
-from ANNarchy.parser.ITE import extract_ite, translate_ITE
+from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import (
     ConfigManager,
     _check_paradigm,
     get_global_config,
 )
-from ANNarchy.intern import Messages
+from ANNarchy.parser.Equation import Equation
+from ANNarchy.parser.Function import FunctionParser
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
+from ANNarchy.parser.StringManipulation import (
+    extract_flags,
+    extract_name,
+    prepare_string,
+    process_equations,
+    split_equation,
+)
 
 
 def extract_randomdist(description, net_id):
@@ -557,6 +557,7 @@ def extract_functions(description, net_id, local_global=False):
 
         # Check the function name is not reserved by Sympy
         from inspect import getmembers
+
         import sympy
 
         functions_list = [o[0] for o in getmembers(sympy)]

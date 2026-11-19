@@ -26,17 +26,17 @@ BaseTemplates:
         * LIL_P: a partitioned LIL representation
 """
 
-from . import LIL as LIL_OpenMP
-from . import LIL_P as LIL_Sliced_OpenMP
-from . import COO as COO_OpenMP
-from . import DIA as DIA_OpenMP
 from . import BSR as BSR_OpenMP
+from . import COO as COO_OpenMP
 from . import CSR as CSR_OpenMP
 from . import CSR_P as CSR_Sliced_OpenMP
 from . import CSR_T as CSR_T_OpenMP
 from . import CSR_T_P as CSR_T_Sliced_OpenMP
+from . import DIA as DIA_OpenMP
 from . import ELL as ELL_OpenMP
 from . import ELLR as ELLR_OpenMP
+from . import LIL as LIL_OpenMP
+from . import LIL_P as LIL_Sliced_OpenMP
 from . import SELL as SELL_OpenMP
 from . import Dense as Dense_OpenMP
 from . import Dense_T as Dense_T_OpenMP

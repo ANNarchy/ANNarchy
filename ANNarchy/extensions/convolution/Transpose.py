@@ -4,9 +4,9 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
 

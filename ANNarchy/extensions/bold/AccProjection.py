@@ -3,10 +3,9 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager
-
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 
 class AccProjection(SpecificProjection):

@@ -38,6 +38,7 @@ authorized_keywords = [
 # Functions for string manipulation
 ####################################
 import re
+
 from ANNarchy.intern import Messages
 
 

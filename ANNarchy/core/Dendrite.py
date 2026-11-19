@@ -3,12 +3,13 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-from ANNarchy.core.Random import RandomDistribution
-
 from typing import Iterator
+
 import numpy as np
+
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 
 class Dendrite:

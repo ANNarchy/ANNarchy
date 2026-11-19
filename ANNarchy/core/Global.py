@@ -9,10 +9,10 @@ network instances.
 
 from typing import Any
 
-from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 __all__ = [
     "clear",

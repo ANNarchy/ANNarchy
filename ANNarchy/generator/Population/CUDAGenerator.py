@@ -4,24 +4,24 @@
 """
 
 import re
-from math import ceil
 from copy import deepcopy
+from math import ceil
 
 import ANNarchy
-
+from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Template.GlobalOperationTemplate import (
     global_operation_templates_cuda as global_op_template,
 )
-from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import (
+    check_and_apply_pow_fix,
     generate_equation_code,
     tabify,
-    check_and_apply_pow_fix,
 )
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
-from .PopulationGenerator import PopulationGenerator
+from ANNarchy.intern.ConfigManagement import ConfigManager
+
 from .CUDATemplates import cuda_templates
+from .PopulationGenerator import PopulationGenerator
 
 
 class CUDAGenerator(PopulationGenerator):

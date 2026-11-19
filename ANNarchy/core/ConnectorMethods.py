@@ -8,12 +8,12 @@ for more details: https://annarchy.readthedocs.io/en/latest/manual/Connector.htm
 
 import numpy as np
 
-from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.parser.report.LatexParser import _process_random
+from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.intern import Messages
-from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.parser.report.LatexParser import _process_random
 
 try:
     from ANNarchy.cython_ext import *
@@ -729,7 +729,7 @@ def connect_from_sparse(
     :param delays: the value of the constant delay (default: dt). Variable delays are not allowed.
     """
     try:
-        from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
+        from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
     except:
         Messages.error(
             "from_sparse(): scipy is not installed, sparse matrices can not be loaded."

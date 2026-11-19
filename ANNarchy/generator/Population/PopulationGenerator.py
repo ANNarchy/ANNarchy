@@ -3,8 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.generator.Utils import tabify
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 
 
 class PopulationGenerator(object):

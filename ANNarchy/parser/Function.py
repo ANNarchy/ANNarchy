@@ -4,11 +4,12 @@
 """
 
 import re
-import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr, convert_xor, auto_number
 
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+import sympy as sp
+from sympy.parsing.sympy_parser import auto_number, convert_xor, parse_expr
+
 from ANNarchy.intern import Messages
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.Equation import transform_condition
 from ANNarchy.parser.ParserTemplate import functions_dict, user_functions
 

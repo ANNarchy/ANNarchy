@@ -5,23 +5,23 @@
 
 import re
 
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.parser.CoupledEquations import CoupledEquations
 from ANNarchy.parser.Equation import Equation
-from ANNarchy.parser.ITE import extract_ite, translate_ITE
 from ANNarchy.parser.Extraction import (
-    extract_parameters,
-    extract_variables,
+    extract_axon_spike_condition,
     extract_functions,
-    get_attributes,
-    extract_targets,
+    extract_globalops_neuron,
+    extract_parameters,
     extract_randomdist,
     extract_spike_variable,
-    extract_axon_spike_condition,
-    extract_globalops_neuron,
+    extract_targets,
+    extract_variables,
     find_method,
+    get_attributes,
 )
-from ANNarchy.parser.CoupledEquations import CoupledEquations
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
 
 
 def analyse_neuron(neuron, net_id):

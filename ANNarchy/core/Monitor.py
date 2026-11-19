@@ -3,22 +3,22 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Population import Population
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.Projection import Projection
-from ANNarchy.core.Dendrite import Dendrite
-from ANNarchy.core import Global
-
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-
-import numpy as np
 import re
 import sys
 from copy import copy, deepcopy
 from typing import Any
+
 import h5py
+import numpy as np
+
+from ANNarchy.core import Global
+from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Projection import Projection
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 # objects/functions that should be available by "from ANNarchy import *"
 __all__ = ["Monitor"]

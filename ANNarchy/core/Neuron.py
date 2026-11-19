@@ -3,16 +3,17 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
+import copy
 import hashlib
 import json
-import copy
 
-from ANNarchy.parser.AnalyseNeuron import analyse_neuron
+import numpy as np
+
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
-from ANNarchy.intern import Messages
+from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 
 
 class Neuron:

@@ -6,21 +6,19 @@
 from copy import deepcopy
 
 import ANNarchy
-
+from ANNarchy.core import Global
+from ANNarchy.generator.Population.OpenMPTemplates import openmp_templates
+from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 from ANNarchy.generator.Template.GlobalOperationTemplate import (
     global_operation_templates_omp_extern as global_op_extern_dict,
 )
 from ANNarchy.generator.Utils import (
     generate_equation_code,
-    tabify,
     remove_trailing_spaces,
+    tabify,
 )
-from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
-
-from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
-from ANNarchy.generator.Population.OpenMPTemplates import openmp_templates
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 
 class OpenMPGenerator(PopulationGenerator):

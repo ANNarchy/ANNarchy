@@ -10,25 +10,25 @@ from ANNarchy.core.Random import (
     distributions_arguments,
     distributions_equivalents,
 )
-from ANNarchy.parser.Equation import Equation
-from ANNarchy.parser.ITE import extract_ite, translate_ITE
-from ANNarchy.parser.Extraction import (
-    extract_parameters,
-    extract_variables,
-    extract_functions,
-    get_attributes,
-    extract_randomdist,
-    extract_pre_spike_variable,
-    extract_post_spike_variable,
-    extract_axon_spike_variable,
-    extract_globalops_synapse,
-    extract_prepost,
-    find_method,
-    extract_structural_plasticity,
-)
-from ANNarchy.parser.CoupledEquations import CoupledEquations
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.parser.CoupledEquations import CoupledEquations
+from ANNarchy.parser.Equation import Equation
+from ANNarchy.parser.Extraction import (
+    extract_axon_spike_variable,
+    extract_functions,
+    extract_globalops_synapse,
+    extract_parameters,
+    extract_post_spike_variable,
+    extract_pre_spike_variable,
+    extract_prepost,
+    extract_randomdist,
+    extract_structural_plasticity,
+    extract_variables,
+    find_method,
+    get_attributes,
+)
+from ANNarchy.parser.ITE import extract_ite, translate_ITE
 
 
 def analyse_synapse(synapse, net_id):

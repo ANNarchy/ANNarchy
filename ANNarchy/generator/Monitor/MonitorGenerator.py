@@ -3,14 +3,12 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.generator.Monitor import BaseTemplates as RecTemplate
-from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor
-
-from ANNarchy.generator.Monitor import OpenMPTemplates
-from ANNarchy.generator.Monitor import CUDATemplates
+from ANNarchy.generator.Monitor import BaseTemplates as RecTemplate
+from ANNarchy.generator.Monitor import CUDATemplates, OpenMPTemplates
+from ANNarchy.generator.Utils import tabify
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 class MonitorGenerator(object):

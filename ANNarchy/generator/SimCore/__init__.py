@@ -1,3 +1,3 @@
-from .SingleThreadGenerator import SingleThreadGenerator as SingleThreadSimCoreGenerator
-from .OpenMPGenerator import OpenMPGenerator as OpenMPSimCoreGenerator
 from .CUDAGenerator import CUDAGenerator as CUDASimCoreGenerator
+from .OpenMPGenerator import OpenMPGenerator as OpenMPSimCoreGenerator
+from .SingleThreadGenerator import SingleThreadGenerator as SingleThreadSimCoreGenerator

@@ -3,12 +3,12 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManagement import ConfigManager
-from ANNarchy.intern import Messages
-
 from ANNarchy.core.Neuron import Neuron
-from ANNarchy.core.Utils import convert_steps_to_ms, convert_ms_to_steps
+from ANNarchy.core.Utils import convert_ms_to_steps, convert_steps_to_ms
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+
 
 class SpikeSourceArray(SpecificPopulation):
     """

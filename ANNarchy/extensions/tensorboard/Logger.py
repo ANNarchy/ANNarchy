@@ -4,7 +4,6 @@
 """
 
 import ANNarchy.core.Global as Global
-
 from ANNarchy.intern import Messages
 
 try:
@@ -18,6 +17,7 @@ except Exception as e:
 import os
 import socket
 from datetime import datetime
+
 import numpy as np
 
 
@@ -334,8 +334,8 @@ class Logger(object):
         :param close: whether the logger will close the figure when done (default: True).
         """
 
-        import matplotlib.pyplot as plt
         import matplotlib.backends.backend_agg as plt_backend_agg
+        import matplotlib.pyplot as plt
 
         canvas = plt_backend_agg.FigureCanvasAgg(figure)
         canvas.draw()

@@ -7,9 +7,9 @@ from ANNarchy.intern.ConfigManagement import ConfigManager
 
 from .ProfileGenerator import ProfileGenerator
 from .ProfileTemplate import (
-    profile_base_template,
-    cuda_profile_template,
     cuda_profile_header,
+    cuda_profile_template,
+    profile_base_template,
 )
 
 

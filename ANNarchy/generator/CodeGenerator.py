@@ -6,35 +6,37 @@
 import time
 
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern.NetworkManager import NetworkManager
-
-from ANNarchy.intern import Messages
-
-from ANNarchy.generator.NanoBind.Generator import NanoBindGenerator
+from ANNarchy.generator import Profile
 from ANNarchy.generator.Monitor.MonitorGenerator import MonitorGenerator
-from ANNarchy.generator.SimCore import (
-    SingleThreadSimCoreGenerator,
-    OpenMPSimCoreGenerator,
-    CUDASimCoreGenerator
-)
+from ANNarchy.generator.NanoBind.Generator import NanoBindGenerator
 from ANNarchy.generator.Population import (
-    SingleThreadGenerator,
-    OpenMPGenerator,
     CUDAGenerator,
+    OpenMPGenerator,
+    SingleThreadGenerator,
 )
 from ANNarchy.generator.Projection import (
-    SingleThreadProjectionGenerator,
-    OpenMPProjectionGenerator,
     CUDAProjectionGenerator,
+    OpenMPProjectionGenerator,
+    SingleThreadProjectionGenerator,
+)
+from ANNarchy.generator.SimCore import (
+    CUDASimCoreGenerator,
+    OpenMPSimCoreGenerator,
+    SingleThreadSimCoreGenerator,
+)
+from ANNarchy.generator.Template import (
+    CUDABaseTemplate,
+    OpenMPBaseTemplate,
+    SingleThreadBaseTemplate,
 )
 from ANNarchy.generator.Template.GlobalOperationTemplate import (
-    global_operation_templates_st,
-    global_operation_templates_openmp,
     global_operation_templates_cuda,
+    global_operation_templates_openmp,
+    global_operation_templates_st,
 )
-from ANNarchy.generator.Template import SingleThreadBaseTemplate, OpenMPBaseTemplate, CUDABaseTemplate
-from ANNarchy.generator import Profile
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 
 class CodeGenerator(object):

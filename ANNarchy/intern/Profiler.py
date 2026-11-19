@@ -3,13 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import weakref
-import time
 import csv
+import time
+import weakref
+
 import matplotlib.pylab as plt
 
-from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 
 class Profiler:

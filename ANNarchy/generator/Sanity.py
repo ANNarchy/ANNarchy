@@ -5,13 +5,13 @@
 
 import re
 
+from ANNarchy.core.CTypes import *
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern import Messages
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.core.CTypes import *
 
 # No variable can have these names
 reserved_variables = [

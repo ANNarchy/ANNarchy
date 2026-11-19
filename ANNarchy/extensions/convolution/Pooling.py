@@ -5,20 +5,19 @@
 
 from copy import deepcopy
 
-from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
-from ANNarchy.intern import Messages
-
-from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 from ANNarchy.extensions.convolution.PoolingTemplate import (
     cuda_op_code,
     cuda_pooling_code_2d,
     cuda_pooling_code_2d_small_extent,
     cuda_pooling_code_3d,
     pooling_template_cuda,
-    pooling_template_omp
+    pooling_template_omp,
 )
 from ANNarchy.extensions.convolution.Utils import SharedSynapse
+from ANNarchy.generator.Utils import remove_trailing_spaces, tabify
+from ANNarchy.intern import Messages
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 # Indices used for each dimension
 indices = ["i", "j", "k", "l", "m", "n"]
