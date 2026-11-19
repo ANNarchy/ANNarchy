@@ -80,7 +80,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     ```
 
     :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
-    :param schedule: list of times (in ms) where the firing rate should change. The list must start with 0.
+    :param schedule: either a single value (in ms), to use the next rate every `schedule` ms, or a list of times (in ms) where the firing rate should change. A list must start with 0 and contain one time point per rate.
     :param period: time (in ms) after which the schedule starts again with its first rate, allowing cycling over the schedule. Default: no cycling (-1).
     :param name: optional name for the population.
     """
@@ -154,7 +154,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         Set new parameters for the timed poisson input population.
 
         :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
-        :param schedule: list of times (in ms) where the firing rate should change. The list must start with 0. Default: the current schedule remains.
+        :param schedule: either a single value (in ms), to use the next rate every `schedule` ms, or a list of times (in ms) where the firing rate should change. A list must start with 0 and contain one time point per rate. Default: the current schedule remains.
         :param period: time (in ms) after which the schedule starts again with its first rate, allowing cycling over the schedule. -1 stops the cycling. Default: the current period remains.
         :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
         """

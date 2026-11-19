@@ -14,12 +14,12 @@ class SpikeSourceArray(SpecificPopulation):
     """
     Spike source generating spikes at the times given in the `spike_times` array.
 
-    Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
+    Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional. Pass the spike times as a keyword argument (`spike_times=...`), as the first positional argument is `geometry`. If the spike times are not known yet when the population is created, it can be created with only its `geometry` (the number of neurons); the spike times must then be provided with `update()` before `compile()`.
 
     The spike times can later be replaced with the `update()` method, but the number of neurons must stay the same. A direct assignment such as `inp.spike_times = ...` is not possible.
 
-    The spike times are by default relative to the start of a simulation.
-    The ``reset()`` method of a ``SpikeSourceArray`` restores the spike times it had directly after `compile()` and restarts its internal clock, so the spike times become relative to the time of that call.
+    The spike times refer to the internal clock of the population. This clock starts at 0 with `compile()` and runs with the simulation, so without `period` the spike times are times of the simulation (like `net.time`). With `period`, the clock starts again at 0 at the beginning of each period, so the spike times are times within the period. `update()` never restarts the clock.
+    The ``reset()`` method of a ``SpikeSourceArray`` restores the spike times it had directly after `compile()` and restarts its internal clock, so the spike times become relative to the time of that call. ``clear()`` also restarts the internal clock, but keeps the current spike times.
     You can then repeat a stimulation many times.
 
     ```python
@@ -54,6 +54,27 @@ class SpikeSourceArray(SpecificPopulation):
     net.simulate(100)
     ```
 
+    `update()` has no `reset` argument and does not shift the new spike times: they refer to the running clock like the old ones, and spike times that the clock has already passed are skipped. To emit spikes at given delays from now, add the current time of the network, `net.time` (in ms), to these delays:
+
+    ```python
+    inp = net.create(ann.SpikeSourceArray(spike_times=times))
+
+    net.compile()
+
+    # Spikes at 10/11, 20/21, etc
+    net.simulate(50)
+
+    # New spikes 10/11 and 30/31 ms from now, i.e. at 60/61 and 80/81
+    inp.update(spike_times=[
+        [net.time + 10, net.time + 30],
+        [net.time + 11, net.time + 31]
+    ])
+    net.simulate(50)
+    ```
+
+    This only works while the clock of the population runs with `net.time`: not with `period`, and not after ``reset()`` or ``clear()`` of the population alone.
+
+    :param geometry: number of neurons (an integer). If omitted, it is derived from `spike_times`. If only `geometry` is given, the spike times must be provided with `update()` before `compile()`.
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
     :param period: time (in ms) after which the spike times are repeated, allowing cycling over the inputs. By default, no cycling is used (-1.).
     :param name: optional name for the population.
@@ -146,6 +167,14 @@ class SpikeSourceArray(SpecificPopulation):
        ) -> None:
         """
         Reconfigure `spike_times`, `period` or both after construction of the object. Arguments that are not provided (None) keep their current value.
+
+        There is no `reset` argument: `update()` never restarts the internal clock of the population, and the new spike times are not shifted. Like the old ones, they refer to this clock, which starts at 0 with `compile()`, again at the beginning of each period (with `period`), and with `reset()` or `clear()`; spike times that the clock has already passed are skipped. To emit spikes at given delays from now, add the current time of the network:
+
+        ```python
+        inp.update(spike_times=[[net.time + 10., net.time + 30.]])
+        ```
+
+        This only works while the clock of the population runs with `net.time`: not with `period`, and not after `reset()` or `clear()` of the population alone.
 
         :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt. The number of neurons must stay the same.
         :param period: time (in ms) after which the spike times are repeated, allowing cycling over the inputs. -1 stops the repetition.

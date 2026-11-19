@@ -114,7 +114,7 @@ class InputArray(SpecificPopulation):
 
         Implementation note:
 
-            Overload `Population.reset` as we need to set spike_times/period from hand.
+            Overload `Population.reset` as we need to reset r by hand.
         """
         # reset r
         if isinstance(self.init["r"], (int, float)):

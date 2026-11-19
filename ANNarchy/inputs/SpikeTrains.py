@@ -122,7 +122,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     :param rates: rate in Hz of the population (must be a float or a list of float)
     :param corr: total correlation strength (float in [0, 1], or a list)
     :param tau: correlation time constant in ms.
-    :param schedule: list of times (in ms) where new values of ``rates`` and ``corr`` will be used to compute mu and sigma.
+    :param schedule: either a single value (in ms), to use the next values every ``schedule`` ms, or a list of times (in ms) where new values of ``rates`` and ``corr`` will be used to compute mu and sigma. A list must start with 0 and contain one time point per value.
     :param period: time (in ms) after which the schedule starts again with its first values, allowing cycling over the schedule. Default: no cycling (-1.)
     :param name: unique name of the population (optional).
     :param refractory: refractory period in ms (careful: may break the correlation)
@@ -233,7 +233,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         :param rates: rate in Hz of the population (must be a float or a list of float)
         :param corr: total correlation strength (float in [0, 1], or a list)
-        :param schedule: list of times (in ms) where new values of ``rates`` and ``corr`` will be used to compute mu and sigma.
+        :param schedule: either a single value (in ms), to use the next values every ``schedule`` ms, or a list of times (in ms) where new values of ``rates`` and ``corr`` will be used to compute mu and sigma. A list must start with 0 and contain one time point per value.
         :param tau: correlation time constant in ms.
         :param reset: whether to reset the internal timers before updating. If True the simulation will continue with the first elements provided by rates/schedule. If False, the simulation will continue with values of the provided rates/schedule at the position of the current internal timers. Default: True.
         """
