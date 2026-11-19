@@ -1,7 +1,7 @@
 **5.0.5**
 
 Breaking Changes:
-* unified the interface of input devices, such as SpikeSourceArray or TimedArray: values should be now defined either on construction or using the update method (issue #51). See also the section (TODO) in the manual.
+* unified the interface of input devices, such as SpikeSourceArray or TimedArray: values should be now defined either on construction or using the update method (issue #51). See also the section (https://annarchy.github.io/manual/Inputs.html) in the manual.
 
 New/Changed features:
 * on GPUs added reduced floating-point precision types (fp16, bfloat16), see commits 53e51f4, 38a5262, 00cf229, 0d885ee. Note that this is an experimental feature, bug reports are appreciated.
@@ -13,7 +13,7 @@ Bugfixes:
 * Monitor: recorded axonal spike events were not readable (commit b2f7485)
 * Population: updating refractory times after `compile` failed (commit d40cd0d)
 * HomogeneousCorrelatedSpikeTrains were not working for OpenMP/CUDA (commit c6e7b1b, 984e120)
-
+* globally defined functions were not accessible (issue #55).
 
 **5.0.4.1**
 
