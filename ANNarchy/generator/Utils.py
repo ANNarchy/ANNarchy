@@ -36,6 +36,10 @@ def canonicalize(obj):
     if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
 
+    # NumPy scalar types
+    if isinstance(obj, numpy.generic):
+        return canonicalize(obj.item())
+
     # NumPy arrays
     if isinstance(obj, numpy.ndarray):
         return {
