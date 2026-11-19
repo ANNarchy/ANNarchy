@@ -699,7 +699,7 @@ class Network(metaclass=NetworkMeta):
 
         net.compile()
 
-        net.simulate_until(max_duration=1000.0. population=pop1)
+        net.simulate_until(max_duration=1000.0, population=pop1)
         ```
 
         :param max_duration: the maximum duration of the simulation in milliseconds.
