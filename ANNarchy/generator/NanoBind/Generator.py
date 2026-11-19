@@ -3,11 +3,11 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate, function_template
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Profiler import profiler_template
 from ANNarchy.generator.NanoBind.Projection import *
+from ANNarchy.generator.Utils import remove_trailing_spaces, tabify
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -138,15 +138,11 @@ class NanoBindGenerator:
             if _check_paradigm("cuda", self.net_id):
                 # for local attributes
                 if attr in pop.neuron_ir.local_attr_names:
-                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
-                        id=pop.id, name=attr
-                    )
+                    attributes += f"""\t\t.def_rw("{attr}_host_to_device", &PopStruct{pop.id}::{attr}_host_to_device)\n"""
                 # for global attributes which are updated over time
                 if attr in pop.neuron_ir.global_attr_names and \
                    attr in pop.neuron_ir.variable_names:
-                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(
-                        id=pop.id, name=attr
-                    )
+                    attributes += f"""\t\t.def_rw("{attr}_host_to_device", &PopStruct{pop.id}::{attr}_host_to_device)\n"""
 
         # Arrays for the post-synaptic potential
         if pop.neuron_ir.is_rate:

@@ -6,7 +6,7 @@
 import copy
 import inspect
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 import numpy as np
 
@@ -42,8 +42,8 @@ class Population:
         self,
         geometry: tuple | int,
         neuron: "Neuron",
-        name: str = None,
-        stop_condition: str = None,
+        name: str | None = None,
+        stop_condition: str | None = None,
         # Internal use only
         storage_order: str = "post_to_pre",
         copied: bool = False,

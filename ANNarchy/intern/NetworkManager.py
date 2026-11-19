@@ -121,9 +121,7 @@ class NetworkManager:
         Instead of showing the object pointer, we present the information of
         registered networks.
         """
-        string = "<{}.{} object at {}>\n".format(
-            self.__class__.__module__, self.__class__.__name__, hex(id(self))
-        )
+        string = f"<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))}>\n"
 
         string += "Number of registered networks = " + str(len(self)) + "\n"
 
@@ -248,7 +246,7 @@ class NetworkManager:
         """
         from ANNarchy.core.Global import _bytes_human_readable
 
-        print("Memory consumption of C++ objects (Network {id}): ".format(id=net_id))
+        print(f"Memory consumption of C++ objects (Network {net_id}): ")
 
         for pop in self._networks[net_id]._data.populations:
             print(pop.name, _bytes_human_readable(pop._size_in_bytes()))

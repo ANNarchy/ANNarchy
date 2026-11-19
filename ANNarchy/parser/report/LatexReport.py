@@ -7,14 +7,13 @@ import os
 
 import numpy as np
 
-import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 from ANNarchy.inputs import input_name_list, input_type_list
-from ANNarchy.intern import Messages
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.parser.report import LatexParser
 
 ##################################
 ### Templates
@@ -784,9 +783,7 @@ def _generate_inputs(net_id):
 
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         if isinstance(pop, input_type_list):
-            input_desc += r"{} & {} \\ \hline".format(
-                pop.name, pop.neuron_type.short_description
-            )
+            input_desc += rf"{pop.name} & {pop.neuron_type.short_description} \\ \hline"
             input_desc += "\n"
 
     input_desc += r"""

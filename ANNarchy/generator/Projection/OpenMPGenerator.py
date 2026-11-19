@@ -1266,13 +1266,7 @@ if (%(condition)s) {
         # sanity check
         if template is None:
             raise Messages.CodeGeneratorException(
-                "\tproj{}: no template available (Configuration: format={}, order={}, single_matrix={}, pattern={})".format(
-                    proj.id,
-                    proj._storage_format,
-                    proj._storage_order,
-                    single_matrix,
-                    proj._parallel_pattern,
-                )
+                f"\tproj{proj.id}: no template available (Configuration: format={proj._storage_format}, order={proj._storage_order}, single_matrix={single_matrix}, pattern={proj._parallel_pattern})"
             )
 
         # Axonal spike events
@@ -1613,9 +1607,7 @@ _last_event%(local_index)s = t;
         except KeyError:
             # Template does not exist
             Messages.error(
-                "No template for spiking neurons post event (format = {}, order = {}, and single_matrix = {})".format(
-                    proj._storage_format, proj._storage_order, single_matrix
-                )
+                f"No template for spiking neurons post event (format = {proj._storage_format}, order = {proj._storage_order}, and single_matrix = {single_matrix})"
             )
 
         # Annotate code

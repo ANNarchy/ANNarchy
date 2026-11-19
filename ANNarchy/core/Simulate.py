@@ -188,9 +188,9 @@ def simulate_until(
     Example:
 
     ```python
-    pop1 = ann.Population( ..., stop_condition = "r > 1.0 : any")
-    ann.compile()
-    duration = ann.simulate_until(max_duration=1000.0, population=pop1)
+    pop1 = net.create( ..., stop_condition = "r > 1.0 : any")
+    net.compile()
+    duration = net.simulate_until(max_duration=1000.0, population=pop1)
     ```
 
     :param max_duration: Maximum duration of the simulation in milliseconds.

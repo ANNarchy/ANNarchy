@@ -8,7 +8,7 @@ import inspect
 import math
 import os
 import pickle
-from typing import Iterator
+from collections.abc import Iterator
 
 import numpy as np
 
@@ -1994,9 +1994,7 @@ class Projection:
                 "suppress_warnings", self.net_id
             ):
                 Messages.info(
-                    "Loading connectivity was successful, note that stored connectivity in save file diverges from the initial state ... (Projection{id} - {name})".format(
-                        id=self.id, name=self.name
-                    )
+                    f"Loading connectivity was successful, note that stored connectivity in save file diverges from the initial state ... (Projection{self.id} - {self.name})"
                 )
 
         # HD ( 5th Sep. 2024):

@@ -1,5 +1,3 @@
-# SpecificPopulation inheritances
-# SpecificProjecion inheritances
 from .CurrentInjection import CurrentInjection
 from .DecodingProjection import DecodingProjection
 from .InputArray import InputArray

@@ -8,18 +8,14 @@ import os
 import numpy as np
 
 import ANNarchy
-import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Synapse import Synapse
-from ANNarchy.intern import Messages
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.parser.AnalyseNeuron import analyse_neuron
-from ANNarchy.parser.AnalyseSynapse import analyse_synapse
-
-from ..Extraction import extract_parameters, find_method
+from ANNarchy.parser.Extraction import extract_parameters, find_method
+from ANNarchy.parser.report import LatexParser
 
 ##################################
 ### Main method

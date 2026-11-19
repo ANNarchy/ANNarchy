@@ -134,9 +134,7 @@ class TimedArray(SpecificPopulation):
             parameters="",
             equations="r = 0.0",
             name="Timed Array",
-            description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(
-                geometry, schedule, period
-            ),
+            description=f"Timed array sets inputs (shape = {geometry}) sequentially with schedule = {schedule} and period = {period}.",
         )
 
         # Register Population

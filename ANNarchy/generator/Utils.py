@@ -37,6 +37,10 @@ def canonicalize(obj):
     if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
 
+    # NumPy scalar types
+    if isinstance(obj, numpy.generic):
+        return canonicalize(obj.item())
+
     # NumPy arrays
     if isinstance(obj, numpy.ndarray):
         return {
@@ -581,11 +585,11 @@ def detect_cuda_arch():
 
     # NVIDIA and it's version numbering ...
     CC = int(float(query_result[1]) * 10)
-    return """
+    return f"""
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES {})
+    set(CMAKE_CUDA_ARCHITECTURES {CC})
     endif()
-""".format(CC)
+"""
 
 #####################################################################
 #   Hardware-related

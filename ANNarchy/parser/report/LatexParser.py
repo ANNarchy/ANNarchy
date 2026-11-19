@@ -7,7 +7,6 @@ import re
 
 import sympy as sp
 from sympy.parsing.sympy_parser import (
-    auto_number,
     convert_xor,
     parse_expr,
     standard_transformations,
