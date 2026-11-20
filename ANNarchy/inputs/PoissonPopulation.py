@@ -193,6 +193,23 @@ class PoissonPopulation(SpecificPopulation):
             self.update(rates=rates)
 
     #
+    # Special properties
+    #
+
+    @property
+    def rates(self):
+        """ Being called when reading `rates` attribute. """
+        if self.initialized:
+            return self.cyInstance.rates
+        else:
+            return self.rates_init
+
+    @rates.setter
+    def rates(self, value):
+        """ Being called when setting `rates` attribute. """
+        raise Messages.NoDirectAssignment("PoissonPopulation: `rates` can only be set during construction or via update()")
+
+    #
     # User-interface
     #
 
@@ -208,13 +225,13 @@ class PoissonPopulation(SpecificPopulation):
         :param rates: mean firing rate of each neuron. It can be a single value for all or a numpy.ndarray storing individual values.
         """
         if isinstance(rates, str):
-            raise Messages.error("PoissonPopulation: providing an equation `rates` is only allowed on construction.")
+            Messages.error("PoissonPopulation: providing an equation `rates` is only allowed on construction.")
 
         if isinstance(rates, list):
             rates = numpy.asarray(rates)
 
         if isinstance(rates, numpy.ndarray) and rates.shape != self.geometry:
-            raise Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
+            Messages.error("PoissonPopulation: `rates` must have the same dimension as the population.")
 
         if self.initialized:
             if isinstance(rates, str):
@@ -245,7 +262,7 @@ class PoissonPopulation(SpecificPopulation):
         self.update(rates=self.rates_init)
 
     #
-    # Internal API - object handling
+    # Internal API
     #
 
     def _copy(self, net_id=None):
@@ -273,31 +290,8 @@ class PoissonPopulation(SpecificPopulation):
         if isinstance(self.rates_init, (numpy.ndarray, float, int)):
             self.update(rates=self.rates_init)
 
-    def __getattr__(self, name):
-        """
-        Method called when reading an attribute.
-        """
-        if name == "rates":
-            if self.initialized:
-                return self.cyInstance.rates
-            else:
-                return self.rates_init
-
-        else:
-            return super().__getattr__(name=name)
-
-    def __setattr__(self, name, value):
-        """
-        Method called when setting an attribute.
-        """
-        if name == "rates":
-            raise Messages.NoDirectAssignment("PoissonPopulation: `rates` can only be set during construction or via update()")
-
-        else:
-            super().__setattr__(name=name, value=value)
-
     #
-    # Internal API - code generation
+    # Code generation
     #
 
     def _generate_st(self):

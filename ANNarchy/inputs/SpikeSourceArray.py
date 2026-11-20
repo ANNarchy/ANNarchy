@@ -222,6 +222,10 @@ class SpikeSourceArray(SpecificPopulation):
         # reset other properties
         super().reset(attributes)
 
+    #
+    # Internal API
+    #
+
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return SpikeSourceArray(
@@ -246,6 +250,25 @@ class SpikeSourceArray(SpecificPopulation):
             )
             for neur_times in spike_times
         ]
+
+    def _instantiate(self, module):
+        """
+        Initializes the nanobind wrapper.
+        """
+        # Sanity check
+        if self.init["spike_times"] is None:
+            Messages.error("SpikeSourceArray: `spike_times` must be initialized either during construction or by calling `update`.")
+
+        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
+            self.size, self.max_delay
+        )
+        self.cyInstance.spike_times = self._sort_spikes(self.init["spike_times"])
+        self.cyInstance.period = convert_ms_to_steps(self.init["period"], self.net_id)
+        # Note: recompute_spike_times is called automatically in init_population
+
+    #
+    # Code generation
+    #
 
     def _generate(self):
         # Add possible targets
@@ -465,18 +488,3 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template["spike_gather_invoke"] = ""
         self._specific_template["spike_gather_header"] = ""
         self._specific_template["spike_gather_call"] = ""
-
-    def _instantiate(self, module):
-        """
-        Initializes the nanobind wrapper.
-        """
-        # Sanity check
-        if self.init["spike_times"] is None:
-            Messages.error("SpikeSourceArray: `spike_times` must be initialized either during construction or by calling `update`.")
-
-        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
-            self.size, self.max_delay
-        )
-        self.cyInstance.spike_times = self._sort_spikes(self.init["spike_times"])
-        self.cyInstance.period = convert_ms_to_steps(self.init["period"], self.net_id)
-        # Note: recompute_spike_times is called automatically in init_population

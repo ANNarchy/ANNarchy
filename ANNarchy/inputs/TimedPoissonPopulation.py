@@ -143,6 +143,82 @@ class TimedPoissonPopulation(SpecificPopulation):
         self.init["rates"] = rates
         self.init["period"] = period
 
+    #
+    # Special properties
+    #
+
+    @property
+    def rates(self):
+        """ Array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population. """
+        if self.initialized:
+            if len(self.geometry) > 1:
+                # unflatten the data
+                flat_values = self.cyInstance.get_rates()
+                values = []
+                for x in range(len(self.schedule)):
+                    values.append(np.reshape(flat_values[x], self.geometry))
+                return values
+            else:
+                return self.cyInstance.get_rates()
+        else:
+            return self.init["rates"]
+
+    @rates.setter
+    def rates(self, value):
+        if self.initialized:
+            value = list(value)
+
+            if isinstance(
+                value[0], (float, int)
+            ):  # same value for each neuron, create a list of list
+                value = [
+                    [float(value[i]) for _ in range(self.size)]
+                    for i in range(len(value))
+                ]
+            else:
+                value = [
+                    list(np.array(value[i]).flatten()) for i in range(len(value))
+                ]
+
+            self.cyInstance.set_rates(value)
+
+        else:
+            self.init["rates"] = value
+
+    @property
+    def schedule(self):
+        """ List of times (in ms) where the firing rate should change. The list must start with 0. Default: the current schedule remains. """
+        if self.initialized:
+            return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
+        else:
+            return self.init["schedule"]
+
+    @schedule.setter
+    def schedule(self, value):
+        if self.initialized:
+            self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
+        else:
+            self.init["schedule"] = value
+
+    @property
+    def period(self):
+        """ Time (in ms) after which the schedule starts again with its first rate, allowing cycling over the schedule. -1 stops the cycling. Default: the current period remains. """
+        if self.initialized:
+            return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
+        else:
+            return self.init["period"]
+
+    @period.setter
+    def period(self, value):
+        if self.initialized:
+            self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
+        else:
+            self.init["period"] = value
+
+    #
+    # User-interface
+    #
+
     def update(
         self,
         rates: np.ndarray,
@@ -203,6 +279,10 @@ class TimedPoissonPopulation(SpecificPopulation):
         self.rates = np.array(rates)
         self.period = period
 
+    #
+    # Internal API
+    #
+
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return TimedPoissonPopulation(
@@ -214,6 +294,16 @@ class TimedPoissonPopulation(SpecificPopulation):
             copied=True,
             net_id=self.net_id if net_id is None else net_id,
         )
+
+    def _instantiate(self, module):
+        # Create the Cython instance
+        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
+            self.size, self.max_delay
+        )
+
+    #
+    # Code generation
+    #
 
     def _generate_st(self):
         """
@@ -693,70 +783,3 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         .def("reset", &PopStruct{self.id}::reset)
         .def("clear", &PopStruct{self.id}::clear);
 """
-
-    def _instantiate(self, module):
-        # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name + "_wrapper")(
-            self.size, self.max_delay
-        )
-
-    def __setattr__(self, name, value):
-        if name == "schedule":
-            if self.initialized:
-                self.cyInstance.set_schedule(convert_ms_to_steps(value, self.net_id))
-            else:
-                self.init["schedule"] = value
-        elif name == "rates":
-            if self.initialized:
-                value = list(value)
-
-                if isinstance(
-                    value[0], (float, int)
-                ):  # same value for each neuron, create a list of list
-                    value = [
-                        [float(value[i]) for _ in range(self.size)]
-                        for i in range(len(value))
-                    ]
-                else:
-                    value = [
-                        list(np.array(value[i]).flatten()) for i in range(len(value))
-                    ]
-
-                self.cyInstance.set_rates(value)
-
-            else:
-                self.init["rates"] = value
-        elif name == "period":
-            if self.initialized:
-                self.cyInstance.set_period(convert_ms_to_steps(value, self.net_id))
-            else:
-                self.init["period"] = value
-        else:
-            Population.__setattr__(self, name, value)
-
-    def __getattr__(self, name):
-        if name == "schedule":
-            if self.initialized:
-                return convert_steps_to_ms(self.cyInstance.get_schedule(), self.net_id)
-            else:
-                return self.init["schedule"]
-        elif name == "rates":
-            if self.initialized:
-                if len(self.geometry) > 1:
-                    # unflatten the data
-                    flat_values = self.cyInstance.get_rates()
-                    values = []
-                    for x in range(len(self.schedule)):
-                        values.append(np.reshape(flat_values[x], self.geometry))
-                    return values
-                else:
-                    return self.cyInstance.get_rates()
-            else:
-                return self.init["rates"]
-        elif name == "period":
-            if self.initialized:
-                return convert_steps_to_ms(self.cyInstance.get_period(), self.net_id)
-            else:
-                return self.init["period"]
-        else:
-            return Population.__getattribute__(self, name)
